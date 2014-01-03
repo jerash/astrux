@@ -1,0 +1,74 @@
+#General
+-b:128 -r:50 -z:intbuf -z:nodb -z:nointbuf -n:"mixer" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,24:0
+
+#INPUTS
+-a:01 -f:f32_le,1,48000 -i:jack,,mic_diane -pn:mono2stereo -epp:50
+-a:02 -f:f32_le,1,48000 -i:jack,,mic_raf -pn:mono2stereo -epp:50
+-a:05 -f:f32_le,1,48000 -i:jack,,di_bass -pn:mono2stereo -epp:50
+-a:06 -f:f32_le,1,48000 -i:jack,,di_guitar -pn:mono2stereo -epp:50
+-a:07 -f:f32_le,1,48000 -i:jack,,mic_ambi
+-a:08 -f:f32_le,1,48000 -i:jack,,line_bass
+-a:09 -f:f32_le,1,48000 -i:jack,,line_guitar
+-a:11 -f:f32_le,1,48000 -i:jack,,spdif_tcmone
+
+-a:01 -f:f32_le,2,48000 -o:loop,mic_diane
+-a:02 -f:f32_le,2,48000 -o:loop,mic_raf
+-a:05 -f:f32_le,2,48000 -o:loop,di_bass
+-a:06 -f:f32_le,2,48000 -o:loop,di_guitar
+-a:07 -f:f32_le,2,48000 -o:loop,mic_ambi
+-a:08 -f:f32_le,2,48000 -o:loop,line_bass
+-a:09 -f:f32_le,2,48000 -o:loop,line_guitar
+-a:11 -f:f32_le,2,48000 -o:loop,spdif_tcmone
+
+#CHANNELS ROUTING
+-a:mic_diane_to_foh_mix,mic_diane_to_ear_diane,mic_diane_to_ear_raf,mic_diane_to_tcmone -f:f32_le,2,48000 -i:loop,mic_diane
+-a:mic_raf_to_foh_mix,mic_raf_to_ear_diane,mic_raf_to_ear_raf,mic_raf_to_tcmone -f:f32_le,2,48000 -i:loop,mic_raf
+-a:di_bass_to_foh_mix,di_bass_to_ear_diane,di_bass_to_ear_raf,di_bass_to_tcmone -f:f32_le,2,48000 -i:loop,di_bass
+-a:di_guitar_to_foh_mix,di_guitar_to_ear_diane,di_guitar_to_ear_raf,di_guitar_to_tcmone -f:f32_le,2,48000 -i:loop,di_guitar
+-a:mic_ambi_to_foh_mix,mic_ambi_to_ear_diane,mic_ambi_to_ear_raf,mic_ambi_to_tcmone -f:f32_le,2,48000 -i:loop,mic_ambi
+-a:line_bass_to_foh_mix,line_bass_to_ear_diane,line_bass_to_ear_raf,line_bass_to_tcmone -f:f32_le,2,48000 -i:loop,line_bass
+-a:line_guitar_to_foh_mix,line_guitar_to_ear_diane,line_guitar_to_ear_raf,line_guitar_to_tcmone -f:f32_le,2,48000 -i:loop,line_guitar
+-a:spdif_tcmone_to_foh_mix,spdif_tcmone_to_ear_diane,spdif_tcmone_to_ear_raf -f:f32_le,2,48000 -i:loop,spdif_tcmone
+
+-a:mic_diane_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:mic_raf_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:di_bass_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:di_guitar_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:mic_ambi_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:line_bass_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:line_guitar_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:spdif_tcmone_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix
+-a:mic_diane_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:mic_raf_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:di_bass_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:di_guitar_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:mic_ambi_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:line_bass_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:line_guitar_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:spdif_tcmone_to_ear_diane -f:f32_le,2,48000 -o:jack,,to_bus_ear_diane
+-a:mic_diane_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:mic_raf_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:di_bass_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:di_guitar_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:mic_ambi_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:line_bass_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:line_guitar_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:spdif_tcmone_to_ear_raf -f:f32_le,2,48000 -o:jack,,to_bus_ear_raf
+-a:mic_diane_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:mic_raf_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:di_bass_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:di_guitar_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:mic_ambi_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:line_bass_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+-a:line_guitar_to_tcmone -f:f32_le,2,48000 -o:jack,,to_bus_tcmone
+
+#BUS OUTPUTS
+-a:bus_foh_mix -f:f32_le,2,48000 -i:jack,,bus_foh_mix
+-a:bus_ear_diane -f:f32_le,2,48000 -i:jack,,bus_ear_diane
+-a:bus_ear_raf -f:f32_le,2,48000 -i:jack,,bus_ear_raf
+-a:bus_send_tcmone -f:f32_le,2,48000 -i:jack,,bus_send_tcmone
+
+-a:bus_foh_mix -f:f32_le,2,48000 -o:jack,,foh_mix_out
+-a:bus_ear_diane -f:f32_le,2,48000 -o:jack,,ear_diane_out
+-a:bus_ear_raf -f:f32_le,2,48000 -o:jack,,ear_raf_out
+-a:bus_send_tcmone -f:f32_le,2,48000 -o:jack,,tcmone_out
