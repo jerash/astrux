@@ -24,6 +24,13 @@ die "reading inputs ini file failed\n" until $ini_inputs;
 my $ini_outputs = new Config::IniFiles -file => "fakeout.ini"; # -allowempty => 1;
 die "reading outputs ini file failed\n" until $ini_outputs;
 
+#open submixes files
+#TODO : iterate through all sumbix_*.ini files
+#my @ini_submixes;
+#push @ini_submixes , new Config::IniFiles -file => "fakesub.ini";
+my $ini_submix = new Config::IniFiles -file => "fakesub.ini";
+die "reading submix ini file failed\n" until $ini_submix;
+
 #reset the midipath file
 open FILE, ">midistate.csv" or die $!;
 print FILE "path,value,min,max,CC,channel\n";
@@ -33,7 +40,7 @@ close FILE;
 #
 # === variables contenant les lignes à insérer dans le fichier ecs ===
 #
-my @ecasound_header = ("-b:128 -r:50 -z:intbuf -z:nodb -z:nointbuf -n:\"mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
+my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
 my @valid_input_sections; #liste des input sections valides (connectables)
 my @valid_output_sections; #liste des output sections valides (connectables)
 my @inputs_ai; #liste des ai ecasound
@@ -56,15 +63,16 @@ print "\nFound " . (scalar @input_sections) . " input definitions in ini file\n"
 while (my $section = shift @input_sections) {
 	#si entrée invalide, suivante
 	next until ( $ini_inputs->val($section,'status') eq 'active' );
-	next until ( $ini_inputs->val($section,'type') eq 'audio' ) or ( $ini_inputs->val($section,'type') eq 'return' );
+	next until ( $ini_inputs->val($section,'type') eq 'audio' ) or ( $ini_inputs->val($section,'type') eq 'return' ) or ( $ini_inputs->val($section,'type') eq 'submix' );
 	#récupérer le numéro de la section
 	my $number = substr $section, -2, 2;
-	my $line = "-a:$number -f:f32_le,1,48000 -i:jack,,";
-	#récupérer le nom de la piste
-	next until ( $ini_inputs->val($section,'name') );
-	$line .= $ini_inputs->val($section,'name');
+	my $line = "-a:$number ";
 	#si piste mono, ajouter mono_panvol (-pn:mono2stereo -epp:50)
 	if ( $ini_inputs->val($section,'channels') eq 1 ) {
+		$line .= "-f:f32_le,1,48000 -i:jack,,";
+		#récupérer le nom de la piste
+		die "must have a track name\n" until ( $ini_inputs->val($section,'name') );
+		$line .= $ini_inputs->val($section,'name');
 		#get default values
 		my @def_dump = MidiCC::get_defaults("mono_panvol");
 		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
@@ -76,6 +84,10 @@ while (my $section = shift @input_sections) {
 	}
 	#sinon, piste stéréo par défaut
 	elsif ( $ini_inputs->val($section,'channels') eq 2 ) {
+		$line .= "-f:f32_le,2,48000 -i:jack,,";
+		#récupérer le nom de la piste
+		die "must have a track name\n" until ( $ini_inputs->val($section,'name') );
+		$line .= $ini_inputs->val($section,'name');
 		#get default values
 		my @def_dump = MidiCC::get_defaults("st_panvol");
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
@@ -130,7 +142,7 @@ while (my $section = shift @output_sections) {
 	#si entrée invalide, suivante
 	next until ( $ini_outputs->val($section,'status') eq 'active' );
 	next until ( $ini_outputs->val($section,'type') eq 'bus' ) or ( $ini_outputs->val($section,'type') eq 'send' );
-	next until ( $ini_outputs->val($section,'name') );
+	die "must have a track name\n" until ( $ini_outputs->val($section,'name') );
 	#stocker la section valide
 	push(@valid_output_sections, $section );
 }
@@ -219,12 +231,9 @@ if ($debug) {
 	print Dumper (@outputbus_ao);
 }
 #----------------------------------------------------------------
-#
-# === Création du fichier ecs ecasound ===
-# -- entête --
+# --- Création du fichier ecs ecasound ---
 
 open FILE, ">mixer.ecs" or die $!;
-
 print FILE "#General\n";
 print FILE "$_\n" for @ecasound_header;
 print FILE "\n#INPUTS\n";
@@ -239,9 +248,116 @@ print FILE "\n#BUS OUTPUTS\n";
 print FILE "$_\n" for @outputbus_ai;
 print FILE "\n";
 print FILE "$_\n" for @outputbus_ao;
-
 close FILE;
 print "ecs file successfully created\n";
+
+#----------------------------------------------------------------
+#----------------------------------------------------------------
+#
+# === Création des fichiers ecs submixes ===
+#
+
+#TODO : add a loop to object so we can add insert effects to the output bus
+
+my @sub_tracks; #liste des pistes i/o
+
+@input_sections = $ini_submix->Sections;
+print "\nFound " . (scalar @input_sections) . " submix track definitions in ini file\n";
+#pour chaque entrée définie dans le fichier ini
+#construction de la ligne d'input
+while (my $section = shift @input_sections) {
+	my $found_output = 0;
+	my $line;
+	#récupérer le numéro de la section
+	my $number = substr $section, -2, 2;
+	#check if input or output
+	if ( $ini_submix->val($section,'type') eq 'input' ) {
+		#si piste mono, ajouter mono_panvol (-pn:mono2stereo -epp:50)
+		if ( $ini_submix->val($section,'channels') eq 1 ) {
+			$line = "-a:$number -f:f32_le,1,48000 -i:jack,,";
+			#récupérer le nom de la piste
+			die "must have a track name\n" until ( $ini_submix->val($section,'name') );
+			#TODO check for name uniqueness
+			$line .= $ini_submix->val($section,'name');
+			#get default values
+			my @def_dump = MidiCC::get_defaults("mono_panvol");
+			$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
+			#ajouter les contrôleurs midi
+			my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+			my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];
+		}
+		#sinon, piste stéréo par défaut
+		elsif ( $ini_submix->val($section,'channels') eq 2 ) {
+			$line = "-a:$number -f:f32_le,2,48000 -i:jack,,";
+			#récupérer le nom de la piste
+			die "must have a track name\n" until ( $ini_submix->val($section,'name') );
+			#TODO check for name uniqueness
+			$line .= $ini_submix->val($section,'name');
+			#get default values
+			my @def_dump = MidiCC::get_defaults("st_panvol");
+			$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
+			#ajouter les contrôleurs midi
+			my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];	
+		}
+		#ajouter channel inserts (seulement pour les inputs, TODO for outputs)
+		if (( $ini_submix->val($section,'insert') ) && ($ini_submix->val($section,'type') eq 'input') ) {
+			#verify how many inserts are defined
+			my @inserts = split(",", $ini_submix->val($section,'insert') );
+			foreach my $insert ( @inserts ) {
+				# TODO : split on | for parralel effects ?
+				#print "one effect here : $insert\n";
+				#get default values
+				my @def_dump = MidiCC::get_defaults($insert);
+				$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
+				#ajouter les contrôleurs midi
+				my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
+				my @CC_dump = MidiCC::generate_km($insert,$path);
+				#status is in first parameter, km info is in second parameter
+				$line .= $CC_dump[1] if $CC_dump[0];	
+			}
+		}
+	}
+	elsif ( $ini_submix->val($section,'type') eq 'output' ) {
+		die "submix output must be stereo" if ($ini_submix->val($section,'channels') ne 2);
+		$line = "-a:all -f:f32_le,2,48000 -o:jack,,";
+		#récupérer le nom de la piste
+		die "must have a track name\n" until ( $ini_submix->val($section,'name') );
+		#TODO check for uniqueness
+		$line .= $ini_submix->val($section,'name') . "_out";
+		$found_output = 1;
+	}
+	elsif ($found_output == 1) {
+		die "only one outbut bus should exist\n";
+	}
+	else {
+		die "unknown track type\n";
+	}	
+	push(@sub_tracks,$line);
+}
+
+print "\nFound " . (scalar @sub_tracks) . " valid submix track definitions\n";
+if ($debug) {
+	print "\nSUBMIX CHAINS\n";
+	print Dumper (@sub_tracks);
+}
+#----------------------------------------------------------------
+# --- Création du fichier ecs ecasound ---
+my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"submix_drums\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
+
+open FILE, ">submix_drums.ecs" or die $!;
+print FILE "#General\n";
+print FILE "$_\n" for @ecasound_header;
+print FILE "\n#CHAINS\n";
+print FILE "$_\n" for @sub_tracks;
+print FILE "\n";
+close FILE;
+print "ecs file successfully created\n";
+
 
 #----------------------------------------------------------------
 #
