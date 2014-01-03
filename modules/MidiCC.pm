@@ -73,9 +73,11 @@ sub generate_km {
 		foreach my $param (@names) {
 			#get mim/max parameter range, and new unique CC/channel
 			my ($CC,$channel) = &getnextCC();
-			$line .= "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
-			#TODO : create/update the state.ini file
-			print FILE $path . "/$param," . (shift @defaults) . ",$CC,$channel\n";
+			my $low = (shift @lows);
+			my $high = (shift @highs);
+			$line .= "-km:" . $nb++ . ",$low,$high,$CC,$channel";
+			#TODO : create/update the midistate.csv file
+			print FILE $path . "/$param," . (shift @defaults) . ",$low,$high,$CC,$channel\n";
 		}
 		close FILE;
 		#remove trailing whitespace

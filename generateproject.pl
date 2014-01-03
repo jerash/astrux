@@ -26,7 +26,7 @@ die "reading outputs ini file failed\n" until $ini_outputs;
 
 #reset the midipath file
 open FILE, ">midistate.csv" or die $!;
-print FILE "path,value,CC,channel\n";
+print FILE "path,value,min,max,CC,channel\n";
 close FILE;
 
 #----------------------------------------------------------------
