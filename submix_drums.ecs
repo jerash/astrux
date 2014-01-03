@@ -1,5 +1,5 @@
 #General
--b:128 -r:50 -z:nodb -z:nointbuf -n:"submix_drums" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0
+-b:128 -r:50 -z:nodb -z:nointbuf -n:"submix_drums" -X -z:noxruns -z:mixmode,avg -G:jack,submix_drums,notransport -Md:alsaseq,16:0
 
 #CHAINS
 -a:01 -f:f32_le,2,48000 -i:jack,,kick -pn:st_panvol,50,0 -km:1,0,100,28,2 -km:2,-100,6,29,2
@@ -7,5 +7,5 @@
 -a:03 -f:f32_le,2,48000 -i:jack,,hihat -pn:st_panvol,50,0 -km:1,0,100,32,2 -km:2,-100,6,33,2
 -a:04 -f:f32_le,2,48000 -i:jack,,toms -pn:st_panvol,50,0 -km:1,0,100,34,2 -km:2,-100,6,35,2
 -a:05 -f:f32_le,2,48000 -i:jack,,cymbals -pn:st_panvol,50,0 -km:1,0,100,36,2 -km:2,-100,6,37,2
--a:all -f:f32_le,2,48000 -o:jack,,drums_out
+-a:all -f:f32_le,2,48000 -o:jack,,out_out
 

@@ -1,5 +1,5 @@
 #General
--b:128 -r:50 -z:nodb -z:nointbuf -n:"submix_test" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0
+-b:128 -r:50 -z:nodb -z:nointbuf -n:"submix_test" -X -z:noxruns -z:mixmode,avg -G:jack,submix_test,notransport -Md:alsaseq,16:0
 
 #CHAINS
 -a:01 -f:f32_le,2,48000 -i:jack,,bing1 -pn:st_panvol,50,0 -km:1,0,100,38,2 -km:2,-100,6,39,2
