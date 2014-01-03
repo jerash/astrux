@@ -8,17 +8,28 @@ require ("modules/MidiCC.pm");
 # This script will create a main mixer ecs file for ecasound based on the information contained in ini files
 # It will unconditionnaly overwrite any previoulsy existing ecs file with the same name.
 #----------------------------------------------------------------
+my $debug = 0;
 
 use Data::Dumper;
 use Config::IniFiles;
 
+#the gobal variable containing strip and their effects
+our %tree;
+
+#open input file
 my $ini_inputs = new Config::IniFiles -file => "fakein.ini"; # -allowempty => 1;
 die "reading inputs ini file failed\n" until $ini_inputs;
+#push( @{$tree_ref->{"mixer"}}, "inputs");
 
+#open output file
 my $ini_outputs = new Config::IniFiles -file => "fakeout.ini"; # -allowempty => 1;
 die "reading outputs ini file failed\n" until $ini_outputs;
+#push( @{$tree_ref->{"mixer"}}, "outputs");
 
-my $debug = 0;
+#reset the midipath file
+open FILE, ">midistate.csv" or die $!;
+print FILE "path,value,CC,channel\n";
+close FILE;
 
 #----------------------------------------------------------------
 #
@@ -232,8 +243,8 @@ print FILE "\n";
 print FILE "$_\n" for @outputbus_ao;
 
 close FILE;
-
 print "ecs file successfully created\n";
+
 #----------------------------------------------------------------
 #
 # === Création du fichier jack.plumbing ===

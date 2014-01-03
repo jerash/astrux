@@ -46,7 +46,8 @@ sub getnextCC {
 #
 # === generate_km ===
 #
-#will return a line containing the uniques km CCs
+# will return a line containing the uniques km CCs
+# and create a file with all paths to the midi CC
 #
 sub generate_km {
 	#grab plugin name in parameter
@@ -61,6 +62,7 @@ sub generate_km {
 	}
 	else {
 		print Dumper \%pluginfo if $debug;
+		open FILE, ">>midistate.csv" or die $!;
 		#iterate through each parameter
 		my @names = values $pluginfo{"paramnames"};
 		my @defaults = values $pluginfo{"defaultvalues"};
@@ -73,8 +75,9 @@ sub generate_km {
 			my ($CC,$channel) = &getnextCC();
 			$line .= "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
 			#TODO : create/update the state.ini file
-			print $path . "/$param " . (shift @defaults) . " => CC $CC channel $channel\n";
+			print FILE $path . "/$param," . (shift @defaults) . ",$CC,$channel\n";
 		}
+		close FILE;
 		#remove trailing whitespace
 		$line =~ s/\s+$//;
 		return (1,$line);		
