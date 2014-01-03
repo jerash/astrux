@@ -5,7 +5,7 @@
 # --------------------------------------------------------------------------------
 voldb = -eadb:%1 \
 -pd:volume_control_db \
--ppn:volume(db) \
+-ppn:volume_db \
 -ppd:0 \
 -ppl:-100 \
 -ppu:6
@@ -17,7 +17,7 @@ voldb = -eadb:%1 \
 # --------------------------------------------------------------------------------
 mono_panvol = -chcopy:1.00,2.00 -epp:%1 -eadb:%2 \
 -pd:mono_to_stereo_with_pan_and_volume \
--ppn:pan,volume(db) \
+-ppn:pan,volume_db \
 -ppd:50,0 \
 -ppl:0,-100 \
 -ppu:100,6
@@ -29,7 +29,7 @@ mono_panvol = -chcopy:1.00,2.00 -epp:%1 -eadb:%2 \
 # --------------------------------------------------------------------------------
 st_panvol = -epp:%1 -eadb:%2 \
 -pd:stereo_pan_and_volume \
--ppn:pan,volume(db) \
+-ppn:pan,volume_db \
 -ppd:50,0 \
 -ppl:0,-100 \
 -ppu:100,6

@@ -19,12 +19,10 @@ our %tree;
 #open input file
 my $ini_inputs = new Config::IniFiles -file => "fakein.ini"; # -allowempty => 1;
 die "reading inputs ini file failed\n" until $ini_inputs;
-#push( @{$tree_ref->{"mixer"}}, "inputs");
 
 #open output file
 my $ini_outputs = new Config::IniFiles -file => "fakeout.ini"; # -allowempty => 1;
 die "reading outputs ini file failed\n" until $ini_outputs;
-#push( @{$tree_ref->{"mixer"}}, "outputs");
 
 #reset the midipath file
 open FILE, ">midistate.csv" or die $!;
