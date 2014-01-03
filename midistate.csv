@@ -163,3 +163,7 @@ path,value,min,max,CC,channel
 /mixer/inputs/toms/panvol/volume_db,0,-100,6,35,2
 /mixer/inputs/cymbals/panvol/pan,50,0,100,36,2
 /mixer/inputs/cymbals/panvol/volume_db,0,-100,6,37,2
+/mixer/inputs/bing1/panvol/pan,50,0,100,38,2
+/mixer/inputs/bing1/panvol/volume_db,0,-100,6,39,2
+/mixer/inputs/bing2/panvol/pan,50,0,100,40,2
+/mixer/inputs/bing2/panvol/volume_db,0,-100,6,41,2
