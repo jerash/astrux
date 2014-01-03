@@ -51,6 +51,7 @@ sub getnextCC {
 sub generate_km {
 	#grab plugin name in parameter
 	my $plugin = shift;
+	my $path = shift; #print "$name\n";
 	#get plugin info
 	my ($code,$message,%pluginfo) = EcaFx::getcontrols($plugin);
 	if ($code eq 0) {
@@ -72,6 +73,7 @@ sub generate_km {
 			my ($CC,$channel) = &getnextCC();
 			$line .= "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
 			#TODO : create/update the state.ini file
+			print $path . "/$param " . (shift @defaults) . " => CC $CC channel $channel\n";
 		}
 		#remove trailing whitespace
 		$line =~ s/\s+$//;

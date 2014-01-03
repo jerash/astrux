@@ -60,7 +60,8 @@ while (my $section = shift @input_sections) {
 		my @def_dump = MidiCC::get_defaults("mono_panvol");
 		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
-		my @CC_dump = MidiCC::generate_km("mono_panvol");
+		my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+		my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];
 	}
@@ -70,7 +71,8 @@ while (my $section = shift @input_sections) {
 		my @def_dump = MidiCC::get_defaults("st_panvol");
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
-		my @CC_dump = MidiCC::generate_km("st_panvol");
+		my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];	
 	}
@@ -85,7 +87,8 @@ while (my $section = shift @input_sections) {
 			my @def_dump = MidiCC::get_defaults($insert);
 			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 			#ajouter les contrôleurs midi
-			my @CC_dump = MidiCC::generate_km($insert);
+			my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
+			my @CC_dump = MidiCC::generate_km($insert,$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];	
 		}
@@ -129,7 +132,7 @@ my $line = "-a:";
 foreach my $channel (@valid_input_sections) {
 	#foreach valid bus
 	foreach my $bus (@valid_output_sections) {
-	#ignore send bus to himlself
+	#ignore send bus to himself
 		next if (($ini_outputs->val($bus,'type') eq 'send') and  ($ini_outputs->val($bus,'return') eq $channel) );
 	#create channels_ai	
 	$line .= $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . ",";
@@ -152,10 +155,11 @@ foreach my $bus (@valid_output_sections) {
 		my $line = "-a:" . $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . " -f:f32_le,2,48000 -o:jack,,to_bus_" . $ini_outputs->val($bus,'name');
 		#add volume control
 		#get default values
-		my @def_dump = MidiCC::get_defaults("voldb");
-		$line .= " -pn:voldb" . $def_dump[1] if $def_dump[0];
+		my @def_dump = MidiCC::get_defaults("st_panvol");
+		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
-		my @CC_dump = MidiCC::generate_km("voldb");
+		my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/from/" . $ini_inputs->val($channel,'name') . "/panvol";
+		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];	
 		#add the line to the list
@@ -180,10 +184,11 @@ foreach my $bus (@valid_output_sections) {
 	$line .= $ini_outputs->val($bus,'name');
 	#add volume control
 	#get default values
-	my @def_dump = MidiCC::get_defaults("voldb");
-	$line .= " -pn:voldb" . $def_dump[1] if $def_dump[0];
+	my @def_dump = MidiCC::get_defaults("st_panvol");
+	$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 	#ajouter les contrôleurs midi
-	my @CC_dump = MidiCC::generate_km("voldb");
+	my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
+	my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 	#status is in first parameter, km info is in second parameter
 	$line .= $CC_dump[1] if $CC_dump[0];	
 	#add the line to the list
@@ -233,6 +238,7 @@ print "ecs file successfully created\n";
 #
 # === Création du fichier jack.plumbing ===
 
+# attention à ignorer les pistes qui n'ont pas de hardware_input (players,system)
 
 #----------------------------------------------------------------
 #
