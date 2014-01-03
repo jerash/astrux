@@ -1,9 +1,26 @@
 #
-#    - mono2stereo -
+#    - mono_panvol -
 #
-# mono to stereo converter (1 channel to 2 channels)
+# mono to stereo converter (1 channel to 2 channels) with pan and volume
 # --------------------------------------------------------------------------------
-mono2stereo = -chcopy:1.00,2.00
+mono_panvol = -chcopy:1.00,2.00 -epp:%1 -eadb:%2 \
+-pd:mono_to_stereo_with_pan_and_volume \
+-ppn:pan,volume(db) \
+-ppd:50,0 \
+-ppl:0,-100 \
+-ppu:100,6
+
+#
+#    - st_panvol -
+#
+# mono to stereo converter (1 channel to 2 channels) with pan and volume
+# --------------------------------------------------------------------------------
+st_panvol = -epp:%1 -eadb:%2 \
+-pd:stereo_pan_and_volume \
+-ppn:pan,volume(db) \
+-ppd:50,0 \
+-ppl:0,-100 \
+-ppu:100,6
 
 #
 #    - eqq -

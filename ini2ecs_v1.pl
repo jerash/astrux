@@ -24,7 +24,7 @@ my $debug = 0;
 #
 # === variables contenant les lignes à insérer dans le fichier ecs ===
 #
-my @ecasound_header = ("-b:128 -r:50 -z:intbuf -z:nodb -z:nointbuf -n:\"mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,24:0");
+my @ecasound_header = ("-b:128 -r:50 -z:intbuf -z:nodb -z:nointbuf -n:\"mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
 my @valid_input_sections; #liste des input sections valides (connectables)
 my @valid_output_sections; #liste des output sections valides (connectables)
 my @inputs_ai; #liste des ai ecasound
@@ -50,12 +50,32 @@ while (my $section = shift @input_sections) {
 	next until ( $ini_inputs->val($section,'type') eq 'audio' ) or ( $ini_inputs->val($section,'type') eq 'return' );
 	#récupérer le numéro de la section
 	my $number = substr $section, -2, 2;
-	my $line = "-a:" . $number . " -f:f32_le,1,48000 -i:jack,,";
+	my $line = "-a:$number -f:f32_le,1,48000 -i:jack,,";
 	#récupérer le nom de la piste
 	next until ( $ini_inputs->val($section,'name') );
-	$line = $line . $ini_inputs->val($section,'name');
-	#si piste mono, ajouter mono2stereo et pan center (-pn:mono2stereo -epp:50)
-	$line = $line . " -pn:mono2stereo -epp:50" if ( $ini_inputs->val($section,'channels') eq 1 );
+	$line .= $ini_inputs->val($section,'name');
+	#si piste mono, ajouter mono_panvol (-pn:mono2stereo -epp:50)
+	if ( $ini_inputs->val($section,'channels') eq 1 ) {
+		$line .= " -pn:mono_panvol";
+		#TODO : get default values
+		my @def_dump = MidiCC::get_defaults("mono_panvol");
+		$line .= $def_dump[1] if $def_dump[0];
+		#ajouter les contrôleurs midi
+		my @CC_dump = MidiCC::generate_km("mono_panvol");
+		#status is in first parameter, km info is in second parameter
+		$line .= $CC_dump[1] if $CC_dump[0];
+	}
+	#sinon, piste stéréo par défaut
+	elsif ( $ini_inputs->val($section,'channels') eq 2 ) {
+		$line .= " -pn:st_panvol";
+		#TODO : get default values
+		my @def_dump = MidiCC::get_defaults("st_panvol");
+		$line .= $def_dump[1] if $def_dump[0];
+		#ajouter les contrôleurs midi
+		my @CC_dump = MidiCC::generate_km("st_panvol");
+		#status is in first parameter, km info is in second parameter
+		$line .= $CC_dump[1] if $CC_dump[0];	
+	}
 	#ajouter channel strip 
 		#TODO
 	#section valide
@@ -64,7 +84,7 @@ while (my $section = shift @input_sections) {
 	 #ajoute la ligne à la liste des ai
 	push(@inputs_ai,$line);
 	 #crée la sorite loop
-	$line = "-a:" . $number . " -f:f32_le,2,48000 -o:loop," . $ini_inputs->val($section,'name');
+	$line = "-a:$number -f:f32_le,2,48000 -o:loop," . $ini_inputs->val($section,'name');
 	push(@inputs_ao,$line);
 }
 
@@ -100,12 +120,12 @@ foreach my $channel (@valid_input_sections) {
 	#ignore send bus to himlself
 		next if (($ini_outputs->val($bus,'type') eq 'send') and  ($ini_outputs->val($bus,'return') eq $channel) );
 	#create channels_ai	
-	$line = $line . $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . ",";
+	$line .= $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . ",";
 	}
 	#remove last ,
 	chop($line);
 	#finish line
-	$line = $line . " -f:f32_le,2,48000 -i:loop," . $ini_inputs->val($channel,'name');
+	$line .= " -f:f32_le,2,48000 -i:loop," . $ini_inputs->val($channel,'name');
 	#add the line to the list
 	push(@channels_ai,$line);
 	$line = "-a:";
@@ -132,19 +152,19 @@ if ($debug) {
 foreach my $bus (@valid_output_sections) {
 	#outputbus_ai
 	my $line = "-a:bus_";
-	$line = $line . "send_" if ($ini_outputs->val($bus,'type') eq 'send');
-	$line = $line . $ini_outputs->val($bus,'name');
-	$line = $line . " -f:f32_le,2,48000 -i:jack,,bus_";
-	$line = $line . "send_" if ($ini_outputs->val($bus,'type') eq 'send');
-	$line = $line . $ini_outputs->val($bus,'name');
+	$line .= "send_" if ($ini_outputs->val($bus,'type') eq 'send');
+	$line .= $ini_outputs->val($bus,'name');
+	$line .= " -f:f32_le,2,48000 -i:jack,,bus_";
+	$line .= "send_" if ($ini_outputs->val($bus,'type') eq 'send');
+	$line .= $ini_outputs->val($bus,'name');
 	push(@outputbus_ai,$line);
 	#outputbus_ao
 	$line = "-a:bus_";
-	$line = $line . "send_" if ($ini_outputs->val($bus,'type') eq 'send');
-	$line = $line . $ini_outputs->val($bus,'name');
-	$line = $line . " -f:f32_le,2,48000 -o:jack,,";
-	$line = $line . $ini_outputs->val($bus,'name');
-	$line = $line . "_out";
+	$line .= "send_" if ($ini_outputs->val($bus,'type') eq 'send');
+	$line .= $ini_outputs->val($bus,'name');
+	$line .= " -f:f32_le,2,48000 -o:jack,,";
+	$line .= $ini_outputs->val($bus,'name');
+	$line .= "_out";
 	push(@outputbus_ao,$line);
 }
 if ($debug) {

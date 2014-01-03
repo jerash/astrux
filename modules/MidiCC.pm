@@ -15,6 +15,8 @@ use warnings;
 use feature 'state';
 use Data::Dumper;
 
+require ("modules/EcaFx.pm");
+
 #DOING : made decision to use ecasound effect_preset file exclusively to standardize format
 my $debug = 0;
 
@@ -68,8 +70,37 @@ sub generate_km {
 		foreach my $param (@names) {
 			#get mim/max parameter range, and new unique CC/channel
 			my ($CC,$channel) = &getnextCC();
-			$line = $line . "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
+			$line .= "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
 			#TODO : create/update the state.ini file
+		}
+		return (1,$line);		
+	}
+}
+
+#----------------------------------------------------------------
+#
+# === get_defaults ===
+#
+#will return a line containing the uniques the default values
+# separated by ,
+#
+sub get_defaults {
+	#grab plugin name in parameter
+	my $plugin = shift;
+	#get plugin info
+	my ($code,$message,%pluginfo) = EcaFx::getcontrols($plugin);
+	if ($code eq 0) {
+		#can't get plugin controls
+		print "$message\n";
+		return (0,"");
+	}
+	else {
+		print Dumper \%pluginfo if $debug;
+		#iterate through each parameter
+		my @defaults = values $pluginfo{"defaultvalues"};
+		my $line = "";
+		foreach my $param (@defaults) {
+			$line .= "," . $param;
 		}
 		return (1,$line);		
 	}
