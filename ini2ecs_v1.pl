@@ -56,10 +56,9 @@ while (my $section = shift @input_sections) {
 	$line .= $ini_inputs->val($section,'name');
 	#si piste mono, ajouter mono_panvol (-pn:mono2stereo -epp:50)
 	if ( $ini_inputs->val($section,'channels') eq 1 ) {
-		$line .= " -pn:mono_panvol";
-		#TODO : get default values
+		#get default values
 		my @def_dump = MidiCC::get_defaults("mono_panvol");
-		$line .= $def_dump[1] if $def_dump[0];
+		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
 		my @CC_dump = MidiCC::generate_km("mono_panvol");
 		#status is in first parameter, km info is in second parameter
@@ -67,17 +66,30 @@ while (my $section = shift @input_sections) {
 	}
 	#sinon, piste stéréo par défaut
 	elsif ( $ini_inputs->val($section,'channels') eq 2 ) {
-		$line .= " -pn:st_panvol";
-		#TODO : get default values
+		#get default values
 		my @def_dump = MidiCC::get_defaults("st_panvol");
-		$line .= $def_dump[1] if $def_dump[0];
+		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
 		my @CC_dump = MidiCC::generate_km("st_panvol");
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];	
 	}
-	#ajouter channel strip 
-		#TODO
+	#ajouter channel inserts
+	if ( $ini_inputs->val($section,'insert') ) {
+		#verify how many inserts are defined
+		my @inserts = split(",", $ini_inputs->val($section,'insert') );
+		foreach my $insert ( @inserts ) {
+			# TODO : split on | for parralel effects ?
+			#print "one effect here : $insert\n";
+			#get default values
+			my @def_dump = MidiCC::get_defaults($insert);
+			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
+			#ajouter les contrôleurs midi
+			my @CC_dump = MidiCC::generate_km($insert);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];	
+		}
+	}
 	#section valide
 	 #ajoute à la liste des sections valides
 	push(@valid_input_sections,$section);
@@ -138,6 +150,15 @@ foreach my $bus (@valid_output_sections) {
 		next if (($ini_outputs->val($bus,'type') eq 'send') and  ($ini_outputs->val($bus,'return') eq $channel) );
 		#create channels_ao
 		my $line = "-a:" . $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . " -f:f32_le,2,48000 -o:jack,,to_bus_" . $ini_outputs->val($bus,'name');
+		#add volume control
+		#get default values
+		my @def_dump = MidiCC::get_defaults("voldb");
+		$line .= " -pn:voldb" . $def_dump[1] if $def_dump[0];
+		#ajouter les contrôleurs midi
+		my @CC_dump = MidiCC::generate_km("voldb");
+		#status is in first parameter, km info is in second parameter
+		$line .= $CC_dump[1] if $CC_dump[0];	
+		#add the line to the list
 		push(@channels_ao,$line);
 	}
 }
@@ -157,6 +178,15 @@ foreach my $bus (@valid_output_sections) {
 	$line .= " -f:f32_le,2,48000 -i:jack,,bus_";
 	$line .= "send_" if ($ini_outputs->val($bus,'type') eq 'send');
 	$line .= $ini_outputs->val($bus,'name');
+	#add volume control
+	#get default values
+	my @def_dump = MidiCC::get_defaults("voldb");
+	$line .= " -pn:voldb" . $def_dump[1] if $def_dump[0];
+	#ajouter les contrôleurs midi
+	my @CC_dump = MidiCC::generate_km("voldb");
+	#status is in first parameter, km info is in second parameter
+	$line .= $CC_dump[1] if $CC_dump[0];	
+	#add the line to the list
 	push(@outputbus_ai,$line);
 	#outputbus_ao
 	$line = "-a:bus_";
@@ -165,6 +195,7 @@ foreach my $bus (@valid_output_sections) {
 	$line .= " -f:f32_le,2,48000 -o:jack,,";
 	$line .= $ini_outputs->val($bus,'name');
 	$line .= "_out";
+	#add the line to the list
 	push(@outputbus_ao,$line);
 }
 if ($debug) {

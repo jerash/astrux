@@ -32,8 +32,9 @@ sub getcontrols() {
 	return (0,"usage : getecafxcontrols \“pluginname\" \n",{}) if !$plugin; 
 	
 	#open effect file
-	open(my $file, "<", "effect_presets")
+	open(my $file, "<", "ecacfg/effect_presets")
 		or return (0,"cannot open < effect_presets: $!",{});
+	# TODO : fallback from project file to global file
 
 	#get the effect parameters string
 	my $found =0;

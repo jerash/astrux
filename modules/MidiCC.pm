@@ -73,6 +73,8 @@ sub generate_km {
 			$line .= "-km:" . $nb++ . "," . (shift @lows) . "," . (shift @highs) . "," . $CC . "," . $channel . " ";
 			#TODO : create/update the state.ini file
 		}
+		#remove trailing whitespace
+		$line =~ s/\s+$//;
 		return (1,$line);		
 	}
 }
