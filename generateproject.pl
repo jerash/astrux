@@ -13,8 +13,8 @@ my $debug = 0;
 use Data::Dumper;
 use Config::IniFiles;
 
-#the gobal variable containing strip and their effects
-our %tree;
+#enable/disable midiCC control with -km switch
+my $create_midi_CC = 1;
 
 #open input file
 my $ini_inputs = new Config::IniFiles -file => "fakein.ini"; # -allowempty => 1;
@@ -77,10 +77,12 @@ while (my $section = shift @input_sections) {
 		my @def_dump = MidiCC::get_defaults("mono_panvol");
 		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
-		my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
-		my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
-		#status is in first parameter, km info is in second parameter
-		$line .= $CC_dump[1] if $CC_dump[0];
+		if ($create_midi_CC) {
+			my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+			my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];
+		}
 	}
 	#sinon, piste stéréo par défaut
 	elsif ( $ini_inputs->val($section,'channels') eq 2 ) {
@@ -91,11 +93,13 @@ while (my $section = shift @input_sections) {
 		#get default values
 		my @def_dump = MidiCC::get_defaults("st_panvol");
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
-		#ajouter les contrôleurs midi
-		my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
-		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
-		#status is in first parameter, km info is in second parameter
-		$line .= $CC_dump[1] if $CC_dump[0];	
+		if ($create_midi_CC) {
+			#ajouter les contrôleurs midi
+			my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];
+		}
 	}
 	#ajouter channel inserts
 	if ( $ini_inputs->val($section,'insert') ) {
@@ -107,11 +111,13 @@ while (my $section = shift @input_sections) {
 			#get default values
 			my @def_dump = MidiCC::get_defaults($insert);
 			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
-			#ajouter les contrôleurs midi
-			my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
-			my @CC_dump = MidiCC::generate_km($insert,$path);
-			#status is in first parameter, km info is in second parameter
-			$line .= $CC_dump[1] if $CC_dump[0];	
+			if ($create_midi_CC) {
+				#ajouter les contrôleurs midi
+				my $path = "/mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
+				my @CC_dump = MidiCC::generate_km($insert,$path);
+				#status is in first parameter, km info is in second parameter
+				$line .= $CC_dump[1] if $CC_dump[0];
+			}
 		}
 	}
 	#section valide
@@ -178,11 +184,13 @@ foreach my $bus (@valid_output_sections) {
 		#get default values
 		my @def_dump = MidiCC::get_defaults("st_panvol");
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
-		#ajouter les contrôleurs midi
-		my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/from/" . $ini_inputs->val($channel,'name') . "/panvol";
-		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
-		#status is in first parameter, km info is in second parameter
-		$line .= $CC_dump[1] if $CC_dump[0];	
+		if ($create_midi_CC) {
+			#ajouter les contrôleurs midi
+			my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/from/" . $ini_inputs->val($channel,'name') . "/panvol";
+			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+			#status is in first parameter, km info is in second parameter
+			$line .= $CC_dump[1] if $CC_dump[0];
+		}
 		#add the line to the list
 		push(@channels_ao,$line);
 	}
@@ -207,11 +215,13 @@ foreach my $bus (@valid_output_sections) {
 	#get default values
 	my @def_dump = MidiCC::get_defaults("st_panvol");
 	$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
-	#ajouter les contrôleurs midi
-	my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
-	my @CC_dump = MidiCC::generate_km("st_panvol",$path);
-	#status is in first parameter, km info is in second parameter
-	$line .= $CC_dump[1] if $CC_dump[0];	
+	if ($create_midi_CC) {
+		#ajouter les contrôleurs midi
+		my $path = "/mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
+		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+		#status is in first parameter, km info is in second parameter
+		$line .= $CC_dump[1] if $CC_dump[0];
+	}	
 	#add the line to the list
 	push(@outputbus_ai,$line);
 	#outputbus_ao
@@ -282,11 +292,13 @@ while (my $section = shift @input_sections) {
 			#get default values
 			my @def_dump = MidiCC::get_defaults("mono_panvol");
 			$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
-			#ajouter les contrôleurs midi
-			my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
-			my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
-			#status is in first parameter, km info is in second parameter
-			$line .= $CC_dump[1] if $CC_dump[0];
+			if ($create_midi_CC) {
+				#ajouter les contrôleurs midi
+				my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+				my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
+				#status is in first parameter, km info is in second parameter
+				$line .= $CC_dump[1] if $CC_dump[0];
+			}
 		}
 		#sinon, piste stéréo par défaut
 		elsif ( $ini_submix->val($section,'channels') eq 2 ) {
@@ -298,11 +310,13 @@ while (my $section = shift @input_sections) {
 			#get default values
 			my @def_dump = MidiCC::get_defaults("st_panvol");
 			$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
-			#ajouter les contrôleurs midi
-			my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
-			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
-			#status is in first parameter, km info is in second parameter
-			$line .= $CC_dump[1] if $CC_dump[0];	
+			if ($create_midi_CC) {
+				#ajouter les contrôleurs midi
+				my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+				my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+				#status is in first parameter, km info is in second parameter
+				$line .= $CC_dump[1] if $CC_dump[0];
+			}	
 		}
 		#ajouter channel inserts (seulement pour les inputs, TODO for outputs)
 		if (( $ini_submix->val($section,'insert') ) && ($ini_submix->val($section,'type') eq 'input') ) {
@@ -314,11 +328,13 @@ while (my $section = shift @input_sections) {
 				#get default values
 				my @def_dump = MidiCC::get_defaults($insert);
 				$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
-				#ajouter les contrôleurs midi
-				my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
-				my @CC_dump = MidiCC::generate_km($insert,$path);
-				#status is in first parameter, km info is in second parameter
-				$line .= $CC_dump[1] if $CC_dump[0];	
+				if ($create_midi_CC) {
+					#ajouter les contrôleurs midi
+					my $path = "/mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
+					my @CC_dump = MidiCC::generate_km($insert,$path);
+					#status is in first parameter, km info is in second parameter
+					$line .= $CC_dump[1] if $CC_dump[0];
+				}
 			}
 		}
 	}
@@ -347,7 +363,7 @@ if ($debug) {
 }
 #----------------------------------------------------------------
 # --- Création du fichier ecs ecasound ---
-my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"submix_drums\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
+@ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"submix_drums\" -X -z:noxruns -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0");
 
 open FILE, ">submix_drums.ecs" or die $!;
 print FILE "#General\n";
