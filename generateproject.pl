@@ -13,8 +13,15 @@ my $debug = 0;
 use Data::Dumper;
 use Config::IniFiles;
 
-#------------------------OPTIONS-----------------------------------
-# TODO move this options to grab project.ini options
+#------------------------FILES-----------------------------------
+#create/reset the midipath file
+open FILE, ">oscmidistate.csv" or die $!;
+print FILE "path,value,min,max,CC,channel\n";
+close FILE;
+
+#create/reset the players_cs file
+open FILE, ">players_cs" or die $!;
+close FILE;
 
 #-----------------------PROJECT INI---------------------------------
 #project file
@@ -66,11 +73,6 @@ sub build_ecasound_header {
 	$ecasound_header .= " -G:jack,$temp,sendrecv" if ($synchro eq "synch");
 	$ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
 }
-
-#create/reset the midipath file
-open FILE, ">midistate.csv" or die $!;
-print FILE "path,value,min,max,CC,channel\n";
-close FILE;
 
 #-------------------------Plumbing------------------------------------
 my $do_plumbing = $ini_project->val('jack.plumbing','enable');
@@ -485,15 +487,16 @@ print "---PLAYERS---\n";
 my $basedir = $ini_project->val('project','basefolder');
 #get the song folder names into an array
 opendir (DIR,$basedir) or die "Can't open project directory : $basedir\n";
-my @songlist = grep { /^[0-9][0-9].*/ } readdir(DIR);
+my @songfolderlist = grep { /^[0-9][0-9].*/ } readdir(DIR);
 closedir DIR;
 #verify if there is something to be done
-my $numberofsongs = @songlist;
+my $numberofsongs = @songfolderlist;
 die "No songs have been found, exiting\n" unless ($numberofsongs > 0);
 #display the number of songs we found
 print $numberofsongs . " song folder found\n";
 
-foreach my $folder(@songlist) {
+my @cs_list; #liste des chain setup player à charger au démarrage du projet
+foreach my $folder(@songfolderlist) {
 	my @audio_players; #liste des fichiers audio à lire
 	#look for song.ini
 	if (-e -r "$basedir/$folder/song.ini") {
@@ -538,28 +541,27 @@ foreach my $folder(@songlist) {
 		print FILE "$_\n" for @audio_players;
 		print FILE "\n";
 		close FILE;
-		print "ecs file successfully created\n";
+		print "ecs file successfully created for song " . $ini_song->val('global','friendly_name') . "\n";
+		#insertion du chain setup dans la liste
+		push (@cs_list,"$basedir/$folder/$songname.ecs");
 	}
 	else {
 		# TODO : no song.ini file found, try to guess
 		#warn "no song.ini file found, trying to guess\n";		
 	}
 }
-
-#cleanup songs list
+undef @songfolderlist;
+#create the lsit of player chainsetups to load of project start
 my @validsonglist;
-foreach(@songlist){
-    if( ( defined $_) and !($_ =~ /^$/ )){
-        push(@validsonglist, $_);
+open FILE, ">>$basedir/players_cs" or die $!;
+foreach(@cs_list){
+	if( ( defined $_) and !($_ =~ /^$/ )){
+		print FILE "$_\n";
+      	push(@validsonglist, $_);
     }
 }
-
-undef @songlist;
-#verify if there is any valid songs left
-$numberofsongs = @validsonglist;
-warn "No valid songs found ... gotta play LIVE only!\n" if ($numberofsongs == 0);
-#display the number of valid songs
-print $numberofsongs . " valid song(s)\n";
+close FILE;
+print scalar @cs_list . " valid song(s)\n";
 
 
 #----------------------------------------------------------------
