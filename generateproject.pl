@@ -61,16 +61,16 @@ $ecasound_header .= " -z:mixmode,".$ini_project->val('ecasound','mixmode') if $i
 $ecasound_header .= " -G:jack,$eca_mixer,notransport";
 $ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
 
-
 #create/reset the midipath file
 open FILE, ">midistate.csv" or die $!;
 print FILE "path,value,min,max,CC,channel\n";
 close FILE;
 
+#-------------------------Plumbing------------------------------------
+my $do_plumbing = $ini_project->val('jack.plumbing','enable');
 #create/reset the jack.plumbing file
 open FILE, ">jack.plumbing" or die $!;
 close FILE;
-
 
 #----------------------------------------------------------------
 #
@@ -454,11 +454,13 @@ foreach my $submix_ini (@ini_submixes) {
 # === mise à jour du fichier jack.plumbing ===
 
 sub add_plumbing () {
-	my $param = shift;
-	open FILE, ">>jack.plumbing" or die $!;
-	print FILE $param;
-	print FILE "\n";
-	close FILE;
+	if ($do_plumbing){ 
+		my $param = shift;
+		open FILE, ">>jack.plumbing" or die $!;
+		print FILE $param;
+		print FILE "\n";
+		close FILE;
+	}	
 }
 # voir comment/quand définir le branchement de pistes système (players,messages)
 

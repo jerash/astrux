@@ -1,9 +1,9 @@
 #General
--b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"mixer" -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0
+-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns --server-tcp-port=2868 -n:"mixer" -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0
 
 #INPUTS
--a:01 -f:f32_le,1,48000 -i:jack,,mic_diane -pn:mono_panvol,50,0
--a:02 -f:f32_le,1,48000 -i:jack,,guitar -pn:mono_panvol,50,0
+-a:01 -f:f32_le,1,48000 -i:jack,,mic_diane -pn:mono_panvol,50,0 -km:1,0,100,1,1 -km:2,-100,6,2,1
+-a:02 -f:f32_le,1,48000 -i:jack,,guitar -pn:mono_panvol,50,0 -km:1,0,100,3,1 -km:2,-100,6,4,1
 
 -a:01 -f:f32_le,2,48000 -o:loop,mic_diane
 -a:02 -f:f32_le,2,48000 -o:loop,guitar
@@ -12,14 +12,14 @@
 -a:mic_diane_to_foh_mix,mic_diane_to_ear -f:f32_le,2,48000 -i:loop,mic_diane
 -a:guitar_to_foh_mix,guitar_to_ear -f:f32_le,2,48000 -i:loop,guitar
 
--a:mic_diane_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix -pn:st_panvol,50,0
--a:guitar_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix -pn:st_panvol,50,0
--a:mic_diane_to_ear -f:f32_le,2,48000 -o:jack,,to_bus_ear -pn:st_panvol,50,0
--a:guitar_to_ear -f:f32_le,2,48000 -o:jack,,to_bus_ear -pn:st_panvol,50,0
+-a:mic_diane_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix -pn:st_panvol,50,0 -km:1,0,100,5,1 -km:2,-100,6,6,1
+-a:guitar_to_foh_mix -f:f32_le,2,48000 -o:jack,,to_bus_foh_mix -pn:st_panvol,50,0 -km:1,0,100,7,1 -km:2,-100,6,8,1
+-a:mic_diane_to_ear -f:f32_le,2,48000 -o:jack,,to_bus_ear -pn:st_panvol,50,0 -km:1,0,100,9,1 -km:2,-100,6,10,1
+-a:guitar_to_ear -f:f32_le,2,48000 -o:jack,,to_bus_ear -pn:st_panvol,50,0 -km:1,0,100,11,1 -km:2,-100,6,12,1
 
 #BUS OUTPUTS
--a:bus_foh_mix -f:f32_le,2,48000 -i:jack,,bus_foh_mix -pn:st_panvol,50,0
--a:bus_ear -f:f32_le,2,48000 -i:jack,,bus_ear -pn:st_panvol,50,0
+-a:bus_foh_mix -f:f32_le,2,48000 -i:jack,,bus_foh_mix -pn:st_panvol,50,0 -km:1,0,100,13,1 -km:2,-100,6,14,1
+-a:bus_ear -f:f32_le,2,48000 -i:jack,,bus_ear -pn:st_panvol,50,0 -km:1,0,100,15,1 -km:2,-100,6,16,1
 
 -a:bus_foh_mix -f:f32_le,2,48000 -o:jack,,foh_mix_out
 -a:bus_ear -f:f32_le,2,48000 -o:jack,,ear_out
