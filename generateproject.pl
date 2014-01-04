@@ -14,11 +14,17 @@ use Data::Dumper;
 use Config::IniFiles;
 
 #------------------------OPTIONS-----------------------------------
-my $create_midi_CC = 1; #enable/disable midiCC control with -km switch
-my $config_folder = "config"; #folder where to find the ini files
-my $mixer = "mixer"; #name for the main input/output mixer
+# TODO move this options to grab project.ini options
 
-#-------------------------FILES------------------------------------
+#-----------------------PROJECT INI---------------------------------
+#project file
+my $ini_project = new Config::IniFiles -file => "project.ini"; # -allowempty => 1;
+die "reading project ini file failed\n" until $ini_project;
+
+#folder where to find the ini files
+my $config_folder = $ini_project->val('project','configfolder');
+
+#-------------------------I/O INI------------------------------------
 #open input file
 my $ini_inputs = new Config::IniFiles -file => "$config_folder/inputs.ini"; # -allowempty => 1;
 die "reading inputs ini file failed\n" until $ini_inputs;
@@ -36,6 +42,26 @@ foreach my $subfile (readdir(DIR)) {
 }
 closedir(DIR);
 
+#-------------------------Ecasound------------------------------------
+die "Oops no audio ? what do you want to do ?\n" if ($ini_project->val('ecasound','enable') eq 0);
+#check for audio options
+my $create_midi_CC = $ini_project->val('ecasound','generatekm'); #enable/disable midiCC control with -km switch
+my $eca_mixer = $ini_project->val('ecasound','name'); #name for the main input/output mixer
+#build ecasound header
+#my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$eca_mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,$eca_mixer,notransport -Md:alsaseq,16:0");
+my $ecasound_header;
+$ecasound_header .= "-b:".$ini_project->val('ecasound','buffersize') if $ini_project->val('ecasound','buffersize');
+$ecasound_header .= " -r:".$ini_project->val('ecasound','realtime') if $ini_project->val('ecasound','realtime');
+my @zoptions = split(",",$ini_project->val('ecasound','z'));
+foreach (@zoptions) {
+	$ecasound_header .= " -z:".$_;
+}
+$ecasound_header .= " -n:\"$eca_mixer\"";
+$ecasound_header .= " -z:mixmode,".$ini_project->val('ecasound','mixmode') if $ini_project->val('ecasound','mixmode');
+$ecasound_header .= " -G:jack,$eca_mixer,notransport";
+$ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
+
+
 #create/reset the midipath file
 open FILE, ">midistate.csv" or die $!;
 print FILE "path,value,min,max,CC,channel\n";
@@ -45,11 +71,11 @@ close FILE;
 open FILE, ">jack.plumbing" or die $!;
 close FILE;
 
+
 #----------------------------------------------------------------
 #
 # === variables contenant les lignes à insérer dans le fichier mixer principal ecs ===
 #
-my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,$mixer,notransport -Md:alsaseq,16:0");
 my @valid_input_sections; #liste des input sections valides (connectables)
 my @valid_output_sections; #liste des output sections valides (connectables)
 my @inputs_ai; #liste des ai ecasound
@@ -68,7 +94,7 @@ my @outputbus_ao;
 my @input_sections = $ini_inputs->Sections;
 print "\nFound " . (scalar @input_sections) . " input definitions in ini file\n";
 #initialisation du fichier plumbing
-&add_plumbing(";\n;audio input channels (to $mixer inputs)");
+&add_plumbing(";\n;audio input channels (to $eca_mixer inputs)");
 #pour chaque entrée définie dans le fichier ini, construction de la ligne d'input
 while (my $section = shift @input_sections) {
 	#si entrée invalide, suivante
@@ -89,14 +115,14 @@ while (my $section = shift @input_sections) {
 		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
 		if ($create_midi_CC) {
-			my $path = "/$mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+			my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
 			my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
 		}
 		#ajouter la règle de plumbing
 		my $plumbin = $ini_inputs->val($section,'hardware_input_1');
-		my $plumbout = "$mixer:" . $ini_inputs->val($section,'name') . "_1";
+		my $plumbout = "$eca_mixer:" . $ini_inputs->val($section,'name') . "_1";
 		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 	}
 	#sinon, piste stéréo par défaut
@@ -110,7 +136,7 @@ while (my $section = shift @input_sections) {
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		if ($create_midi_CC) {
 			#ajouter les contrôleurs midi
-			my $path = "/$mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
+			my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
 			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
@@ -119,13 +145,13 @@ while (my $section = shift @input_sections) {
 		for my $i (1..2) {
 			if (( $ini_inputs->val($section,'type') eq 'audio' ) or ( $ini_inputs->val($section,'type') eq 'return' )) {
 				my $plumbin = $ini_inputs->val($section,"hardware_input_$i");
-				my $plumbout = "$mixer:" . $ini_inputs->val($section,'name') . "_$i";
+				my $plumbout = "$eca_mixer:" . $ini_inputs->val($section,'name') . "_$i";
 				&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 			}
 			elsif ( $ini_inputs->val($section,'type') eq 'submix' ) {
 				&add_plumbing(";submix");
 				my $plumbin = "submix_" . $ini_inputs->val($section,'name') . ":out_(.*)";
-				my $plumbout = "$mixer:submix_" . $ini_inputs->val($section,'name') . "_\\1";
+				my $plumbout = "$eca_mixer:submix_" . $ini_inputs->val($section,'name') . "_\\1";
 				&add_plumbing("(connect \"$plumbin\" \"$plumbout\")");
 				last;
 			}
@@ -143,7 +169,7 @@ while (my $section = shift @input_sections) {
 			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 			if ($create_midi_CC) {
 				#ajouter les contrôleurs midi
-				my $path = "/$mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
+				my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
 				my @CC_dump = MidiCC::generate_km($insert,$path);
 				#status is in first parameter, km info is in second parameter
 				$line .= $CC_dump[1] if $CC_dump[0];
@@ -215,7 +241,7 @@ foreach my $bus (@valid_output_sections) {
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		if ($create_midi_CC) {
 			#ajouter les contrôleurs midi
-			my $path = "/$mixer/outputs/" . $ini_outputs->val($bus,'name') . "/from/" . $ini_inputs->val($channel,'name') . "/panvol";
+			my $path = "/$eca_mixer/outputs/" . $ini_outputs->val($bus,'name') . "/from/" . $ini_inputs->val($channel,'name') . "/panvol";
 			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
@@ -225,9 +251,9 @@ foreach my $bus (@valid_output_sections) {
 	}
 	#ajouter la règle de plumbing
 	for my $i (1..2) {
-		my $plumbin = "$mixer:to_bus_" . $ini_outputs->val($bus,'name') . "_.*[13579]\$" if ($i==1);
-		$plumbin = "$mixer:to_bus_" . $ini_outputs->val($bus,'name') . "_.*[02468]\$" if ($i==2);
-		my $plumbout = "$mixer:bus_" . $ini_outputs->val($bus,'name') . "_$i";
+		my $plumbin = "$eca_mixer:to_bus_" . $ini_outputs->val($bus,'name') . "_.*[13579]\$" if ($i==1);
+		$plumbin = "$eca_mixer:to_bus_" . $ini_outputs->val($bus,'name') . "_.*[02468]\$" if ($i==2);
+		my $plumbout = "$eca_mixer:bus_" . $ini_outputs->val($bus,'name') . "_$i";
 		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 	}
 }
@@ -254,7 +280,7 @@ foreach my $bus (@valid_output_sections) {
 	$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 	if ($create_midi_CC) {
 		#ajouter les contrôleurs midi
-		my $path = "/$mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
+		my $path = "/$eca_mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
 		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];
@@ -272,7 +298,7 @@ foreach my $bus (@valid_output_sections) {
 	push(@outputbus_ao,$line);
 	#ajouter la règle de plumbing
 	for my $i (1..2) {
-		my $plumbin = "$mixer:" . $ini_outputs->val($bus,'name') . "_out_$i";
+		my $plumbin = "$eca_mixer:" . $ini_outputs->val($bus,'name') . "_out_$i";
 		my $plumbout = $ini_outputs->val($bus,"hardware_output_$i");
 		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbout;
 	}
@@ -285,9 +311,9 @@ if ($debug) {
 }
 #----------------------------------------------------------------
 # --- Création du fichier ecs ecasound ---
-open FILE, ">$mixer.ecs" or die $!;
+open FILE, ">$eca_mixer.ecs" or die $!;
 print FILE "#General\n";
-print FILE "$_\n" for @ecasound_header;
+print FILE "$ecasound_header\n";
 print FILE "\n#INPUTS\n";
 print FILE "$_\n" for @inputs_ai;
 print FILE "\n";
@@ -341,7 +367,7 @@ foreach my $submix_ini (@ini_submixes) {
 				$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 				if ($create_midi_CC) {
 					#ajouter les contrôleurs midi
-					my $path = "/$mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+					my $path = "/$eca_mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
 					my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
 					#status is in first parameter, km info is in second parameter
 					$line .= $CC_dump[1] if $CC_dump[0];
@@ -359,7 +385,7 @@ foreach my $submix_ini (@ini_submixes) {
 				$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 				if ($create_midi_CC) {
 					#ajouter les contrôleurs midi
-					my $path = "/$mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
+					my $path = "/$eca_mixer/inputs/" . $ini_submix->val($section,'name') . "/panvol";
 					my @CC_dump = MidiCC::generate_km("st_panvol",$path);
 					#status is in first parameter, km info is in second parameter
 					$line .= $CC_dump[1] if $CC_dump[0];
@@ -377,7 +403,7 @@ foreach my $submix_ini (@ini_submixes) {
 					$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 					if ($create_midi_CC) {
 						#ajouter les contrôleurs midi
-						my $path = "/$mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
+						my $path = "/$eca_mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
 						my @CC_dump = MidiCC::generate_km($insert,$path);
 						#status is in first parameter, km info is in second parameter
 						$line .= $CC_dump[1] if $CC_dump[0];
@@ -410,11 +436,11 @@ foreach my $submix_ini (@ini_submixes) {
 	}
 	#----------------------------------------------------------------
 	# --- Création du fichier ecs ecasound ---
-	@ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$submix_name\" -X -z:noxruns -z:mixmode,avg -G:jack,$submix_name,notransport -Md:alsaseq,16:0");
+	$ecasound_header = "-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$submix_name\" -X -z:noxruns -z:mixmode,avg -G:jack,$submix_name,notransport -Md:alsaseq,16:0";
 
 	open FILE, ">$submix_name.ecs" or die $!;
 	print FILE "#General\n";
-	print FILE "$_\n" for @ecasound_header;
+	print FILE "$ecasound_header\n";
 	print FILE "\n#CHAINS\n";
 	print FILE "$_\n" for @submix_tracks;
 	print FILE "\n";

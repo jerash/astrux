@@ -7,7 +7,8 @@ package MidiCC;
 #
 # -km:1,-30,12,87,10
 # -km:operator,min,max,CC,channel
-
+#
+# use ecasound effect_preset file exclusively to standardize format
 
 use strict;
 use warnings;
@@ -17,7 +18,6 @@ use Data::Dumper;
 
 require ("modules/EcaFx.pm");
 
-#DOING : made decision to use ecasound effect_preset file exclusively to standardize format
 my $debug = 0;
 
 #----------------------------------------------------------------
@@ -45,6 +45,9 @@ sub getnextCC {
 #----------------------------------------------------------------
 #
 # === generate_km ===
+#
+# param1 : plugin name
+# param2 : current tree path
 #
 # will return a line containing the uniques km CCs
 # and create a file with all paths to the midi CC

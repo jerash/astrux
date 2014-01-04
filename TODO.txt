@@ -1,0 +1,24 @@
+add global ecasound header generation (options) to project.ini
+parse project.ini
+
+vérifier l'intégration des insert sur les outputs
+
+vérifier jack.plumbing pour les players
+
+check each project folder and generate ecs files
+create ecasound send command with all cs-load for players
+add override global ecasound header in song.ini
+
+perl générer ini files
+	>un submix va déclarer une nouvelle input automatiqument
+
+change getnextCC > getavailableCC with a table (in case some effect gets removed)
+
+vérifier les TODO
+
+pont osc/midi
+
+
+----DONE----
+modifier la génération des submix ecs pour être générique avec plusieurs fichiers
+générer jack.plumbing
