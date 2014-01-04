@@ -1,0 +1,6 @@
+#General
+-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"player" -z:mixmode,avg -Md:alsaseq,16:0
+
+#CHAINS
+-a:01 -i:/home/seijitsu/astrux/01.hedgehog/hedgehog.wav -o:jack,,out_1
+
