@@ -285,6 +285,25 @@ foreach my $bus (@valid_output_sections) {
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];
 	}	
+	#add bus inserts
+	if ( $ini_outputs->val($bus,'insert') ) {
+		#verify how many inserts are defined
+		my @inserts = split(",", $ini_outputs->val($bus,'insert') );
+		foreach my $insert ( @inserts ) {
+			# TODO : split on | for parralel effects ?
+			#print "one effect here : $insert\n";
+			#get default values
+			my @def_dump = MidiCC::get_defaults($insert);
+			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
+			if ($create_midi_CC) {
+				#ajouter les contrôleurs midi
+				my $path = "/$eca_mixer/inputs/" . $ini_outputs->val($bus,'name') . "/$insert";
+				my @CC_dump = MidiCC::generate_km($insert,$path);
+				#status is in first parameter, km info is in second parameter
+				$line .= $CC_dump[1] if $CC_dump[0];
+			}
+		}
+	}
 	#add the line to the list
 	push(@outputbus_ai,$line);
 	#outputbus_ao
