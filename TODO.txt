@@ -1,5 +1,4 @@
 
-check each project folder and generate ecs files
 create ecasound send command with all cs-load for players
 add override global ecasound header in song.ini
 
@@ -34,3 +33,4 @@ modifier la génération des submix ecs pour être générique avec plusieurs fi
 générer jack.plumbing : 24271433
 add global ecasound header generation (options) to project.ini : 28956eb
 vérifier l'intégration des insert sur les outputs : corrigé 5b95963
+check each project folder and generate ecs files : 2100b92
