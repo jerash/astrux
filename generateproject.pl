@@ -48,18 +48,24 @@ die "Oops no audio ? what do you want to do ?\n" if ($ini_project->val('ecasound
 my $create_midi_CC = $ini_project->val('ecasound','generatekm'); #enable/disable midiCC control with -km switch
 my $eca_mixer = $ini_project->val('ecasound','name'); #name for the main input/output mixer
 #build ecasound header
-#my @ecasound_header = ("-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$eca_mixer\" -X -z:noxruns -z:mixmode,avg -G:jack,$eca_mixer,notransport -Md:alsaseq,16:0");
 my $ecasound_header;
-$ecasound_header .= "-b:".$ini_project->val('ecasound','buffersize') if $ini_project->val('ecasound','buffersize');
-$ecasound_header .= " -r:".$ini_project->val('ecasound','realtime') if $ini_project->val('ecasound','realtime');
-my @zoptions = split(",",$ini_project->val('ecasound','z'));
-foreach (@zoptions) {
-	$ecasound_header .= " -z:".$_;
+&build_ecasound_header($eca_mixer,'nosync');
+
+sub build_ecasound_header {
+	my $temp = shift;
+	my $synchro = shift;
+	$ecasound_header = "-b:".$ini_project->val('ecasound','buffersize') if $ini_project->val('ecasound','buffersize');
+	$ecasound_header .= " -r:".$ini_project->val('ecasound','realtime') if $ini_project->val('ecasound','realtime');
+	my @zoptions = split(",",$ini_project->val('ecasound','z'));
+	foreach (@zoptions) {
+		$ecasound_header .= " -z:".$_;
+	}
+	$ecasound_header .= " -n:\"$temp\"";
+	$ecasound_header .= " -z:mixmode,".$ini_project->val('ecasound','mixmode') if $ini_project->val('ecasound','mixmode');
+	$ecasound_header .= " -G:jack,$temp,notransport" if ($synchro eq "nosync");
+	$ecasound_header .= " -G:jack,$temp,sendrecv" if ($synchro eq "synch");
+	$ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
 }
-$ecasound_header .= " -n:\"$eca_mixer\"";
-$ecasound_header .= " -z:mixmode,".$ini_project->val('ecasound','mixmode') if $ini_project->val('ecasound','mixmode');
-$ecasound_header .= " -G:jack,$eca_mixer,notransport";
-$ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
 
 #create/reset the midipath file
 open FILE, ">midistate.csv" or die $!;
@@ -86,8 +92,10 @@ my @outputbus_ai;
 my @outputbus_ao;
  
 #----------------------------------------------------------------
+print "---MAIN MIXER---\n";
+#----------------------------------------------------------------
 #
-# === Génération des lignes à insérer ===
+# === I/O Channels, Buses, Sends ===
 
 #----------------------------------------------------------------
 # -- CHANNELS audio inputs --
@@ -349,6 +357,7 @@ close FILE;
 print "ecs file successfully created\n";
 
 #----------------------------------------------------------------
+print "---SUBMIXES---\n";
 #----------------------------------------------------------------
 #
 # === Création des fichiers ecs submixes ===
@@ -455,8 +464,8 @@ foreach my $submix_ini (@ini_submixes) {
 	}
 	#----------------------------------------------------------------
 	# --- Création du fichier ecs ecasound ---
-	$ecasound_header = "-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$submix_name\" -X -z:noxruns -z:mixmode,avg -G:jack,$submix_name,notransport -Md:alsaseq,16:0";
-
+	#$ecasound_header = "-b:128 -r:50 -z:nodb -z:nointbuf -n:\"$submix_name\" -X -z:noxruns -z:mixmode,avg -G:jack,$submix_name,notransport -Md:alsaseq,16:0";
+	&build_ecasound_header($submix_name,'nosync');
 	open FILE, ">$submix_name.ecs" or die $!;
 	print FILE "#General\n";
 	print FILE "$ecasound_header\n";
@@ -466,6 +475,92 @@ foreach my $submix_ini (@ini_submixes) {
 	close FILE;
 	print "ecs file successfully created\n";
 }
+
+#----------------------------------------------------------------
+print "---PLAYERS---\n";
+#----------------------------------------------------------------
+#
+# === Création des fichiers ecs pour chaque chanson ===
+#
+my $basedir = $ini_project->val('project','basefolder');
+#get the song folder names into an array
+opendir (DIR,$basedir) or die "Can't open project directory : $basedir\n";
+my @songlist = grep { /^[0-9][0-9].*/ } readdir(DIR);
+closedir DIR;
+#verify if there is something to be done
+my $numberofsongs = @songlist;
+die "No songs have been found, exiting\n" unless ($numberofsongs > 0);
+#display the number of songs we found
+print $numberofsongs . " song folder found\n";
+
+foreach my $folder(@songlist) {
+	my @audio_players; #liste des fichiers audio à lire
+	#look for song.ini
+	if (-e -r "$basedir/$folder/song.ini") {
+		#song ini file
+		my $ini_song = new Config::IniFiles -file => "$basedir/$folder/song.ini"; # -allowempty => 1;
+		die "reading song ini file failed\n" unless $ini_song;
+
+		my @song_sections = $ini_song->Sections;
+		while (my $section = shift @song_sections) {
+			#on cherche les audio files
+			next unless $section =~ /AUDIO/;
+			#verify if the number exists as a player track
+			my $number = substr $section, -2, 2;
+			next unless $number <= $ini_project->val('audio_player','nb_tracks');
+			#verify if file to play is accessible
+			my $filename = $ini_song->val($section,'filename');
+			next unless -e -r "$basedir/$folder/$filename";
+			#create ecasound input line
+			my $line = "-a:$number -i:$basedir/$folder/$filename";
+			#don't deal with mono/stereo, and file format; let ecasound do it well
+			# TODO : midi CC for players tracks, generic ones ...
+			#output line
+			my $output = $ini_song->val($section,'output'); #sys_player ok
+			$line .= " -o:jack,,out_$output";
+			push (@audio_players,$line);
+		}
+		print "\nFound " . (scalar @audio_players) . " valid audio files to play for song " . $ini_song->val('global','friendly_name') . "\n";
+		if ($debug) {
+			print "\nPLAYER CHAINS\n";
+			print Dumper (@audio_players);
+		}
+		#----------------------------------------------------------------
+		# --- Création du fichier ecs ecasound for the song ---
+		&build_ecasound_header('player','sync');
+		#TODO : option to keep ecasound opened after transport stop
+		#TODO : check autostart option
+		my $songname = $ini_song->val('global','name');
+		open FILE, ">$basedir/$folder/$songname.ecs" or die $!;
+		print FILE "#General\n";
+		print FILE "$ecasound_header\n";
+		print FILE "\n#CHAINS\n";
+		print FILE "$_\n" for @audio_players;
+		print FILE "\n";
+		close FILE;
+		print "ecs file successfully created\n";
+	}
+	else {
+		# TODO : no song.ini file found, try to guess
+		#warn "no song.ini file found, trying to guess\n";		
+	}
+}
+
+#cleanup songs list
+my @validsonglist;
+foreach(@songlist){
+    if( ( defined $_) and !($_ =~ /^$/ )){
+        push(@validsonglist, $_);
+    }
+}
+
+undef @songlist;
+#verify if there is any valid songs left
+$numberofsongs = @validsonglist;
+warn "No valid songs found ... gotta play LIVE only!\n" if ($numberofsongs == 0);
+#display the number of valid songs
+print $numberofsongs . " valid song(s)\n";
+
 
 #----------------------------------------------------------------
 #----------------------------------------------------------------

@@ -1,13 +1,20 @@
-add global ecasound header generation (options) to project.ini
-parse project.ini
-
-vérifier l'intégration des insert sur les outputs
-
-vérifier jack.plumbing pour les players
 
 check each project folder and generate ecs files
 create ecasound send command with all cs-load for players
 add override global ecasound header in song.ini
+
+option to keep ecasound player opened after transport stop
+
+mono player tracks are opened to stereo out, but play on left channel !
+
+valider l'idée d'une seul player, pouvant avoir plusieurs outputs si nécessaire. voir cohérence avec génération du bon nombre de pistes sur le mixer.
+
+vérifier jack.plumbing pour les players
+vérifier jack.plumbing pour les sampler
+
+trouver une idée pour pouvoir avoir des CC sur les pistes du player sans générer un CC unique pour chaque chanson.
+	> définir le nombre de piste dans le projet
+	> assigner chaque fichier à une piste
 
 perl générer ini files
 	>un submix va déclarer une nouvelle input automatiqument
@@ -18,7 +25,12 @@ vérifier les TODO
 
 pont osc/midi
 
+change grep (wav;mid..etc) in song check to a global definition list
+
+intégrer player type vidéo avec xjadeo
 
 ----DONE----
 modifier la génération des submix ecs pour être générique avec plusieurs fichiers
-générer jack.plumbing
+générer jack.plumbing : 24271433
+add global ecasound header generation (options) to project.ini : 28956eb
+vérifier l'intégration des insert sur les outputs : corrigé 5b95963
