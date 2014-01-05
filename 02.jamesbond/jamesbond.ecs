@@ -1,8 +1,0 @@
-#General
--b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"player" -z:mixmode,avg -Md:alsaseq,16:0
-
-#CHAINS
--a:01 -i:/home/seijitsu/astrux/02.jamesbond/james-bass.wav -o:jack,,out_1
--a:02 -i:/home/seijitsu/astrux/02.jamesbond/james-guitar.wav -o:jack,,out_1
--a:03 -i:/home/seijitsu/astrux/02.jamesbond/james-instru.wav -o:jack,,out_2
-

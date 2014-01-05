@@ -15,10 +15,17 @@ use warnings;
 
 use feature 'state';
 use Data::Dumper;
+use Config::IniFiles;
 
-require ("modules/EcaFx.pm");
+require ("EcaFx.pm");
 
 my $debug = 0;
+#-----------------------PROJECT INI---------------------------------
+#project file
+my $ini_project = new Config::IniFiles -file => "project.ini"; # -allowempty => 1;
+die "reading project ini file failed\n" until $ini_project;
+#folder where to store generated files
+my $files_folder = $ini_project->val('project','filesfolder');
 
 #----------------------------------------------------------------
 #
@@ -65,7 +72,7 @@ sub generate_km {
 	}
 	else {
 		print Dumper \%pluginfo if $debug;
-		open FILE, ">>midistate.csv" or die $!;
+		open FILE, ">>$files_folder/oscmidistate.csv" or die $!;
 		#iterate through each parameter
 		my @names = values $pluginfo{"paramnames"};
 		my @defaults = values $pluginfo{"defaultvalues"};

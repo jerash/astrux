@@ -1,5 +1,0 @@
-#General
--b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"mixer" -z:mixmode,avg -G:jack,mixer,notransport -Md:alsaseq,16:0-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"player" -z:mixmode,avg -Md:alsaseq,16:0
-
-#CHAINS
-

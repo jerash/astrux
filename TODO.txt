@@ -1,19 +1,7 @@
 
-create ecasound send command with all cs-load for players
-add override global ecasound header in song.ini
-
 option to keep ecasound player opened after transport stop
 
-mono player tracks are opened to stereo out, but play on left channel !
-
-valider l'idée d'une seul player, pouvant avoir plusieurs outputs si nécessaire. voir cohérence avec génération du bon nombre de pistes sur le mixer.
-
-vérifier jack.plumbing pour les players
-vérifier jack.plumbing pour les sampler
-
-trouver une idée pour pouvoir avoir des CC sur les pistes du player sans générer un CC unique pour chaque chanson.
-	> définir le nombre de piste dans le projet
-	> assigner chaque fichier à une piste
+ajouter jack.plumbing pour les sampler
 
 perl générer ini files
 	>un submix va déclarer une nouvelle input automatiqument
@@ -23,14 +11,30 @@ change getnextCC > getavailableCC with a table (in case some effect gets removed
 vérifier les TODO
 
 pont osc/midi
-
 change grep (wav;mid..etc) in song check to a global definition list
-
 intégrer player type vidéo avec xjadeo
 
 ----DONE----
 modifier la génération des submix ecs pour être générique avec plusieurs fichiers
-générer jack.plumbing : 24271433
-add global ecasound header generation (options) to project.ini : 28956eb
-vérifier l'intégration des insert sur les outputs : corrigé 5b95963
-check each project folder and generate ecs files : 2100b92
+:24271433
+générer jack.plumbing : 
+:28956eb
+add global ecasound header generation (options) to project.ini : 
+:5b95963
+vérifier l'intégration des insert sur les outputs : corrigé 
+:2100b92
+check each project folder and generate ecs files
+add override global ecasound header in song.ini 
+valider l'idée d'une seul player, pouvant avoir plusieurs outputs si nécessaire. voir cohérence avec génération du bon nombre de pistes sur le mixer. >> ok, numéroter les sorties pour chaque piste, et faire le plumbing de manière adéquate
+trouver une idée pour pouvoir avoir des CC sur les pistes du player sans générer un CC unique pour chaque chanson.
+	> définir le nombre de piste player dans le projet > ok
+	> assigner chaque fichier à jouer à une piste > ok
+:c5a0fe2
+create ecasound send command with all cs-load for players
+?
+mono player tracks are opened to stereo out, but play on left channel !
+parse type=player input definitions
+ajouter jack.plumbing pour les players
+correction de bugs sur les nommages plumbing
+correction de bugs sur les nommages oscmidi
+supprimer le préfixe submix_ dans le nom du submix après import
