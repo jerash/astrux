@@ -1,7 +1,10 @@
 
 option to keep ecasound player opened after transport stop
 
-ajouter jack.plumbing pour les sampler
+dummy song & ecacfg , examples in astrux folder for project creation
+
+verify submix can't be named "mixer" (would overwrite main ecs file)
+	> or add submix_ prefix to generated files
 
 perl générer ini files
 	>un submix va déclarer une nouvelle input automatiqument
@@ -31,10 +34,13 @@ trouver une idée pour pouvoir avoir des CC sur les pistes du player sans géné
 	> assigner chaque fichier à jouer à une piste > ok
 :c5a0fe2
 create ecasound send command with all cs-load for players
-?
+:1cb21f23
 mono player tracks are opened to stereo out, but play on left channel !
 parse type=player input definitions
 ajouter jack.plumbing pour les players
 correction de bugs sur les nommages plumbing
 correction de bugs sur les nommages oscmidi
 supprimer le préfixe submix_ dans le nom du submix après import
+ajouter jack.plumbing pour les sampler
+:
+stockage des fichiers générés dans un sous dossier
