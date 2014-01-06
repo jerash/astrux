@@ -22,7 +22,7 @@ use Data::Dumper;
 #	%hash : empty hash if code 0, hash of controls if code 1
 #
 #------------------------------------------------------------------------------------------
-sub getcontrols() {
+sub Getcontrols() {
 	my $debug = 0;
 
 	#name of plugin passed as argument (may be an incomplete name)

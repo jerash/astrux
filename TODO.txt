@@ -1,6 +1,7 @@
 export csv
 	remplacer les , par des ;
-
+	externaliser l'accès au fichier dans un module
+	
 dans le fichiers oscmidistate.csv  
 	erreur pour /mixer/drums si c'est un autre process ecasound ? > pas forcément car /mixer/input est sur le main et mixer/drums sur un submix précis
 	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon

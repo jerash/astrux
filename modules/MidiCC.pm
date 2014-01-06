@@ -18,11 +18,12 @@ use Data::Dumper;
 use Config::IniFiles;
 
 require ("EcaFx.pm");
+require ("Bridge.pm");
 
 my $debug = 0;
 #-----------------------PROJECT INI---------------------------------
 #project file
-my $ini_project = new Config::IniFiles -file => "project.ini"; # -allowempty => 1;
+my $ini_project = new Config::IniFiles -file => "project.ini";
 die "reading project ini file failed\n" until $ini_project;
 #folder where to store generated files
 my $files_folder = $ini_project->val('project','filesfolder');
@@ -59,12 +60,12 @@ sub getnextCC {
 # will return a line containing the uniques km CCs
 # and create a file with all paths to the midi CC
 #
-sub generate_km {
+sub Generate_km {
 	#grab plugin name in parameter
 	my $plugin = shift;
 	my $path = shift; #print "$name\n";
 	#get plugin info
-	my ($code,$message,%pluginfo) = EcaFx::getcontrols($plugin);
+	my ($code,$message,%pluginfo) = EcaFx::Getcontrols($plugin);
 	if ($code eq 0) {
 		#can't get plugin controls
 		print "$message\n";
@@ -72,7 +73,6 @@ sub generate_km {
 	}
 	else {
 		print Dumper \%pluginfo if $debug;
-		open FILE, ">>$files_folder/oscmidistate.csv" or die $!;
 		#extract parameters tables from hash
 		my @names = values $pluginfo{"paramnames"};
 		my @defaults = values $pluginfo{"defaultvalues"};
@@ -87,10 +87,9 @@ sub generate_km {
 			my $low = (shift @lows);
 			my $high = (shift @highs);
 			$line .= " -km:" . $nb++ . ";$low;$high;$CC;$channel";
-			#TODO : create/update the midistate.csv file
-			print FILE $path . "/$param," . (shift @defaults) . ";$low;$high;$CC,$channel\n";
+			#update the midistate.csv file
+			Bridge::Add_to_file($path . "/$param," . (shift @defaults) . ";$low;$high;$CC,$channel\n");
 		}
-		close FILE;
 		#remove trailing whitespace
 		$line =~ s/\s+$//;
 		return (1,$line);		
@@ -104,11 +103,11 @@ sub generate_km {
 #will return a line containing the uniques the default values
 # separated by ,
 #
-sub get_defaults {
+sub Get_defaults {
 	#grab plugin name in parameter
 	my $plugin = shift;
 	#get plugin info
-	my ($code,$message,%pluginfo) = EcaFx::getcontrols($plugin);
+	my ($code,$message,%pluginfo) = EcaFx::Getcontrols($plugin);
 	if ($code eq 0) {
 		#can't get plugin controls
 		print "$message\n";

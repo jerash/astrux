@@ -4,6 +4,8 @@ use warnings;
 
 use lib '/home/seijitsu/astrux/modules';
 require ("MidiCC.pm");
+require ("Bridge.pm");
+require ("Plumbing.pm");
 
 #----------------------------------------------------------------
 # This script will create a main mixer ecs file for ecasound based on the information contained in ini files
@@ -27,10 +29,10 @@ my $config_folder = $ini_project->val('project','configfolder');
 my $files_folder = $ini_project->val('project','filesfolder');
 
 #------------------------FILES-----------------------------------
-#create/reset the midipath file
-open FILE, ">$files_folder/oscmidistate.csv" or die $!;
-print FILE "path,value,min,max,CC,channel\n";
-close FILE;
+#create/reset the oscmidipath file
+Bridge::Init_file();
+#plumbing file;
+my $plumbing = Plumbing->new();
 
 #create/reset the players_cs file
 open FILE, ">$files_folder/players_cs" or die $!;
@@ -79,12 +81,6 @@ sub build_ecasound_header {
 	$ecasound_header .= " -Md:".$ini_project->val('ecasound','midi') if $ini_project->val('ecasound','midi');
 }
 
-#-------------------------Plumbing------------------------------------
-my $do_plumbing = $ini_project->val('jack.plumbing','enable');
-#create/reset the jack.plumbing file
-open FILE, ">$files_folder/jack.plumbing" or die $!;
-close FILE;
-
 #----------------------------------------------------------------
 #
 # === variables contenant les lignes à insérer dans le fichier mixer principal ecs ===
@@ -128,13 +124,13 @@ while (my $section = shift @input_sections) {
 		die "must have a track name\n" until ( $ini_inputs->val($section,'name') );
 		$line .= $ini_inputs->val($section,'name');
 		#get default values
-		my @def_dump = MidiCC::get_defaults("mono_panvol");
+		my @def_dump = MidiCC::Get_defaults("mono_panvol");
 		#ajouter mono_panvol (-erc:1,2 -epp -eadb)
 		$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 		#ajouter les contrôleurs midi
 		if ($create_midi_CC) {
 			my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
-			my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
+			my @CC_dump = MidiCC::Generate_km("mono_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
 		}
@@ -150,12 +146,12 @@ while (my $section = shift @input_sections) {
 		die "must have a track name\n" until ( $ini_inputs->val($section,'name') );
 		$line .= $ini_inputs->val($section,'name');
 		#get default values
-		my @def_dump = MidiCC::get_defaults("st_panvol");
+		my @def_dump = MidiCC::Get_defaults("st_panvol");
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		if ($create_midi_CC) {
 			#ajouter les contrôleurs midi
 			my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/panvol";
-			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+			my @CC_dump = MidiCC::Generate_km("st_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
 		}
@@ -204,12 +200,12 @@ while (my $section = shift @input_sections) {
 			# TODO : split on | for parralel effects ?
 			#print "one effect here : $insert\n";
 			#get default values
-			my @def_dump = MidiCC::get_defaults($insert);
+			my @def_dump = MidiCC::Get_defaults($insert);
 			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 			if ($create_midi_CC) {
 				#ajouter les contrôleurs midi
 				my $path = "/$eca_mixer/inputs/" . $ini_inputs->val($section,'name') . "/$insert";
-				my @CC_dump = MidiCC::generate_km($insert,$path);
+				my @CC_dump = MidiCC::Generate_km($insert,$path);
 				#status is in first parameter, km info is in second parameter
 				$line .= $CC_dump[1] if $CC_dump[0];
 			}
@@ -279,13 +275,13 @@ foreach my $bus (@valid_output_sections) {
 		#create channels_ao
 		my $line = "-a:" . $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . " -f:f32_le,2,48000 -o:jack,,to_bus_" . $ini_outputs->val($bus,'name');
 		#get default values
-		my @def_dump = MidiCC::get_defaults("st_panvol");
+		my @def_dump = MidiCC::Get_defaults("st_panvol");
 		#add pan/volume control
 		$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 		if ($create_midi_CC) {
 			#ajouter les contrôleurs midi
 			my $path = "/$eca_mixer/outputs/" . $ini_outputs->val($bus,'name') . "/channel/" . $ini_inputs->val($channel,'name') . "/panvol";
-			my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+			my @CC_dump = MidiCC::Generate_km("st_panvol",$path);
 			#status is in first parameter, km info is in second parameter
 			$line .= $CC_dump[1] if $CC_dump[0];
 		}
@@ -321,12 +317,12 @@ foreach my $bus (@valid_output_sections) {
 	$line .= $ini_outputs->val($bus,'name');
 	#add volume control
 	#get default values
-	my @def_dump = MidiCC::get_defaults("st_panvol");
+	my @def_dump = MidiCC::Get_defaults("st_panvol");
 	$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 	if ($create_midi_CC) {
 		#ajouter les contrôleurs midi
 		my $path = "/$eca_mixer/outputs/" . $ini_outputs->val($bus,'name') . "/panvol";
-		my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+		my @CC_dump = MidiCC::Generate_km("st_panvol",$path);
 		#status is in first parameter, km info is in second parameter
 		$line .= $CC_dump[1] if $CC_dump[0];
 	}	
@@ -338,12 +334,12 @@ foreach my $bus (@valid_output_sections) {
 			# TODO : split on | for parralel effects ?
 			#print "one effect here : $insert\n";
 			#get default values
-			my @def_dump = MidiCC::get_defaults($insert);
+			my @def_dump = MidiCC::Get_defaults($insert);
 			$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 			if ($create_midi_CC) {
 				#ajouter les contrôleurs midi
 				my $path = "/$eca_mixer/outputs/" . $ini_outputs->val($bus,'name') . "/$insert";
-				my @CC_dump = MidiCC::generate_km($insert,$path);
+				my @CC_dump = MidiCC::Generate_km($insert,$path);
 				#status is in first parameter, km info is in second parameter
 				$line .= $CC_dump[1] if $CC_dump[0];
 			}
@@ -425,12 +421,12 @@ foreach my $submix_ini (@ini_submixes) {
 				#TODO check for name uniqueness
 				$line .= $ini_submix->val($section,'name');
 				#get default values
-				my @def_dump = MidiCC::get_defaults("mono_panvol");
+				my @def_dump = MidiCC::Get_defaults("mono_panvol");
 				$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 				if ($create_midi_CC) {
 					#ajouter les contrôleurs midi
-					my $path = "/$eca_mixer/$submix_name/" . $ini_submix->val($section,'name') . "/panvol";
-					my @CC_dump = MidiCC::generate_km("mono_panvol",$path);
+					my $path = "/$eca_mixer/submix/$submix_name/" . $ini_submix->val($section,'name') . "/panvol";
+					my @CC_dump = MidiCC::Generate_km("mono_panvol",$path);
 					#status is in first parameter, km info is in second parameter
 					$line .= $CC_dump[1] if $CC_dump[0];
 				}
@@ -443,12 +439,12 @@ foreach my $submix_ini (@ini_submixes) {
 				#TODO check for name uniqueness
 				$line .= $ini_submix->val($section,'name');
 				#get default values
-				my @def_dump = MidiCC::get_defaults("st_panvol");
+				my @def_dump = MidiCC::Get_defaults("st_panvol");
 				$line .= " -pn:st_panvol" . $def_dump[1] if $def_dump[0];
 				if ($create_midi_CC) {
 					#ajouter les contrôleurs midi
-					my $path = "/$eca_mixer/$submix_name/" . $ini_submix->val($section,'name') . "/panvol";
-					my @CC_dump = MidiCC::generate_km("st_panvol",$path);
+					my $path = "/$eca_mixer/submix/$submix_name/" . $ini_submix->val($section,'name') . "/panvol";
+					my @CC_dump = MidiCC::Generate_km("st_panvol",$path);
 					#status is in first parameter, km info is in second parameter
 					$line .= $CC_dump[1] if $CC_dump[0];
 				}	
@@ -461,12 +457,12 @@ foreach my $submix_ini (@ini_submixes) {
 					# TODO : split on | for parralel effects ?
 					#print "one effect here : $insert\n";
 					#get default values
-					my @def_dump = MidiCC::get_defaults($insert);
+					my @def_dump = MidiCC::Get_defaults($insert);
 					$line .= " -pn:$insert" . $def_dump[1] if $def_dump[0];
 					if ($create_midi_CC) {
 						#ajouter les contrôleurs midi
 						my $path = "/$eca_mixer/inputs/" . $ini_submix->val($section,'name') . "/$insert";
-						my @CC_dump = MidiCC::generate_km($insert,$path);
+						my @CC_dump = MidiCC::Generate_km($insert,$path);
 						#status is in first parameter, km info is in second parameter
 						$line .= $CC_dump[1] if $CC_dump[0];
 					}
@@ -552,7 +548,7 @@ foreach my $folder(@songfolderlist) {
 			#deal with mono/stereo, 
 			my $f = Audio::SndFile->open("<","$basedir/$folder/$filename");
 			if ( $f->channels == 1 ) {
-				my @def_dump = MidiCC::get_defaults("mono_panvol");
+				my @def_dump = MidiCC::Get_defaults("mono_panvol");
 				#ajouter mono_panvol (-erc:1,2 -epp -eadb)
 				$line .= " -pn:mono_panvol" . $def_dump[1] if $def_dump[0];
 			}
@@ -614,13 +610,8 @@ print "\n";
 # === mise à jour du fichier jack.plumbing ===
 
 sub add_plumbing () {
-	if ($do_plumbing){ 
-		my $param = shift;
-		open FILE, ">>$files_folder/jack.plumbing" or die $!;
-		print FILE $param;
-		print FILE "\n";
-		close FILE;
-	}	
+	#Plumbing::Add(shift);
+	$plumbing->Add(shift);
 }
 
 #----------------------------------------------------------------
@@ -629,3 +620,9 @@ sub add_plumbing () {
 #
 # using a hash to store the generated midis
 # http://stackoverflow.com/questions/13588129/write-to-a-csv-file-from-a-hash-perl
+
+
+# Fermeture des fichiers
+Bridge::Close_file();
+#Plumbing::Close();
+$plumbing->Close;
