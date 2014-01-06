@@ -1,3 +1,9 @@
+export csv
+	remplacer les , par des ;
+
+dans le fichiers oscmidistate.csv  
+	erreur pour /mixer/drums si c'est un autre process ecasound ? > pas forcément car /mixer/input est sur le main et mixer/drums sur un submix précis
+	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
 
 option to keep ecasound player opened after transport stop
 
@@ -8,6 +14,11 @@ verify submix can't be named "mixer" (would overwrite main ecs file)
 
 JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
 
+OSCMIDIbridge :
+	ajouter mot clé "mute" pour les pistes (c-muting)
+	ajouter mot clé "bypass" pour les pistes (c-bypass)
+	>par extension, pas besoin de midi si on peut utiiliser c-select,cop-select,copp-select,copp-value
+	
 dans livescreens, il est prévu de pouvoir désactiver certaines I/O du main mixer pour une chanson en particulier
 	> ca implique de pouvoir envoyer un set de commandes tcp au ecasound main pour ne pas couper le engine
 	> désactiver unne iput couperai le engine, donc il faut faire des mutes...
@@ -28,7 +39,6 @@ modifier jack_smf-player pour créer un port midi par piste avec le nom de la pi
 	> pour connecter en plumbing, le player n'utilise que les numéros de tracks
 		> utilsier un script perl avec MIDI:: qui détermine le nom de la piste/numéro ?
 
-pont osc/midi
 change grep (wav;mid..etc) in song check to a global definition list
 intégrer player type vidéo avec xjadeo
 

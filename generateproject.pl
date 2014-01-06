@@ -8,6 +8,7 @@ require ("MidiCC.pm");
 #----------------------------------------------------------------
 # This script will create a main mixer ecs file for ecasound based on the information contained in ini files
 # It will unconditionnaly overwrite any previoulsy existing ecs file with the same name.
+# it is to be launched in the project folder root.
 #----------------------------------------------------------------
 my $debug = 0;
 
@@ -98,7 +99,7 @@ my @outputbus_ai;
 my @outputbus_ao;
  
 #----------------------------------------------------------------
-print "---MAIN MIXER---\n";
+print "\n---MAIN MIXER---\n";
 #----------------------------------------------------------------
 #
 # === I/O Channels, Buses, Sends ===
@@ -223,7 +224,7 @@ while (my $section = shift @input_sections) {
 	$line = "-a:$number -f:f32_le,2,48000 -o:loop," . $ini_inputs->val($section,'name');
 	push(@inputs_ao,$line);
 }
-print "\nFound " . (scalar @valid_input_sections) . " valid audio input definitions\n";
+print "Found " . (scalar @valid_input_sections) . " valid audio input definitions\n";
 if ($debug) {
 	print "\nINPUT CHAINS\ninputs_ai\n";
 	print Dumper (@inputs_ai);
@@ -245,17 +246,19 @@ while (my $section = shift @output_sections) {
 	#stocker la section valide
 	push(@valid_output_sections, $section );
 }
-print "\nFound " . (scalar @valid_output_sections) . " valid audio output definitions\n";
+print "Found " . (scalar @valid_output_sections) . " valid audio output definitions\n";
 #construction des chains
 #foreach valid channel
 my $line = "-a:";
 foreach my $channel (@valid_input_sections) {
 	#foreach valid bus
 	foreach my $bus (@valid_output_sections) {
-	#ignore send bus to himself
-		next if (($ini_outputs->val($bus,'type') eq 'send') and ($ini_outputs->val($bus,'return') eq $channel) );
-	#create channels_ai	
-	$line .= $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . ",";
+		#ignore send bus to himself
+		if ($ini_outputs->val($bus,'return')) { #prevent display of "Use of uninitialized value in string eq at"
+			next if (($ini_outputs->val($bus,'type') eq 'send') and ($ini_outputs->val($bus,'return') eq $channel) );
+		}
+		#create channels_ai	
+		$line .= $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . ",";
 	}
 	#remove last ,
 	chop($line);
@@ -270,7 +273,9 @@ foreach my $bus (@valid_output_sections) {
 	#foreach valid channel
 	foreach my $channel (@valid_input_sections) {
 		#ignore send bus to himlself
-		next if (($ini_outputs->val($bus,'type') eq 'send') and ($ini_outputs->val($bus,'return') eq $channel) );
+		if ($ini_outputs->val($bus,'return')) { #prevent display of "Use of uninitialized value in string eq at"
+			next if (($ini_outputs->val($bus,'type') eq 'send') and ($ini_outputs->val($bus,'return') eq $channel) );
+		}
 		#create channels_ao
 		my $line = "-a:" . $ini_inputs->val($channel,'name') . "_to_" . $ini_outputs->val($bus,'name') . " -f:f32_le,2,48000 -o:jack,,to_bus_" . $ini_outputs->val($bus,'name');
 		#get default values
@@ -386,10 +391,10 @@ print FILE "$_\n" for @outputbus_ai;
 print FILE "\n";
 print FILE "$_\n" for @outputbus_ao;
 close FILE;
-print "ecs file successfully created\n";
+print "\necs file successfully created\n";
 
 #----------------------------------------------------------------
-print "---SUBMIXES---\n";
+print "\n---SUBMIXES---\n";
 #----------------------------------------------------------------
 #
 # === Création des fichiers ecs submixes ===
@@ -486,7 +491,7 @@ foreach my $submix_ini (@ini_submixes) {
 		push(@submix_tracks,$line);
 	}
 
-	print "\nFound " . (scalar @submix_tracks) . " valid submix track definitions in $submix_ini\n";
+	print "Found " . (scalar @submix_tracks) . " valid submix track definitions in $submix_ini\n";
 	if ($debug) {
 		print "\nSUBMIX CHAINS\n";
 		print Dumper (@submix_tracks);
@@ -502,11 +507,11 @@ foreach my $submix_ini (@ini_submixes) {
 	print FILE "$_\n" for @submix_tracks;
 	print FILE "\n";
 	close FILE;
-	print "ecs file successfully created\n";
+	print "\necs file successfully created\n";
 }
 
 #----------------------------------------------------------------
-print "---PLAYERS---\n";
+print "\n---PLAYERS---\n";
 #----------------------------------------------------------------
 #
 # === Création des fichiers ecs pour chaque chanson ===
@@ -520,7 +525,7 @@ closedir DIR;
 my $numberofsongs = @songfolderlist;
 die "No songs have been found, exiting\n" unless ($numberofsongs > 0);
 #display the number of songs we found
-print $numberofsongs . " song folder found\n";
+print "\n" . $numberofsongs . " song folder found\n";
 
 my @cs_list; #liste des chain setup player à charger au démarrage du projet
 foreach my $folder(@songfolderlist) {
@@ -602,7 +607,7 @@ foreach(@cs_list){
 close FILE;
 print scalar @cs_list . " song(s) with valid players \n";
 
-
+print "\n";
 #----------------------------------------------------------------
 #----------------------------------------------------------------
 #

@@ -73,21 +73,22 @@ sub generate_km {
 	else {
 		print Dumper \%pluginfo if $debug;
 		open FILE, ">>$files_folder/oscmidistate.csv" or die $!;
-		#iterate through each parameter
+		#extract parameters tables from hash
 		my @names = values $pluginfo{"paramnames"};
 		my @defaults = values $pluginfo{"defaultvalues"};
 		my @lows = values $pluginfo{"lowvalues"};
 		my @highs = values $pluginfo{"highvalues"};
 		my $nb = 1;
 		my $line = "";
+		#iterate through each parameter
 		foreach my $param (@names) {
 			#get mim/max parameter range, and new unique CC/channel
 			my ($CC,$channel) = &getnextCC();
 			my $low = (shift @lows);
 			my $high = (shift @highs);
-			$line .= " -km:" . $nb++ . ",$low,$high,$CC,$channel";
+			$line .= " -km:" . $nb++ . ";$low;$high;$CC;$channel";
 			#TODO : create/update the midistate.csv file
-			print FILE $path . "/$param," . (shift @defaults) . ",$low,$high,$CC,$channel\n";
+			print FILE $path . "/$param," . (shift @defaults) . ";$low;$high;$CC,$channel\n";
 		}
 		close FILE;
 		#remove trailing whitespace
