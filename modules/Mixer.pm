@@ -16,21 +16,21 @@ sub NewMixer {
 	#un objet mixer a:
 	# 1. un fichier de sortie 
 	my $ecasound = EcaEcs->new($project,$ini_name);
-	$ecasound->build_header($project,$ini_name,'nosync');
+	$ecasound->build_header();
 	# 2. des paramètres
 	my %mixer = ( 
 		"ecasound" , $ecasound,
-		"name" , $project->val($ini_name,'name'),
-		"port" , $project->val($ini_name,'port'),
-		"config_folder" , $project->val($ini_name,'configfolder'),
-		"midi" , $project->val($ini_name,'generatekm') );
+		"name" , $project->{$ini_name}{'name'},
+		"port" , $project->{$ini_name}{'port'},
+		"config_folder" , $project->{$ini_name}{'configfolder'},
+		"midi" , $project->{$ini_name}{'generatekm'} );
 	bless \%mixer, $class;
 	return \%mixer;
 }
 
 
 sub add_track {
-	#my $create_midi_CC = $ini_project->val('ecasound','generatekm'); #enable/disable midiCC control with -km switch
+	#my $create_midi_CC = $ini_project->{'ecasound','generatekm'); #enable/disable midiCC control with -km switch
 	
 }
 

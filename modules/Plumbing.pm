@@ -20,8 +20,8 @@ my $debug = 0;
 sub new {
 	my $class = shift;
 	my $ini_project = shift;
-	if ( $ini_project->val('jack.plumbing','enable') == 1 ) {
-		my $files_folder = $ini_project->val('project','filesfolder');
+	if ( $ini_project->{'jack.plumbing'}{'enable'} == 1 ) {
+		my $files_folder = $ini_project->{'project'}{'filesfolder'};
 		open my $file, ">$files_folder/jack.plumbing" or die $!;
 		bless $file, $class;
 		return $file;
