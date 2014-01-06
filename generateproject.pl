@@ -31,7 +31,7 @@ my $files_folder = $ini_project->val('project','filesfolder');
 #------------------------FILES-----------------------------------
 #create/reset the oscmidipath file
 Bridge::Init_file();
-#plumbing file;
+#plumbing file
 my $plumbing = Plumbing->new();
 
 #create/reset the players_cs file
@@ -105,7 +105,7 @@ print "\n---MAIN MIXER---\n";
 my @input_sections = $ini_inputs->Sections;
 print "\nFound " . (scalar @input_sections) . " input definitions in ini file\n";
 #initialisation du fichier plumbing
-&add_plumbing(";\n;audio input channels (to $eca_mixer inputs)");
+$plumbing->Add(";\n;audio input channels (to $eca_mixer inputs)");
 #pour chaque entrée définie dans le fichier ini, construction de la ligne d'input
 while (my $section = shift @input_sections) {
 	#si entrée invalide, suivante
@@ -137,7 +137,7 @@ while (my $section = shift @input_sections) {
 		#ajouter la règle de plumbing
 		my $plumbin = $ini_inputs->val($section,'hardware_input_1');
 		my $plumbout = "$eca_mixer:" . $ini_inputs->val($section,'name') . "_1";
-		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+		$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 	}
 	#sinon, piste stéréo
 	elsif ( $ini_inputs->val($section,'channels') eq 2 ) {
@@ -166,27 +166,27 @@ while (my $section = shift @input_sections) {
 				$plumbin = "player:out_$nb" . "_.*[02468]\$" if ($i==2);
 				my $plumbout = "$eca_mixer:";
 				$plumbout .= $ini_inputs->val($section,'name') . "_$i";
-				&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+				$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 			}
 		}
 		#pour une piste submix
 		elsif ( $ini_inputs->val($section,'type') eq 'submix' ) {
 			my $plumbin = "submix_" . $ini_inputs->val($section,'name') . ":" . $ini_inputs->val($section,'name') . "_out_(.*)";
 			my $plumbout = "$eca_mixer:" . $ini_inputs->val($section,'name') . "_\\1";
-			&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+			$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 		}
 		else { #pour une piste input,return
 			for my $i (1..2) {
 				if (( $ini_inputs->val($section,'type') eq 'audio' ) or ( $ini_inputs->val($section,'type') eq 'return' )) {
 					my $plumbin = $ini_inputs->val($section,"hardware_input_$i");
 					my $plumbout = "$eca_mixer:" . $ini_inputs->val($section,'name') . "_$i";
-					&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+					$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 				}
 				elsif ( $ini_inputs->val($section,'type') eq 'submix' ) {
-					&add_plumbing(";submix");
+					$plumbing->Add(";submix");
 					my $plumbin = "submix_" . $ini_inputs->val($section,'name') . ":out_(.*)";
 					my $plumbout = "$eca_mixer:submix_" . $ini_inputs->val($section,'name') . "_\\1";
-					&add_plumbing("(connect \"$plumbin\" \"$plumbout\")");
+					$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")");
 					last;
 				}
 			}
@@ -229,7 +229,7 @@ if ($debug) {
 }
 #----------------------------------------------------------------
 # -- CHANNELS routing to bus sends --
-&add_plumbing(";channels routes");
+$plumbing->Add(";channels routes");
 my @output_sections = $ini_outputs->Sections;
 print "\nFound " . (scalar @output_sections) . " output definitions in ini file\n";
 #pour chaque entrée définie dans le fichier ini
@@ -295,7 +295,7 @@ foreach my $bus (@valid_output_sections) {
 		my $plumbout = "$eca_mixer:bus_";
 		$plumbout .= "send_" if ($ini_outputs->val($bus,'type') eq 'send');
 		$plumbout .= $ini_outputs->val($bus,'name') . "_$i";
-		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+		$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 	}
 }
 if ($debug) {
@@ -306,7 +306,7 @@ if ($debug) {
 }
 #----------------------------------------------------------------
 # -- BUS SENDS --
-&add_plumbing(";buses");
+$plumbing->Add(";buses");
 foreach my $bus (@valid_output_sections) {
 	#outputbus_ai
 	my $line = "-a:bus_";
@@ -360,7 +360,7 @@ foreach my $bus (@valid_output_sections) {
 	for my $i (1..2) {
 		my $plumbin = "$eca_mixer:" . $ini_outputs->val($bus,'name') . "_out_$i";
 		my $plumbout = $ini_outputs->val($bus,"hardware_output_$i");
-		&add_plumbing("(connect \"$plumbin\" \"$plumbout\")") if $plumbout;
+		$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbout;
 	}
 }
 if ($debug) {
@@ -604,15 +604,6 @@ close FILE;
 print scalar @cs_list . " song(s) with valid players \n";
 
 print "\n";
-#----------------------------------------------------------------
-#----------------------------------------------------------------
-#
-# === mise à jour du fichier jack.plumbing ===
-
-sub add_plumbing () {
-	#Plumbing::Add(shift);
-	$plumbing->Add(shift);
-}
 
 #----------------------------------------------------------------
 #
@@ -624,5 +615,4 @@ sub add_plumbing () {
 
 # Fermeture des fichiers
 Bridge::Close_file();
-#Plumbing::Close();
 $plumbing->Close;

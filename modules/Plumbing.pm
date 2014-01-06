@@ -10,12 +10,13 @@ use Config::IniFiles;
 my $debug = 0;
 #-----------------------PROJECT INI---------------------------------
 #project file
-my $ini_project = new Config::IniFiles -file => "project.ini"; # -allowempty => 1;
+my $ini_project = new Config::IniFiles -file => "project.ini";
 die "reading project ini file failed\n" until $ini_project;
 #folder where to store generated files
 my $files_folder = $ini_project->val('project','filesfolder');
 #do we generate plumbing file ?
 my $do_plumbing = $ini_project->val('jack.plumbing','enable');
+#--------------------------------------------------------------------
 
 sub new {
       my $class = shift;
@@ -24,11 +25,6 @@ sub new {
       return $file;
 }
   
-sub Init {
-	#create/reset the jack.plumbing file
-	open FILE, ">$files_folder/jack.plumbing" or die $!;
-}
-
 sub Add {
 	if ($do_plumbing){ 
 		my $file = shift;
