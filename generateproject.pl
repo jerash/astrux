@@ -20,10 +20,10 @@ use Audio::SndFile;
 my %ini_project;
 tie %ini_project, 'Config::IniFiles', ( -file => "project.ini" );
 die "reading project ini file failed\n" until %ini_project;
-my $project_ref = \%ini_project;
+my $ini_project_ref = \%ini_project;
 
 #create the project
-my $Live = Project->new($project_ref);
+my $Live = Project->new($ini_project_ref);
 
 print "\n";
 

@@ -1,3 +1,5 @@
+intégrer les effets d'insert dans les strips
+
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?
 	

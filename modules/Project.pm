@@ -9,62 +9,67 @@ use Data::Dumper;
 use Mixer;
 use Player;
 
-my $debug = 0;
-
 sub new {
 	my $class = shift;
 	my $ini_file = shift;
 
 	#init structure
 	my $project = {
-		'name' => ''
+		'mixers' => {},
+		'songs' => {},
+		'rules' => {},
 	};
-	#TODO : define project hash structure
-
 	bless $project,$class;
 
-	#if parameter exist, fill hash
-	$project->from_inifile($ini_file) if defined $ini_file;
+	#if parameter exist, fill from ini file
+	$project->init($ini_file) if defined $ini_file;
 
 	return $project; 
 }
 
-sub from_inifile {
+sub init {
 	#grap Project object from argument
 	my $project = shift;
 	my $ini_project = shift;
 
-	#folder where to find the ini files
-	my $config_folder = $ini_project->{project}{configfolder};
-	#folder where to store generated files
-	my $files_folder = $ini_project->{project}{filesfolder};
+	#merge project info
+	%$project = ( %{$ini_project->{project}} , %$project );
 
-	#------------------Main Ecasound mixer------------------------------
-	#TODO : check for number of [ecasound_*] section and create mixers
-	my @trux = keys %{$ini_project};
-	my @mixers = grep (/^mixer_/,@trux);
+	#------------------Add mixers------------------------------
+	my @mixers = grep (/^mixer_/,keys %{$ini_project});
 	foreach my $mixer (@mixers) {
 		my $mixername = substr $mixer,6 ;
 		print "Creating mixer $mixername\n";
-		$project->{$mixer} = Mixer->NewMixer($ini_project,$mixername);
-		$project->{$mixer}->CreateChannels;
+		#append path to filename
+		$ini_project->{$mixer}{inifile} = $ini_project->{project}{base_path} . "/" . $ini_project->{project}{mixers_path} . "/" . $ini_project->{$mixer}{inifile};
+		#create mixer
+		$project->{mixers}{$mixername} = Mixer->new($ini_project->{$mixer});
+		#add channel strips to mixer
+		$project->{mixers}{$mixername}->CreateChannels;
 	}
-	#my $player = Player->new();
 
-print Dumper $project;	
+	print Dumper $project;
+
+}
+
+sub from_inifile {	
+# 	#------------------Add songs------------------------------
+# 	#my $player = Player->new();
+
+# print Dumper $project;	
 	
 
-	#------------------------BRIDGE-----------------------------------
-	#create/reset the oscmidipath file
-	Bridge::Init_file();
+# 	#------------------------BRIDGE-----------------------------------
+# 	#create/reset the oscmidipath file
+# 	Bridge::Init_file();
 
-	#------------------------PLUMBING-----------------------------------
-	#create/reset the plumbing file
-	my $plumbing = Plumbing->new($ini_project);
+# 	#------------------------PLUMBING-----------------------------------
+# 	#create/reset the plumbing file
+# 	my $plumbing = Plumbing->new($ini_project);
 	
-	# Fermeture des fichiers
-	Bridge::Close_file();
-	$plumbing->Close;
+# 	# Fermeture des fichiers
+# 	Bridge::Close_file();
+# 	$plumbing->Close;
 
 }
 

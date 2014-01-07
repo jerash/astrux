@@ -9,51 +9,44 @@ use Config::IniFiles;
 use EcaEcs;
 use EcaStrip;
 
-sub NewMixer {
+use Data::Dumper;
+
+sub new {
 	my $class = shift;
-	my $project = shift;
-	my $name = shift;
-	my $ini_name = "mixer_$name";
+	my $ini_mixer = shift;
 
-#TODO check if arguments présents, comme ecastrip
+	my $mixer = {
+		"ecasound" => {},
+		"IOs" => {},
+		"status" => "new"
+	};
+	bless $mixer, $class;
 
-	#un objet mixer a:
-	# 1. un fichier ini de configuration des channels
-	my %io;
-	my $path = $project->{project}{basefolder} . "/" . $project->{project}{configfolder} . "/$name.ini";
-	tie %io, 'Config::IniFiles', ( -file => $path );
-	die "reading I/O ini file failed\n" until %io;
-	my $io_ref = \%io;
-	# 2. un fichier de sortie 
-	my $ecasound = EcaEcs->new($project,$ini_name);
-	$ecasound->build_header();
-	# 3. des paramètres d'état
-	my %mixer = ( 
-		"IOs" , $io_ref,
-		"ecasound" , $ecasound,
-		"status" , "notrunning"
-		);
-	bless \%mixer, $class;
-	return \%mixer;
+	#if parameter exist, fill from ini file
+	$mixer->init($ini_mixer) if defined $ini_mixer;
+
+	return $mixer;
+}
+
+sub init {
+	my $mixer = shift;
+	my $ini_mixer = shift;
+
+	#add ecasound info to mixer
+	$mixer->{ecasound} = $ini_mixer;
+
+	#ouverture du fichier ini de configuration des channels
+	tie my %mixer_io, 'Config::IniFiles', ( -file => $ini_mixer->{inifile} );
+	die "reading I/O ini file failed\n" until %mixer_io;
+	#add IO info to mixer
+	$mixer->{IOs} = \%mixer_io;
 }
 
 sub CreateChannels {
 	my $mixer = shift;
-	#----------------------------------------------------------------
-	#
-	# === variables contenant les lignes à insérer dans le fichier mixer principal ecs ===
-	#
-	my @valid_input_sections; #liste des input sections valides (connectables)
-	my @valid_output_sections; #liste des output sections valides (connectables)
-	my @inputs_ai; #liste des ai ecasound
-	my @inputs_ao; #liste des ao ecasound
-	my @channels_ai; #liste des ai ecasound
-	my @channels_ao; #liste des ao ecasound
-	my @outputbus_ai;
-	my @outputbus_ao;
 	 
 	#----------------------------------------------------------------
-	print "\n---I/O CREATE---\n" . $mixer->get_name;
+	print "\n---I/O CREATE---" . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === I/O Channels, Buses, Sends ===
 	#----------------------------------------------------------------
@@ -368,15 +361,15 @@ sub CreateChannels {
 
 sub get_name {
 	my $mixer = shift;
-	return $mixer->{ecasound}{config}{name};
+	return $mixer->{ecasound}{name};
 }
 sub get_port {
 	my $mixer = shift;
-	return $mixer->{ecasound}{config}{port};
+	return $mixer->{ecasound}{port};
 }
 sub is_midi_controllable {
 	my $mixer = shift;
-	return $mixer->{ecasound}{config}{generatekm};
+	return $mixer->{ecasound}{generatekm};
 }
 
 1;

@@ -13,7 +13,7 @@ my $debug = 0;
 my $ini_project = new Config::IniFiles -file => "project.ini";
 die "reading project ini file failed\n" until $ini_project;
 #folder where to store generated files
-my $files_folder = $ini_project->val('project','filesfolder');
+my $files_folder = $ini_project->val('project','output_path');
 #--------------------------------------------------------------------
 
 # sub new {
