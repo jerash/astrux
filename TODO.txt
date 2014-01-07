@@ -1,3 +1,5 @@
+in mixer ini file
+	if midi strip has more than one channel, we should create a merger with mididings ?
 	
 dans le fichiers oscmidistate.csv  
 	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
