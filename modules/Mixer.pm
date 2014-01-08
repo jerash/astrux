@@ -38,7 +38,7 @@ sub init {
 
 	#add ecasound info to mixer
 	$mixer->{ecasound} = EcaEcs->new($ini_mixer,$ecs_file);
-
+	
 	#add IO info to mixer
 	$mixer->{IOs} = \%mixer_io;
 
@@ -54,40 +54,65 @@ sub CreateChannels {
 	#----------------------------------------------------------------
 	# === I/O Channels, Buses, Sends ===
 	#----------------------------------------------------------------
-	my @i_tab;
-	my @o_tab;
+	my @i_chaintab;
+	my @o_chaintab;
+	my @i_nametab;
+	my @o_nametab;
+	my @x_chaintab;
 	foreach my $name (keys %{$mixer->{IOs}} ) {
 		#ignore inactive channels
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
-	
 		#create the channel strip
 		my $strip = EcaStrip->new($mixer->{IOs}{$name});
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 		
-		#==INPUTS,RETURNS,SUBMIXES,PLAYERS==
-		if (  $strip->is_main_in) {
+		#==INPUTS,RETURNS==
+		if ( $strip->is_main_in) {
 			#create ecasound chain
-			push( @i_tab , $strip->create_input_chain($name) );
-			push( @o_tab , $strip->create_output_chain($name) );
-			#$mixer->{ecasound}->create_input_chain($ecs_file,$mixer->{channels});
-#$ecastrip->{inserts} = $IOsection->{inserts};	
-# my @tab;
-# push(@tab,EcaEcs::create_input_chain($strip,$name,$km));
-# $mixer->{ecasound}{i_chains} = \@tab if @tab;
+			push( @i_chaintab , $strip->create_input_chain($name) );
+			push( @o_chaintab , $strip->create_loop_output_chain($name) );
+			push( @i_nametab , $name );			
 		}
-		#==BUS OUTPUTS AND SENS==
+		#==SUBMIX==
+		if ($strip->is_submix_in) {
+
+		}
+		#==BUS OUTPUTS AND SEND==
+		elsif ( $strip->is_hardware_out or $strip->is_submix_out) {
+			push( @i_chaintab , $strip->create_bus_input_chain($name) );
+			push( @o_chaintab , $strip->create_bus_output_chain($name) );
+			push( @o_nametab , $name );			
+		}
+		#==PLAYERS==
 		elsif ( $strip->is_hardware_out) {
-			print $strip->{friendly_name} . " is case2\n";
+			#connect input to null/rtnull
 		}
 	}
-	#add input chains to ecasound info
-	$mixer->{ecasound}{i_chains} = \@i_tab if @i_tab;
-	#add output chains to ecasound info
-	$mixer->{ecasound}{o_chains} = \@o_tab if @o_tab;
 	#==CHANNELS ROUTING TO BUSES AND SENDS==
+	#if we're on main mixer, create the routes to the buses
+	if ($mixer->get_name eq "main") {
+		my @xin = split ( "\n" , EcaStrip::create_aux_input_chains(\@i_nametab,\@o_nametab));
+		my @xot = split ( "\n" , EcaStrip::create_aux_output_chains(\@i_nametab,\@o_nametab));
+		push(@x_chaintab,@xin);
+		push(@x_chaintab,@xot);
+
+		#TODO : remove send to return loop
+			#dans les inputs : même chaine autour de _to_ délimité avant par : ou , et après par , ou \s
+			#dans les outputs : supprimer la ligne qui contient la même chaine autour de _to_
+		#print Dumper @x_chaintab;
+	}
+	#add input chains to ecasound info
+	$mixer->{ecasound}{i_chains} = \@i_chaintab if @i_chaintab;
+
+	#add output chains to ecasound info
+	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
+	
+	#add aux chains to ecasound info
+	$mixer->{ecasound}{x_chains} = \@x_chaintab if @x_chaintab;
+	
 }
 
 sub get_name {

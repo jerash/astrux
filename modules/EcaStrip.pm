@@ -72,12 +72,15 @@ sub init {
 	#verify if we generate km controllers (midi)
 	my $km = $ecastrip->{generatekm};
 
-	#add pan and volume controls
-	if ($ecastrip->is_mono) {
-			$ecastrip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
-	}
-	elsif ($ecastrip->is_stereo) {
-		$ecastrip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+	#verify to which channel to add pan and volume
+	if ( !$ecastrip->is_submix_out ) {
+		#add pan and volume controls
+		if ($ecastrip->is_mono) {
+				$ecastrip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
+		}
+		elsif ($ecastrip->is_stereo) {
+			$ecastrip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+		}
 	}
 
 	#get list of inserts
@@ -89,11 +92,12 @@ sub init {
 	}	
 }
 
+#-------------------------------------------------------------------
+#	ecasound chain management
+
 sub create_input_chain {
 	my $strip = shift;
 	my $name = shift;
-
-	die "must have a track name\n" if $name eq "";
 
 	my $line = "-a:$name ";
 	$line .= "-f:f32_le,1,48000 -i:jack,," if $strip->is_mono;
@@ -101,14 +105,60 @@ sub create_input_chain {
 	$line .= $name;
 	return $line;
 }
-sub create_output_chain {
+sub create_loop_output_chain {
 	my $strip = shift;
 	my $name = shift;
 
-	die "must have a track name\n" if $name eq "";
-
 	return "-a:$name -f:f32_le,2,48000 -o:loop,$name";
 }
+sub create_bus_input_chain {
+	my $strip = shift;
+	my $name = shift;
+
+	return "-a:bus_$name -f:f32_le,2,48000 -i:jack,,bus_$name";
+}
+sub create_bus_output_chain {
+	my $strip = shift;
+	my $name = shift;
+
+	return "-a:bus_$name -f:f32_le,2,48000 -o:jack,,$name";
+}
+sub create_submix_output_chain {
+	my $strip = shift;
+	my $name = shift;
+
+	return "-a:all -f:f32_le,2,48000 -o:jack,,$name";
+}
+sub create_aux_input_chains {
+	my $in = shift;
+	my $out = shift;
+
+	my $line;
+	foreach my $input (@$in) {
+		$line .= "-a:";
+		foreach my $bus (@$out) {
+			$line .= "$input" . "_to_$bus,";			
+		}
+		chop($line);
+		$line .=  " -f:f32_le,2,48000 -i:loop,$input\n";
+	}
+	return $line;
+}
+sub create_aux_output_chains {
+	my $in = shift;
+	my $out = shift;
+
+	my $line;
+	foreach my $bus (@$out) {
+		foreach my $input (@$in) {
+			$line .= "-a:" . $input . "_to_$bus -f:f32_le,2,48000 -o:jack,,to_bus_$bus\n";
+		}
+	}
+	return $line;
+}
+
+#-------------------------------------------------------------------
+#	functions
 
 sub is_active{
 	my $io = shift;
@@ -161,6 +211,16 @@ sub is_player_track {
 	return 1 if ($io->{type} eq "player");
 	return 0;
 }
+sub is_submix_in {
+	my $io = shift;
+	return 1 if ($io->{type} eq "audio_in");
+	return 0;
+}
+sub is_submix_out {
+	my $io = shift;
+	return 1 if ($io->{type} eq "audio_out");
+	return 0;
+}
 sub is_player {
 	my $io = shift;
 	return 1 if ($io->{type} eq "file_in");
@@ -173,12 +233,16 @@ sub is_submix {
 }
 sub is_mono {
 	my $io = shift;
-	return 1 if ($io->{channels} eq "1");
+	if ($io->{channels}) {
+		return 1 if ($io->{channels} eq "1");
+	}
 	return 0;	
 }
 sub is_stereo {
 	my $io = shift;
-	return 1 if ($io->{channels} eq "2");
+	if ($io->{channels}) {
+		return 1 if ($io->{channels} eq "2");
+	}
 	return 0;	
 }
 sub is_summed_mono {

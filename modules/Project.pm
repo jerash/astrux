@@ -54,6 +54,8 @@ sub init {
 		$project->{mixers}{$mixername} = Mixer->new($ini_project->{$mixer},$ecs_file);
 	}
 
+	#TODO verify if there is one "main" mixer
+
 	print Dumper $project;
 	#------------------Add songs------------------------------
 	#----------------Add plumbing-----------------------------
@@ -62,6 +64,7 @@ sub init {
 sub AddSongs {
 	my $project = shift;
 # 	#my $player = Player->new();
+	#TODO : deal with players ecs chains
 	return;
 }
 sub Create_OscMidiBridge {	

@@ -72,7 +72,7 @@ sub build_header {
 	die "ecs file has not been created" if ($ecaecs->{status} eq "notcreated");
 	$file = $ecaecs->open_add;
 	#append to file
-	print $file $header;
+	#print $file , $header;
 	#update status
 	$ecaecs->{status} = "header";
 }
