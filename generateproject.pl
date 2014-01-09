@@ -15,6 +15,9 @@ use Audio::SndFile;
 # This is the main tool for Astrux Live
 #----------------------------------------------------------------
 
+#TODO : if no arguments check for config.ini in current folder
+#		else, parse command line arguments
+
 #project ini file is in the current folder
 my %ini_project;
 tie %ini_project, 'Config::IniFiles', ( -file => "project.ini" );
@@ -22,11 +25,11 @@ die "reading project ini file failed\n" until %ini_project;
 my $ini_project_ref = \%ini_project;
 
 #----------------------------------------------------------------
-#create the project
+#create the project structure
 my $Live = Project->new($ini_project_ref);
 
 #generate the files for the live
-#$Live->Generate; <<inutile intégrer dans new
+#$Live->Generate; 
 
 print "\n";
 

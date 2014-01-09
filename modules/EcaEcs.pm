@@ -10,22 +10,23 @@ use Data::Dumper;
 sub new {
 	my $class = shift;
 	#ecasound engine configuration options
-	my $ini_mixer = shift;
+	my $mixer_io_ref = shift;
 	#complete path to the file
 	my $ecsfile = shift;
 	
 	#create object
-	my $ecaecs = $ini_mixer;
+	my $ecaecs = $mixer_io_ref;
 	#add ecs file path to object
 	$ecaecs->{ecsfile} = $ecsfile;
 	$ecaecs->{status} = "notcreated";
 	bless $ecaecs,$class;
+print "EcaEcs:ECS=$ecsfile\nstruct=".$ecaecs->{ecsfile} ;
 
 	#create the file in the specified path
 	#print "---EcaEcs\n path = $path\n info = $info\n";
 	$ecaecs->create if (defined $ecsfile);
 	#add file header
-	$ecaecs->build_header if (defined $ini_mixer);
+	$ecaecs->build_header if (defined $mixer_io_ref);
 
 	return $ecaecs;
 }
@@ -33,7 +34,7 @@ sub create {
 	#create the file (overwrite)
 	my $ecaecs = shift;
 	my $path = $ecaecs->{ecsfile};
-	#print "---EcaEcs:create\n path = $path\n";
+	print "---EcaEcs:create\n path = $path\n";
 	die "no path to create ecs file\n" unless (defined $path);
 	open my $handle, ">$path" or die $!;
 	#update mixer status

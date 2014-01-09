@@ -13,44 +13,57 @@ use Data::Dumper;
 
 sub new {
 	my $class = shift;
-	my $ini_mixer = shift;
-	my $ecs_file = shift;
-
+	my $ini_mixer_file = shift;
+	
 	my $mixer = {
 		"ecasound" => {},
 		"IOs" => {}
 	};
 	bless $mixer, $class;
+
 	#if parameter exist, fill from ini file and create the mixer file
-	$mixer->init($ini_mixer,$ecs_file) if defined $ini_mixer;
+	$mixer->init($ini_mixer_file) if defined $ini_mixer_file;
 
 	return $mixer;
 }
 
 sub init {
 	my $mixer = shift;
-	my $ini_mixer = shift;
-	my $ecs_file = shift;
-
-	#ouverture du fichier ini de configuration des channels
-	tie my %mixer_io, 'Config::IniFiles', ( -file => $ini_mixer->{inifile} );
-	die "reading I/O ini file failed\n" until %mixer_io;
-
-	#add ecasound info to mixer
-	$mixer->{ecasound} = EcaEcs->new($ini_mixer,$ecs_file);
+	my $ini_mixer_file = shift;
 	
+	#ouverture du fichier ini de configuration des channels
+	tie my %mixer_io, 'Config::IniFiles', ( -file => $ini_mixer_file );
+	die "reading I/O ini file failed\n" until %mixer_io;
+	my $mixer_io_ref = \%mixer_io;
+
+	#verify in [mixer_globals] section exists
+	if (!$mixer_io_ref->{mixer_globals}) {
+		die "missing [mixer_globals] section in $ini_mixer_file mixer file\n";
+	}
+
+	#update mixer structure with globals
+	my %globals = %{$mixer_io_ref->{mixer_globals}};
+	#add ecasound info to mixer
+	$mixer->{ecasound} =\%globals;
+	#remove mixer globals from IO hash to prevent further ignore
+	delete $mixer_io_ref->{mixer_globals};
+
 	#add IO info to mixer
-	$mixer->{IOs} = \%mixer_io;
+	$mixer->{IOs} = $mixer_io_ref;
 
 	#add channel strips to mixer
-	$mixer->CreateChannels;
+	$mixer->CreateMainMixer if $mixer->is_main;
+	$mixer->CreateSubmix if $mixer->is_submix;
+	$mixer->CreatePlayers if $mixer->is_player;
+
+	#TODO remove IO info ? to see with plumbing...
 }
 
-sub CreateChannels {
+sub CreateMainMixer {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
-	print "-Mixer:CreateChannels for : " . $mixer->get_name . "\n";
+	print "|_Mixer:CreateMainMixer name : " . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === I/O Channels, Buses, Sends ===
 	#----------------------------------------------------------------
@@ -59,7 +72,10 @@ sub CreateChannels {
 	my @i_nametab;
 	my @o_nametab;
 	my @x_chaintab;
-	foreach my $name (keys %{$mixer->{IOs}} ) {
+
+	#check each channel defined in the IO
+	foreach my $name (keys %{$mixer->{IOs}} ) {		
+
 		#ignore inactive channels
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
@@ -69,52 +85,138 @@ sub CreateChannels {
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 		
-		#==INPUTS,RETURNS==
-		if ( $strip->is_main_in) {
+		#==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
+		if ( $strip->is_main_in ) {
 			#create ecasound chain
 			push( @i_chaintab , $strip->create_input_chain($name) );
 			push( @o_chaintab , $strip->create_loop_output_chain($name) );
-			push( @i_nametab , $name );			
-		}
-		#==SUBMIX==
-		if ($strip->is_submix_in) {
-
+			push( @i_nametab , $name );
 		}
 		#==BUS OUTPUTS AND SEND==
-		elsif ( $strip->is_hardware_out or $strip->is_submix_out) {
+		elsif ( $strip->is_hardware_out ) {
 			push( @i_chaintab , $strip->create_bus_input_chain($name) );
 			push( @o_chaintab , $strip->create_bus_output_chain($name) );
 			push( @o_nametab , $name );			
 		}
-		#==PLAYERS==
-		elsif ( $strip->is_hardware_out) {
-			#connect input to null/rtnull
+		else {
+			warn "bad IO definition in main mixer with type \n" . $strip->{type};
 		}
 	}
-	#==CHANNELS ROUTING TO BUSES AND SENDS==
-	#if we're on main mixer, create the routes to the buses
-	if ($mixer->get_name eq "main") {
-		my @xin = split ( "\n" , EcaStrip::create_aux_input_chains(\@i_nametab,\@o_nametab));
-		my @xot = split ( "\n" , EcaStrip::create_aux_output_chains(\@i_nametab,\@o_nametab));
-		push(@x_chaintab,@xin);
-		push(@x_chaintab,@xot);
 
-		#TODO : remove send to return loop
-			#dans les inputs : même chaine autour de _to_ délimité avant par : ou , et après par , ou \s
-			#dans les outputs : supprimer la ligne qui contient la même chaine autour de _to_
-		#print Dumper @x_chaintab;
-	}
+	#==CHANNELS ROUTING TO BUSES AND SENDS==
+	my @xin = split ( "\n" , EcaStrip::create_aux_input_chains(\@i_nametab,\@o_nametab,$mixer));
+	my @xot = split ( "\n" , EcaStrip::create_aux_output_chains(\@i_nametab,\@o_nametab,$mixer));
+	push(@x_chaintab,@xin);
+	push(@x_chaintab,@xot);
+
+	#add aux chains to ecasound info
+	$mixer->{ecasound}{x_chains} = \@x_chaintab if @x_chaintab;
+
 	#add input chains to ecasound info
 	$mixer->{ecasound}{i_chains} = \@i_chaintab if @i_chaintab;
 
 	#add output chains to ecasound info
 	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
-	
-	#add aux chains to ecasound info
-	$mixer->{ecasound}{x_chains} = \@x_chaintab if @x_chaintab;
-	
 }
 
+sub CreateSubmix {
+	my $mixer = shift;
+	
+	#----------------------------------------------------------------
+	print "|_Mixer:Create Submix mixer name : " . $mixer->get_name . "\n";
+	#----------------------------------------------------------------
+	# === Submix ===
+	#----------------------------------------------------------------
+
+	my @i_chaintab;
+	my @o_chaintab;
+
+	#check each channel defined in the IO
+	foreach my $name (keys %{$mixer->{IOs}} ) {		
+
+		#ignore inactive channels
+		next unless $mixer->{IOs}{$name}{status} eq "active";
+
+		#create the channel strip
+		my $strip = EcaStrip->new($mixer->{IOs}{$name});
+
+		#add strip to mixer
+		$mixer->{channels}{$name} = $strip;
+		
+		#==SUBMIX==
+		#create ecasound chain
+		push( @i_chaintab , $strip->create_input_chain($name) ) if ( $strip->is_submix_in );
+		push( @o_chaintab , $strip->create_submix_output_chain($name) ) if ( $strip->is_submix_out );
+		warn "bad IO definition in submix with type \n" . $strip->{type} unless ( ( $strip->is_submix_in ) or ( $strip->is_submix_out ));
+	}
+
+	#add input chains to ecasound info
+	$mixer->{ecasound}{i_chains} = \@i_chaintab if @i_chaintab;
+
+	#add output chains to ecasound info
+	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
+
+}
+
+sub CreatePlayers {
+	my $mixer = shift;
+	
+	#----------------------------------------------------------------
+	print "|_Mixer:Create Player mixer name : " . $mixer->get_name . "\n";
+	#----------------------------------------------------------------
+	# === Players ===
+	#----------------------------------------------------------------
+
+	my @i_chaintab;
+	my @o_chaintab;
+
+	#check each channel defined in the IO
+	foreach my $name (keys %{$mixer->{IOs}} ) {		
+
+		#ignore inactive channels
+		next unless $mixer->{IOs}{$name}{status} eq "active";
+
+		#create the channel strip
+		my $strip = EcaStrip->new($mixer->{IOs}{$name});
+
+		#add strip to mixer
+		$mixer->{channels}{$name} = $strip;
+		
+		#==PLAYERS==
+		#create ecasound chain
+		push( @i_chaintab , $strip->create_player_chain($name) ) if ( $strip->is_file_player );
+		warn "bad IO definition in players with type \n" . $strip->{type} unless ( $strip->is_file_player );
+	}
+
+	#add input chains to ecasound info
+	$mixer->{ecasound}{i_chains} = \@i_chaintab if @i_chaintab;
+
+	#add output chains to ecasound info
+	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
+}
+
+sub GenerateFile {
+	#create the ecs file
+	#TODO : EcaEcs->new ??
+}
+#--------------Test functions-------------------------
+sub is_main {
+	my $mixer = shift;
+	return 1 if $mixer->{ecasound}{type} eq "main";
+	return 0;
+}
+sub is_submix {
+	my $mixer = shift;
+	return 1 if $mixer->{ecasound}{type} eq "submix";
+	return 0;
+}
+sub is_player {
+	my $mixer = shift;
+	return 1 if $mixer->{ecasound}{type} eq "player";
+	return 0;
+}
+
+#--------------Utility functions-------------------------
 sub get_name {
 	my $mixer = shift;
 	return $mixer->{ecasound}{name};
