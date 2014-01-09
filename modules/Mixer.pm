@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Config::IniFiles;
-use EcaEcs;
+use EcaFile;
 use EcaStrip;
 
 use Data::Dumper;
@@ -55,6 +55,9 @@ sub init {
 	$mixer->CreateMainMixer if $mixer->is_main;
 	$mixer->CreateSubmix if $mixer->is_submix;
 	$mixer->CreatePlayers if $mixer->is_player;
+
+	#compile ecasound chains info
+	$mixer->CreateEcsFileInfo;
 
 	#TODO remove IO info ? to see with plumbing...
 }
@@ -167,8 +170,7 @@ sub CreatePlayers {
 	# === Players ===
 	#----------------------------------------------------------------
 
-	my @i_chaintab;
-	my @o_chaintab;
+	my @io_chaintab;
 
 	#check each channel defined in the IO
 	foreach my $name (keys %{$mixer->{IOs}} ) {		
@@ -184,21 +186,22 @@ sub CreatePlayers {
 		
 		#==PLAYERS==
 		#create ecasound chain
-		push( @i_chaintab , $strip->create_player_chain($name) ) if ( $strip->is_file_player );
+		push( @io_chaintab , $strip->create_player_chain($name) ) if ( $strip->is_file_player );
 		warn "bad IO definition in players with type \n" . $strip->{type} unless ( $strip->is_file_player );
 	}
 
-	#add input chains to ecasound info
-	$mixer->{ecasound}{i_chains} = \@i_chaintab if @i_chaintab;
-
-	#add output chains to ecasound info
-	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
+	#add chains to ecasound info
+	$mixer->{ecasound}{io_chains} = \@io_chaintab if @io_chaintab;
 }
 
-sub GenerateFile {
+sub CreateEcsFileInfo {
+	my $mixer = shift;
+
+	my $mixer->{ecafile} = EcaEcs->new;
 	#create the ecs file
 	#TODO : EcaEcs->new ??
 }
+
 #--------------Test functions-------------------------
 sub is_main {
 	my $mixer = shift;
