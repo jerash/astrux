@@ -47,7 +47,6 @@ sub init {
 	#------------------Add mixers-----------------------------
 	$project->AddMixers;	
 
-	print Dumper $project;
 	#------------------Add songs------------------------------
 	#----------------Add plumbing-----------------------------
 	
@@ -81,6 +80,35 @@ sub AddSongs {
 # 	#my $player = Player->new();
 	#TODO : deal with players ecs chains
 	return;
+}
+
+sub CreateEcsFiles {
+	my $project = shift;
+
+	#for each mixer, create the ecasound mixer file
+	foreach my $mixername (keys %{$project->{mixers}}) {
+		#shorcut name
+		my $mixer = $project->{mixers}{$mixername};
+		#create path to ecs file
+		my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/".$mixer->{ecasound}{name} . ".ecs";
+		#add path to ecasound info
+		$mixer->{ecasound}{ecsfile} = $ecsfilepath;
+		#bless structure to access data with module functions
+		bless $mixer->{ecasound} , EcaFile::;
+		#create the file
+		$mixer->{ecasound}->create;
+		#add ecasound header to file
+		$mixer->{ecasound}->build_header;
+		#get chains from structure
+		$mixer->get_ecasoundchains;
+		#add chains to file
+		$mixer->{ecasound}->add_chains;
+		#verify is the generated file can be opened by ecasound
+		#$mixer->{ecasound}->verify;
+	}
+
+	#for each song, create the players files if necessary
+
 }
 
 sub CreateOscMidiBridge {	

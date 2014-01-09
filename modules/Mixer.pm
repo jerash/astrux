@@ -45,6 +45,7 @@ sub init {
 	my %globals = %{$mixer_io_ref->{mixer_globals}};
 	#add ecasound info to mixer
 	$mixer->{ecasound} =\%globals;
+	$mixer->{ecasound}{status} = "notcreated";
 	#remove mixer globals from IO hash to prevent further ignore
 	delete $mixer_io_ref->{mixer_globals};
 
@@ -55,9 +56,6 @@ sub init {
 	$mixer->CreateMainMixer if $mixer->is_main;
 	$mixer->CreateSubmix if $mixer->is_submix;
 	$mixer->CreatePlayers if $mixer->is_player;
-
-	#compile ecasound chains info
-	$mixer->CreateEcsFileInfo;
 
 	#TODO remove IO info ? to see with plumbing...
 }
@@ -194,14 +192,33 @@ sub CreatePlayers {
 	$mixer->{ecasound}{io_chains} = \@io_chaintab if @io_chaintab;
 }
 
-sub CreateEcsFileInfo {
+sub get_ecasoundchains {
 	my $mixer = shift;
 
-	my $mixer->{ecafile} = EcaEcs->new;
-	#create the ecs file
-	#TODO : EcaEcs->new ??
-}
+	my @table;
 
+	if (defined $mixer->{ecasound}{i_chains}) {
+		push @table , "\n#INPUTS\n";
+		push @table , @{$mixer->{ecasound}{i_chains}};
+	}
+	if (defined $mixer->{ecasound}{o_chains}) {
+		push @table , "\n#OUTPUTS\n";
+		push @table , @{$mixer->{ecasound}{o_chains}};
+	}
+	if (defined $mixer->{ecasound}{x_chains}) {
+		push @table , "\n#CHANNELS ROUTING\n";
+		push @table , @{$mixer->{ecasound}{x_chains}};
+	}
+	if (defined $mixer->{ecasound}{io_chains}) {
+		push @table , "\n#PLAYERS\n";
+		push @table , @{$mixer->{ecasound}{io_chains}};
+	}
+
+	#update structure
+	@{$mixer->{ecasound}{all_chains}} = @table;
+	# remove unneeded lines?
+	#print Dumper $mixer->{ecasound}{all_chains};
+}
 #--------------Test functions-------------------------
 sub is_main {
 	my $mixer = shift;

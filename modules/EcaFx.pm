@@ -2,7 +2,7 @@
 
 package EcaFx;
 
-use base qw(EcaStrip EcaEcs);
+use base qw(EcaStrip EcaFile);
 
 use strict;
 use warnings;

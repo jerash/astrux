@@ -80,8 +80,11 @@ sub init {
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
 	
 	#add inserts
+	#TODO verify if order ok ?
+	my $order;
 	foreach my $effect (@effects) {
-		$ecastrip->{inserts}{$effect} = EcaFx->new($effect,$km);
+		$ecastrip->{inserts}{$order-$effect} = EcaFx->new($effect,$km);
+		$order++;
 	}	
 
 	#verify to which channel to add pan and volume
@@ -108,6 +111,11 @@ sub create_input_chain {
 	$line .= "-f:f32_le,1,48000 -i:jack,," if $strip->is_mono;
 	$line .= "-f:f32_le,2,48000 -i:jack,," if $strip->is_stereo;
 	$line .= $name;
+	#add inserts if any
+	#TODO : respect an order to inserts !!!
+	foreach my $insert (keys %{$strip->{inserts}}){
+		$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
+	}
 	return $line;
 }
 sub create_loop_output_chain {
@@ -154,7 +162,7 @@ sub create_aux_input_chains {
 		$line .= "-a:";
 		foreach my $busname (@$out) {
 			if ( $mixer->{channels}{$busname}{return} and ( $mixer->{channels}{$busname}{return} eq $input )) {
-				warn "warning: discarding sendbus to himself ($busname) \n";
+				warn "info: discarding sendbus to himself ($busname) \n";
 			}
 			else {
 				$line .= "$input" . "_to_$busname,";
