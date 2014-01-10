@@ -126,22 +126,20 @@ sub CreateEcsFiles {
 		#create path to ecs file
 		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
 		#add path to song info
-		$song->{ecsfile} = $ecsfilepath;
+		$song->{ecasound}{ecsfile} = $ecsfilepath;
 		#bless structure to access data with module functions
-		bless $song , EcaFile::;
+		bless $song->{ecasound} , EcaFile::;
 		#create the file
-		$song->create;
+		$song->{ecasound}->create;
 		#copy header from player mixer
 		if (defined $project->{mixers}{players}{ecasound}{header}) {
-			$song->{header} = $project->{mixers}{players}{ecasound}{header};
+			$song->{ecasound}{header} = $project->{mixers}{players}{ecasound}{header};
 		}
 		else {
 			die "Error : can't find a player mixer header\n";
 		}
 		#add ecasound header to file
 		$song->build_song_header;
-		#get chains from structure
-		# $song->get_ecasound_song_chains;
 		#add chains to file
 		$song->add_songfile_chain;
 		#TODO verify is the generated file can be opened by ecasound

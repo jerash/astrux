@@ -83,4 +83,36 @@ sub init {
 	}
 }
 
+sub build_song_header {
+	my $song = shift;
+
+	#print "--song:build_header\n header = $header\n";
+	die "ecs file has not been created" if ($song->{ecasound}{status} eq "notcreated");
+	#open file handle
+	open my $handle, ">>$song->{ecasound}{ecsfile}" or die $!;
+	#append to file
+	print $handle $song->{ecasound}{header} or die $!;
+	#close file
+	close $handle or die $!;
+	#update status
+	$song->{ecasound}{status} = "header";
+}
+sub add_songfile_chain {
+	my $song = shift;
+	#open file in add mode
+	open my $handle, ">>$song->{ecasound}{ecsfile}" or die $!;
+	print $handle "\n";
+	foreach my $section (sort keys %{$song}) {
+		#only match audio players, and catch payer slot number
+		next unless (($section =~ /^players_slot_/) and ($song->{$section}{type} eq "player"));
+		#append to file
+		print $handle $song->{$section}{ecsline};
+		print $handle "\n";
+	}	
+	#close file
+	close $handle or die $!;
+	#update status
+	$song->{ecasound}{status} = "created";
+}
+
 1;
