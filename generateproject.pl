@@ -43,9 +43,8 @@ $Live->CreateEcsFiles;
 #>>>works but output is not readable
 
 #Save
-use Data::Dumper;
 $Data::Dumper::Purity = 1;
-open FILE, ">tree" or die "Can't open 'tree':$!";
+open FILE, ">project.cfg" or die "Can't open 'tree':$!";
 print FILE Dumper $Live;
 close FILE;
 #restore

@@ -84,7 +84,7 @@ sub AddSongs {
 
 		#ignore files, use directories only
 		next if (! -d $folder);
-		print " Songs folder : $folder\n";
+		print "Project: Entering song folder : $folder\n";
 
 		#crete a song object
 		my $song = Song->new($folder);

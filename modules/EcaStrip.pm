@@ -46,6 +46,7 @@ sub init {
 	$ecastrip->{generatekm} = $IOsection->{generatekm};
 	$ecastrip->{return} = $IOsection->{return};
 
+	print "   |_adding channel ".$ecastrip->{friendly_name}."\n";
 	#deal with each channel type  << removed now as players are straight cableing and not submix concept
 	# if ($ecastrip->{type} eq "file_in") {
 	# 	#these infos depend on song content
@@ -169,7 +170,7 @@ sub create_aux_input_chains {
 		$line .= "-a:";
 		foreach my $busname (@$out) {
 			if ( $mixer->{channels}{$busname}{return} and ( $mixer->{channels}{$busname}{return} eq $input )) {
-				warn "info: discarding sendbus to himself ($busname) \n";
+				print "   |_info: discarding sendbus to himself ($busname) \n";
 			}
 			else {
 				$line .= "$input" . "_to_$busname,";

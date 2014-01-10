@@ -69,7 +69,6 @@ sub add_header {
 	my $header = "#GENERAL\n";
 	$header .= "-b:".$mixer->{ecasound}{buffersize} if $mixer->{ecasound}{buffersize};
 	$header .= " -r:".$mixer->{ecasound}{realtime} if $mixer->{ecasound}{realtime};
-print Dumper $mixer->{ecasound};
 	my @zoptions = split(",",$mixer->{ecasound}{z});
 	foreach (@zoptions) {
 		$header .= " -z:".$_;
