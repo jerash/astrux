@@ -9,8 +9,6 @@ use Plumbing;
 use Data::Dumper;
 use Config::IniFiles;
 #http://search.cpan.org/~shlomif/Config-IniFiles-2.82/lib/Config/IniFiles.pm
-use Audio::SndFile;
-
 #----------------------------------------------------------------
 # This is the main tool for Astrux Live
 #----------------------------------------------------------------
@@ -27,7 +25,6 @@ my $ini_project_ref = \%ini_project;
 #------------Create project structure----------------------------
 my $Live = Project->new($ini_project_ref);
 
-print Dumper $Live;
 print " -- Live Created sucessfully :) --\n" if defined $Live;
 
 #------------Create ecasound files------------------------
@@ -38,5 +35,24 @@ $Live->CreateEcsFiles;
 
 #Now PLay !
 
-print "\n";
+#print Dumper $Live;
+ 
+# use Storable;
+# store $Live, 'tree.stor';
+# $hashref = retrieve('file');
+#>>>works but output is not readable
 
+#Save
+use Data::Dumper;
+$Data::Dumper::Purity = 1;
+open FILE, ">tree" or die "Can't open 'tree':$!";
+print FILE Dumper $Live;
+close FILE;
+#restore
+# open FILE, $infile;
+# undef $/;
+# eval <FILE>;
+# close FILE;
+
+
+print "\n";

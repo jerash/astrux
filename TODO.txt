@@ -1,4 +1,3 @@
-intégrer les effets d'insert dans les strips
 
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?
@@ -9,9 +8,6 @@ dans le fichiers oscmidistate.csv
 option to keep ecasound player opened after transport stop
 
 dummy song & ecacfg , examples in astrux folder for project creation
-
-verify submix can't be named "mixer" (would overwrite main ecs file)
-	> or add submix_ prefix to generated files
 
 JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
 
@@ -24,9 +20,6 @@ dans livescreens, il est prévu de pouvoir désactiver certaines I/O du main mix
 	> ca implique de pouvoir envoyer un set de commandes tcp au ecasound main pour ne pas couper le engine
 	> désactiver unne iput couperai le engine, donc il faut faire des mutes...
 	>mais dans ce cas ca revient presque à avoir une state du mixer, donc utile ou pas ?
-
-perl générer ini files
-	>un submix va déclarer une nouvelle input automatiqument
 
 create a lscp perl module
 	> get_inputs, get_outputs, is_valid...etc
@@ -74,3 +67,6 @@ stockage des fichiers générés dans un sous dossier
 export csv : remplacer les , par des ;
 externaliser l'accès au fichier csv dans un module (Bridge)
 remplacer /mixer/drums par /mixer/submix/drums
+::?
+mode orienté object, quelques réorganisations de fichiers et de définitions ini
+intégrer les effets d'insert dans les strips

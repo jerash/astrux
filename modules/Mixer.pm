@@ -52,6 +52,9 @@ sub init {
 	#add IO info to mixer
 	$mixer->{IOs} = $mixer_io_ref;
 
+	#add ecasound header info
+	$mixer->add_header;
+
 	#add channel strips to mixer
 	$mixer->CreateMainMixer if $mixer->is_main;
 	$mixer->CreateSubmix if $mixer->is_submix;
@@ -59,12 +62,34 @@ sub init {
 
 	#TODO remove IO info ? to see with plumbing...
 }
+sub add_header {
+	my $mixer = shift;
+
+	my $name = $mixer->{ecasound}{name};
+	my $header = "#GENERAL\n";
+	$header .= "-b:".$mixer->{ecasound}{buffersize} if $mixer->{ecasound}{buffersize};
+	$header .= " -r:".$mixer->{ecasound}{realtime} if $mixer->{ecasound}{realtime};
+	my @zoptions = split(",",$mixer->{z});
+	foreach (@zoptions) {
+		$header .= " -z:".$_;
+	}
+	$header .= " -n:\"$name\"";
+	$header .= " -z:mixmode,".$mixer->{ecasound}{mixmode} if $mixer->{ecasound}{mixmode};
+	$header .= " -G:jack,$name,notransport" if ($mixer->{ecasound}{sync} == 0);
+	$header .= " -G:jack,$name,sendrecv" if ($mixer->{ecasound}{sync});
+	$header .= " -Md:".$mixer->{ecasound}{midi} if $mixer->{ecasound}{midi};
+	#add to tructure
+	$mixer->{ecasound}{header} = $header;
+	#update status
+	$mixer->{ecasound}{status} = "header";
+}
+
 
 sub CreateMainMixer {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
-	print "|_Mixer:CreateMainMixer name : " . $mixer->get_name . "\n";
+	print " |_Mixer:CreateMainMixer name : " . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === I/O Channels, Buses, Sends ===
 	#----------------------------------------------------------------
@@ -124,7 +149,7 @@ sub CreateSubmix {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
-	print "|_Mixer:Create Submix mixer name : " . $mixer->get_name . "\n";
+	print " |_Mixer:Create Submix mixer name : " . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === Submix ===
 	#----------------------------------------------------------------
@@ -163,7 +188,7 @@ sub CreatePlayers {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
-	print "|_Mixer:Create Player mixer name : " . $mixer->get_name . "\n";
+	print " |_Mixer:Create Player mixer name : " . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === Players ===
 	#----------------------------------------------------------------

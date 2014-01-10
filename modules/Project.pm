@@ -7,14 +7,7 @@ use warnings;
 use Data::Dumper;
 
 use Mixer;
-use Player;
-
-use Exporter;
-our @ISA = 'Exporter';
-our @EXPORT = qw($baseurl);
-
-#TODO test global variable export
-our $baseurl = "/home/seijitsu/";
+use Song;
 
 sub new {
 	my $class = shift;
@@ -36,25 +29,25 @@ sub new {
 
 sub init {
 	#grap Project object from argument
-	our $project = shift;
+	my $project = shift;
 	my $ini_project = shift;
 
-
 	#merge project ini info
-	#%$project = ( %{$ini_project->{project}} , %$project );
 	%$project = ( %{$ini_project} , %$project );
 
 	#------------------Add mixers-----------------------------
 	$project->AddMixers;	
 
 	#------------------Add songs------------------------------
+	#TODO
+	$project->AddSongs;	
+
 	#----------------Add plumbing-----------------------------
-	
+	#TODO
 }
 
 sub AddMixers {
 	my $project = shift;
-	#print Dumper $project;
 
 	#build path to mixers files
 	my $mixers_path = $project->{project}{base_path} . "/" . $project->{project}{mixers_path};
@@ -79,7 +72,26 @@ sub AddSongs {
 	my $project = shift;
 # 	#my $player = Player->new();
 	#TODO : deal with players ecs chains
-	return;
+
+	#build path to songs folder
+	my $songs_path = $project->{project}{base_path} . "/" . $project->{project}{songs_path};
+	
+	#get song list
+	my @songs_folders = <$songs_path/*>;
+
+	#iterate through each song fodlder
+	foreach my $folder (@songs_folders){
+
+		#ignore files, use directories only
+		next if (! -d $folder);
+		print " Songs folder : $folder\n";
+
+		#crete a song object
+		my $song = Song->new($folder);
+
+		#update the project with song info
+		$project->{songs}{$song->{song_globals}{name}} = $song;
+	}
 }
 
 sub CreateEcsFiles {
@@ -103,11 +115,43 @@ sub CreateEcsFiles {
 		$mixer->get_ecasoundchains;
 		#add chains to file
 		$mixer->{ecasound}->add_chains;
-		#verify is the generated file can be opened by ecasound
+		#TODO verify is the generated file can be opened by ecasound
 		#$mixer->{ecasound}->verify;
 	}
 
-	#for each song, create the players files if necessary
+	#TODO : for each song, create the ecasound player file		
+	foreach my $songname (keys %{$project->{songs}}) {
+		#shorcut name
+		my $song = $project->{songs}{$songname};
+		#create path to ecs file
+		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
+		#add path to song info
+		$song->{ecsfile} = $ecsfilepath;
+		#bless structure to access data with module functions
+		bless $song , EcaFile::;
+		#create the file
+		$song->create;
+		#copy header from player mixer
+		if (defined $project->{mixers}{players}{ecasound}{header}) {
+			$song->{header} = $project->{mixers}{players}{ecasound}{header};
+		}
+		else {
+			die "Error : can't find a player mixer header\n";
+		}
+		#add ecasound header to file
+		$song->build_song_header;
+		#get chains from structure
+		# $song->get_ecasound_song_chains;
+		#add chains to file
+		$song->add_songfile_chain;
+		#TODO verify is the generated file can be opened by ecasound
+		#$song->{ecasound}->verify;
+	}
+
+}
+
+sub SaveTofile {
+	my $project = shift;
 
 }
 

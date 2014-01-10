@@ -4,9 +4,9 @@ package EcaStrip;
 
 use strict;
 use warnings;
-use EcaFx;
-
 use Data::Dumper;
+
+use EcaFx;
 
 sub new {
 	my $class = shift;
@@ -81,9 +81,10 @@ sub init {
 	
 	#add inserts
 	#TODO verify if order ok ?
-	my $order;
+	my $order = 0;
 	foreach my $effect (@effects) {
-		$ecastrip->{inserts}{$order-$effect} = EcaFx->new($effect,$km);
+		#$ecastrip->{inserts}{$order-$effect} = EcaFx->new($effect,$km);
+		$ecastrip->{inserts}{$order.$effect} = EcaFx->new($effect,$km);
 		$order++;
 	}	
 
@@ -102,6 +103,15 @@ sub init {
 
 #-------------------------------------------------------------------
 #	ecasound chain management
+sub create_chain_add_inserts {
+	my $strip = shift;
+	my $line;
+	#TODO : respect an order to inserts !!! osrt is enough ?
+	foreach my $insert (sort keys %{$strip->{inserts}}){
+		$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
+	}
+	return $line;	
+}
 
 sub create_input_chain {
 	my $strip = shift;
@@ -112,10 +122,7 @@ sub create_input_chain {
 	$line .= "-f:f32_le,2,48000 -i:jack,," if $strip->is_stereo;
 	$line .= $name;
 	#add inserts if any
-	#TODO : respect an order to inserts !!!
-	foreach my $insert (keys %{$strip->{inserts}}){
-		$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
-	}
+	$line .= $strip->create_chain_add_inserts();
 	return $line;
 }
 sub create_loop_output_chain {
@@ -128,8 +135,8 @@ sub create_loop_output_chain {
 sub create_bus_input_chain {
 	my $strip = shift;
 	my $name = shift;
-
-	return "-a:bus_$name -f:f32_le,2,48000 -i:jack,,bus_$name";
+	my $inserts = $strip->create_chain_add_inserts();
+	return "-a:bus_$name -f:f32_le,2,48000 -i:jack,,bus_$name $inserts";
 }
 sub create_bus_output_chain {
 	my $strip = shift;
@@ -182,7 +189,8 @@ sub create_aux_output_chains {
 		foreach my $input (@$in) {
 			#ingore send busname to himself
 			next if ( $mixer->{channels}{$busname}{return} and ( $mixer->{channels}{$busname}{return} eq $input ));
-			$line .= "-a:" . $input . "_to_$busname -f:f32_le,2,48000 -o:jack,,to_bus_$busname\n";
+			my $inserts = $mixer->{channels}{$busname}->create_chain_add_inserts();
+			$line .= "-a:" . $input . "_to_$busname -f:f32_le,2,48000 -o:jack,,to_bus_$busname $inserts\n";
 		}
 	}
 	return $line;
