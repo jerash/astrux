@@ -1,3 +1,8 @@
+dnas tous les trucs à écrire dans un fichiers ou on est susceptible d'avoir plusieurs lignes : mettre sous forme de tableau (push) poru éviter d'avoir une mise en forme du Dumper illisible.
+
+in mixer.pm we remove IO info not necessary anymore
+	> unless we want to reactivate channels ?
+	> it would need to reconfigurate everything, so what's the point ? 'dbetter mute unused channels'
 
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?

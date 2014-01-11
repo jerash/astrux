@@ -36,44 +36,39 @@ sub init {
 	my $ecastrip = shift;
 	my $IOsection = shift;
 	return unless defined $IOsection;
+	#don't insert channel if inactive
+	return unless $IOsection->{status} eq "active";
 
 	#update channel strip info from ini
-	$ecastrip->{friendly_name} = $IOsection->{friendly_name};
-	$ecastrip->{status} = $IOsection->{status};
-	$ecastrip->{can_be_backed} = $IOsection->{can_be_backed};
-	$ecastrip->{group} = $IOsection->{group};
-	$ecastrip->{type} = $IOsection->{type};
-	$ecastrip->{generatekm} = $IOsection->{generatekm};
-	$ecastrip->{return} = $IOsection->{return};
-
+	$ecastrip->{friendly_name} = $IOsection->{friendly_name} if $IOsection->{friendly_name};
+	$ecastrip->{status} = $IOsection->{status} if $IOsection->{status};
+	$ecastrip->{can_be_backed} = $IOsection->{can_be_backed} if $IOsection->{can_be_backed};
+	$ecastrip->{group} = $IOsection->{group} if $IOsection->{group};
+	$ecastrip->{type} = $IOsection->{type} if $IOsection->{type};
+	$ecastrip->{generatekm} = $IOsection->{generatekm} if $IOsection->{generatekm};
+	$ecastrip->{return} = $IOsection->{return} if $IOsection->{return};
+	$ecastrip->{channels} = $IOsection->{channels} if $IOsection->{channels};
+	
 	print "   |_adding channel ".$ecastrip->{friendly_name}."\n";
-	#deal with each channel type  << removed now as players are straight cableing and not submix concept
-	# if ($ecastrip->{type} eq "file_in") {
-	# 	#these infos depend on song content
-	# 	$ecastrip->{channels} = undef;
-	# 	$ecastrip->{connect} = undef;
-	# }
-	# else {
-		$ecastrip->{channels} = $IOsection->{channels};	
+	
+	#en fonction du nombre de channels on crée une liste des inputs
+	my @tab;
+	$ecastrip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
 
-		#en fonction du nombre de channels on crée une liste des inputs
-		my @tab;
-		$ecastrip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
+	#mono channel >> to be used on output buses to save hardware channels if needed
+	if (defined $IOsection->{mode} and $IOsection->{mode} eq "mono") {
+		#get connect port
+		push ( @tab , $IOsection->{"connect_1"});
+	}
+	#stereo channel or more
+	else {
+		#get connect port
+		push ( @tab , $IOsection->{"connect_$_"}) for (1 .. $IOsection->{channels});
+	}
 
-		#mono channel >> to be used on output buses to save hardware channels if needed
-		if (defined $IOsection->{mode} and $IOsection->{mode} eq "mono") {
-			#get connect port
-			push ( @tab , $IOsection->{"connect_1"});
-		}
-
-		#stereo channel or more
-		else {
-			#get connect port
-			push ( @tab , $IOsection->{"connect_$_"}) for (1 .. $IOsection->{channels});
-		}
-		$ecastrip->{connect} = \@tab;
-	# }
-
+	#add the connect channel to structure
+	$ecastrip->{connect} = \@tab;
+	
 	#verify if we generate km controllers (midi)
 	my $km = $ecastrip->{generatekm};
 
@@ -81,11 +76,11 @@ sub init {
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
 	
 	#add inserts
-	#TODO verify if order ok ?
 	my $order = 0;
 	foreach my $effect (@effects) {
-		#$ecastrip->{inserts}{$order-$effect} = EcaFx->new($effect,$km);
-		$ecastrip->{inserts}{$order.$effect} = EcaFx->new($effect,$km);
+		die "Can't have more than 20 inserts on a track\n" if ($order eq 21);
+		$ecastrip->{inserts}{$effect} = EcaFx->new($effect,$km);
+		$ecastrip->{inserts}{$effect}{nb} = $order;
 		$order++;
 	}	
 
@@ -98,6 +93,8 @@ sub init {
 		elsif ($ecastrip->is_stereo) {
 			$ecastrip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 		}
+		#give panvol the last nb to place it at the end of insert chains
+		$ecastrip->{inserts}{panvol}{nb} = "99";
 	}
 
 }

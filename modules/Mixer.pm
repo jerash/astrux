@@ -54,13 +54,13 @@ sub init {
 
 	#add ecasound header info
 	$mixer->add_header;
-
 	#add channel strips to mixer
 	$mixer->CreateMainMixer if $mixer->is_main;
 	$mixer->CreateSubmix if $mixer->is_submix;
 	$mixer->CreatePlayers if $mixer->is_player;
 
-	#TODO remove IO info ? to see with plumbing...
+	#remove IO info not necessary anymore
+	delete $mixer->{IOs};
 }
 sub add_header {
 	my $mixer = shift;
@@ -220,23 +220,30 @@ sub CreatePlayers {
 sub get_ecasoundchains {
 	my $mixer = shift;
 
+	#option to cleanup strucutre by removing io chains after compiling to all_chains
+	my $remove = 1;
+
 	my @table;
 
 	if (defined $mixer->{ecasound}{i_chains}) {
 		push @table , "\n#INPUTS\n";
 		push @table , @{$mixer->{ecasound}{i_chains}};
+		delete $mixer->{ecasound}{i_chains} if $remove;
 	}
 	if (defined $mixer->{ecasound}{o_chains}) {
 		push @table , "\n#OUTPUTS\n";
 		push @table , @{$mixer->{ecasound}{o_chains}};
+		delete $mixer->{ecasound}{o_chains} if $remove;
 	}
 	if (defined $mixer->{ecasound}{x_chains}) {
 		push @table , "\n#CHANNELS ROUTING\n";
 		push @table , @{$mixer->{ecasound}{x_chains}};
+		delete $mixer->{ecasound}{x_chains} if $remove;
 	}
 	if (defined $mixer->{ecasound}{io_chains}) {
 		push @table , "\n#PLAYERS\n";
 		push @table , @{$mixer->{ecasound}{io_chains}};
+		delete $mixer->{ecasound}{io_chains} if $remove;
 	}
 
 	#update structure

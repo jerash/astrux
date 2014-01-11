@@ -17,94 +17,70 @@ my $debug = 0;
 # my $do_plumbing = $ini_project->val('jack.plumbing','enable');
 #--------------------------------------------------------------------
 
-sub new {
-	my $class = shift;
-	my $ini_project = shift;
+sub create {
+	#create the file (overwrite)
+	my $connections = shift;
 
-	if ( $ini_project->{'jack.plumbing'}{'enable'} == 1 ) {
-		my $files_folder = $ini_project->{'project'}{'filesfolder'};
-		open my $file, ">$files_folder/jack.plumbing" or die $!;
-		bless $file, $class;
-		return $file;
-  	} else {
-  		warn "Plumbing not activated!!\n";
-  		return undef;
-  	}
+	#get path to file
+	my $path = $connections->{file};
+	#print "---connections:create\n path = $path\n";
+	die "no path to create ecs file\n" unless (defined $path);
+	#create an empty file (overwrite existing)
+	#TODO : check for existence and ask for action
+	open my $handle, ">$path" or die $!;
+	#update mixer status
+	$connections->{status} = "new";
+	#close file
+	close $handle;
 }
-  
-sub Add {
-	if (my $file = shift) {
-		my $message = shift;
-		print $file $message . "\n";
+
+sub save {
+	my $connections = shift;
+
+	if (defined $connections->{status}) {
+		open my $handle, ">>$connections->{file}" or die $!;
+		print $handle "$_\n" for @{$connections->{rules}};
+		close $handle;
 	} else {
-		warn "Plumbing not activated!!\n";
+		#TODO better handling
+		warn "Plumbing file doesn't exist!!\n";
 	}
 }
-sub Close {
-	close shift;
+
+sub create_rules {
+	my $class = shift;
+	my $project = shift;
+
+	#the rule set
+	my @rules;
+
+	# --- LOOP THROUGH MIXERs ---
+	foreach my $mixername (keys %{$project->{mixers}}) {
+		#ignore players mixer
+		next if $project->{mixers}{$mixername}{ecasound}{name} eq "players";
+		#create mixer reference
+		my $mixer = $project->{mixers}{$mixername}{channels};
+		# --- LOOP THROUGH CHANNELS ---
+		foreach my $channelname (keys %{$mixer}) {
+				for my $i (1..2) {
+				#get the table of connections
+				my @table = @{$mixer->{$channelname}{connect}};
+				#take the Nth one, will be undef if connect is empty or undef
+				my $plumbin = $table[$i-1]; 
+				my $plumbout = $project->{mixers}{$mixername}{ecasound}{name}.":$channelname"."_$i";
+				#$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+				push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+			}
+			#if this is a bus out, create generic channels routing to this bus
+			if ($mixer->{$channelname}->is_hardware_out) {
+				my $string = "(connect \"$mixername:to_bus_$channelname"."_.*[13579]\$"."\" \"$mixername:bus_$channelname"."_1\")";
+				push (@rules , $string); 
+				$string = "(connect \"$mixername:to_bus_$channelname"."_.*[02468]\$"."\" \"$mixername:bus_$channelname"."_2\")";
+				push (@rules , $string); 
+			}
+		}
+	}
+	return @rules;
 }
-
-
-# 		#ajouter la règle de plumbing
-# 		#pour une piste player
-# 		if ( $mixer->{IOs}->val($section,'type') eq 'player' ) {
-# 			for my $i (1..2) {
-# 				#grab player number
-# 				my $nb = substr ($mixer->{IOs}->val($section,'name'), -1, 1);
-# 				#deal with stereo pair
-# 				my $plumbin = "player:out_$nb" . "_.*[13579]\$" if ($i==1);
-# 				$plumbin = "player:out_$nb" . "_.*[02468]\$" if ($i==2);
-# 				my $plumbout = "$eca_mixer:";
-# 				$plumbout .= $mixer->{IOs}->val($section,'name') . "_$i";
-# 				$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
-# 			}
-# 		}
-# 		#pour une piste submix
-# 		elsif ( $mixer->{IOs}->val($section,'type') eq 'submix' ) {
-# 			my $plumbin = "submix_" . $mixer->{IOs}->val($section,'name') . ":" . $mixer->{IOs}->val($section,'name') . "_out_(.*)";
-# 			my $plumbout = "$eca_mixer:" . $mixer->{IOs}->val($section,'name') . "_\\1";
-# 			$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
-# 		}
-# 		else { #pour une piste input,return
-# 			for my $i (1..2) {
-# 				if (( $mixer->{IOs}->val($section,'type') eq 'audio' ) or ( $mixer->{IOs}->val($section,'type') eq 'return' )) {
-# 					my $plumbin = $mixer->{IOs}->val($section,"hardware_input_$i");
-# 					my $plumbout = "$eca_mixer:" . $mixer->{IOs}->val($section,'name') . "_$i";
-# 					$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
-# 				}
-# 				elsif ( $mixer->{IOs}->val($section,'type') eq 'submix' ) {
-# 					$plumbing->Add(";submix");
-# 					my $plumbin = "submix_" . $mixer->{IOs}->val($section,'name') . ":out_(.*)";
-# 					my $plumbout = "$eca_mixer:submix_" . $mixer->{IOs}->val($section,'name') . "_\\1";
-# 					$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")");
-# 					last;
-# 				}
-# 			}
-# 		}
-
-# #foreach valid bus
-# 	#ajouter la règle de plumbing
-# 	for my $i (1..2) {
-# 		my $plumbin = "$eca_mixer:to_bus_" . $mixer->{IOs}->val($bus,'name') . "_.*[13579]\$" if ($i==1);
-# 		$plumbin = "$eca_mixer:to_bus_" . $mixer->{IOs}->val($bus,'name') . "_.*[02468]\$" if ($i==2);
-# 		my $plumbout = "$eca_mixer:bus_";
-# 		$plumbout .= "send_" if ($mixer->{IOs}->val($bus,'type') eq 'send');
-# 		$plumbout .= $mixer->{IOs}->val($bus,'name') . "_$i";
-# 		$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
-# 	}
-# }
-
-# #----------------------------------------------------------------
-# # -- BUS SENDS --
-# $plumbing->Add(";buses");
-# foreach my $bus (@valid_output_sections) {
-# 	#ajouter la règle de plumbing
-# 	for my $i (1..2) {
-# 		my $plumbin = "$eca_mixer:" . $mixer->{IOs}->val($bus,'name') . "_out_$i";
-# 		my $plumbout = $mixer->{IOs}->val($bus,"hardware_output_$i");
-# 		$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbout;
-# 	}
-# }
-
 
 1;

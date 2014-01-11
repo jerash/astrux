@@ -25,33 +25,13 @@ my $ini_project_ref = \%ini_project;
 #------------Create project structure----------------------------
 my $Live = Project->new($ini_project_ref);
 
-print " -- Live Created sucessfully :) --\n" if defined $Live;
+print " -- Live Project Created :) --\n" if defined $Live;
 
-#------------Create ecasound files------------------------
-$Live->CreateEcsFiles;	
+#------------Create project files------------------------
+$Live->GenerateFiles;	
+$Live->SaveTofile;
 
-#generate the files for the live
-#$Live->Generate; 
-
-#Now PLay !
-
-#print Dumper $Live;
- 
-# use Storable;
-# store $Live, 'tree.stor';
-# $hashref = retrieve('file');
-#>>>works but output is not readable
-
-#Save
-$Data::Dumper::Purity = 1;
-open FILE, ">project.cfg" or die "Can't open 'tree':$!";
-print FILE Dumper $Live;
-close FILE;
-#restore
-# open FILE, $infile;
-# undef $/;
-# eval <FILE>;
-# close FILE;
+#------------Now PLay !------------------------
 
 
 print "\n";

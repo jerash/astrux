@@ -8,6 +8,7 @@ use Data::Dumper;
 
 use Mixer;
 use Song;
+use Plumbing;
 
 sub new {
 	my $class = shift;
@@ -17,7 +18,6 @@ sub new {
 	my $project = {
 		'mixers' => {},
 		'songs' => {},
-		'rules' => {},
 	};
 	bless $project,$class;
 
@@ -39,11 +39,11 @@ sub init {
 	$project->AddMixers;	
 
 	#------------------Add songs------------------------------
-	#TODO
 	$project->AddSongs;	
 
 	#----------------Add plumbing-----------------------------
 	#TODO
+	$project->AddPlumbing;
 }
 
 sub AddMixers {
@@ -70,8 +70,6 @@ sub AddMixers {
 
 sub AddSongs {
 	my $project = shift;
-# 	#my $player = Player->new();
-	#TODO : deal with players ecs chains
 
 	#build path to songs folder
 	my $songs_path = $project->{project}{base_path} . "/" . $project->{project}{songs_path};
@@ -94,9 +92,31 @@ sub AddSongs {
 	}
 }
 
-sub CreateEcsFiles {
+sub AddOscMidiBridge {	
+	# 	#------------------------BRIDGE-----------------------------------
+	# 	#create/reset the oscmidipath file
+	# 	Bridge::Init_file();	
+	#
+	# 	Bridge::Close_file();
+	return;
+}
+sub AddPlumbing {
 	my $project = shift;
 
+	my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
+	$project->{connections}{file} = $plumbingfilepath;
+	bless $project->{connections} , Plumbing::;
+
+	my @plumbing_rules = Plumbing->create_rules($project);
+	#print Dumper @plumbing_rules;
+	$project->{connections}{rules} = \@plumbing_rules;
+
+}
+
+sub GenerateFiles {
+	my $project = shift;
+
+	#----------------ECASOUND FILES------------------------
 	#for each mixer, create the ecasound mixer file
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		#shorcut name
@@ -119,7 +139,7 @@ sub CreateEcsFiles {
 		#$mixer->{ecasound}->verify;
 	}
 
-	#TODO : for each song, create the ecasound player file		
+	#for each song, create the ecasound player file		
 	foreach my $songname (keys %{$project->{songs}}) {
 		#shorcut name
 		my $song = $project->{songs}{$songname};
@@ -146,28 +166,48 @@ sub CreateEcsFiles {
 		#$song->{ecasound}->verify;
 	}
 
+	#----------------PLUMBING FILE------------------------
+	if ($project->{connections}{"jack.plumbing"} == 1) {
+		#we're asked to generate the plumbing file
+		my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
+		$project->{connections}{file} = $plumbingfilepath;
+		bless $project->{connections} , Plumbing::;
+		print "Project: creating plumbing file $plumbingfilepath\n";
+		$project->{connections}->create;
+		$project->{connections}->save;
+	}
+	else {
+		print "Project: jack.plumbing isn't defined as active. Not creating file.";
+	}
+
 }
 
 sub SaveTofile {
 	my $project = shift;
+	my $outfile = shift;
 
+	$Data::Dumper::Purity = 1;
+	#TODO check how to send parameter !? its too late....
+	#open FILE, ">$outfile" or die "Can't open file to write:$!";
+	open FILE, ">project.cfg" or die "Can't open file to write:$!";
+	print FILE Dumper $project;
+	close FILE;
+# use Storable;
+# store $Live, 'tree.stor';
+# $hashref = retrieve('file');
+#>>>works but output is not readable
 }
 
-sub CreateOscMidiBridge {	
-	# 	#------------------------BRIDGE-----------------------------------
-	# 	#create/reset the oscmidipath file
-	# 	Bridge::Init_file();	
-	#
-	# 	Bridge::Close_file();
-	return;
-}
-sub CreatePlumbing {
-	# 	#------------------------PLUMBING-----------------------------------
-	# 	#create/reset the plumbing file
-	# 	my $plumbing = Plumbing->new($ini_project);	
-	#
-	# 	$plumbing->Close;
-	return;
+sub LoadFromFile {
+	my $project = shift;
+	my $infile = shift;
+
+	#restore
+	open FILE, $infile;
+	undef $/;
+	#TODO verify this thing
+	eval <FILE>;
+	close FILE;
 }
 
 
