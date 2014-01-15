@@ -130,10 +130,33 @@ sub CreateMainMixer {
 	}
 
 	#==CHANNELS ROUTING TO BUSES AND SENDS==
+	#TODO create real mixer channels in the strucure !! else midiosc bridge can't find them !
+	#use type='route'
 	my @xin = split ( "\n" , EcaStrip::create_aux_input_chains(\@i_nametab,\@o_nametab,$mixer));
 	my @xot = split ( "\n" , EcaStrip::create_aux_output_chains(\@i_nametab,\@o_nametab,$mixer));
 	push(@x_chaintab,@xin);
 	push(@x_chaintab,@xot);
+
+	#to each channel defined as active input
+	foreach my $name (@i_nametab ) {		
+
+		#add a route to the defined buses
+		foreach my $bus (@o_nametab) {
+
+			#create a channel strip
+			my $strip = EcaStrip->new;
+
+			#verify if the channel is defined using midi control
+			my $km = $mixer->{channels}{$name}{generatekm};
+
+			#init the aux strip
+			$strip->aux_init($km);
+
+			#add aux route strip to mixer
+			$mixer->{channels}{$name}{aux_route}{$bus} = $strip;
+		}
+	}
+
 
 	#add aux chains to ecasound info
 	$mixer->{ecasound}{x_chains} = \@x_chaintab if @x_chaintab;

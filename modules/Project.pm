@@ -300,16 +300,19 @@ sub Start {
 		#fork and exec
 			$SIG{CHLD} = sub { wait };
 			$pid_mixer = fork();
-			die "unable to fork: $!" unless defined($pid_mixer);
-			push (@pid_mixers,$pid_mixer);
 			if ($pid_mixer) {
+				#we are parent
 				print "new pid_mixer = $pid_mixer\n";
-			   	print "$command\n";
-			    #exec( $command );
-		        # die "unable to exec: $!";
-			    system( $command );
-			    print "started ok\n";
-			    exit 0;
+			   	push (@pid_mixers,$pid_mixer);
+			}
+			elsif (defined $pid_mixer) {
+				#we are child
+				print "$command\n";
+			    exec( $command );
+		        die "unable to exec: $!";
+			}
+			else {
+				die "unable to fork: $!";
 			}
 			sleep(1);
 			print ".../\n"

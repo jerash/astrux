@@ -99,12 +99,29 @@ sub init {
 
 }
 
+sub aux_init {
+	my $strip = shift;
+	my $km = shift;
+
+	#init values
+	$strip->{type} = "route";
+	$strip->{channels} = "2"; 
+	delete $strip->{group}; 
+	delete $strip->{status}; 
+	delete $strip->{connect}; 
+	delete $strip->{friendly_name}; 
+	delete $strip->{can_be_backed}; 
+	
+	#add pan and volume
+	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+}
+
 #-------------------------------------------------------------------
 #	ecasound chain management
 sub create_chain_add_inserts {
 	my $strip = shift;
 	my $line;
-	#TODO : respect an order to inserts !!! osrt is enough ?
+	#TODO : respect an order to inserts !!! or sort is enough ?
 	foreach my $insert (sort keys %{$strip->{inserts}}){
 		$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
 	}
