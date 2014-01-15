@@ -9,6 +9,7 @@ use Plumbing;
 use Data::Dumper;
 use Config::IniFiles;
 #http://search.cpan.org/~shlomif/Config-IniFiles-2.82/lib/Config/IniFiles.pm
+
 #----------------------------------------------------------------
 # This is the main tool for Astrux Live
 #----------------------------------------------------------------
@@ -24,14 +25,14 @@ my $ini_project_ref = \%ini_project;
 
 #------------Create project structure----------------------------
 my $Live = Project->new($ini_project_ref);
-
 print " -- Live Project Created :) --\n" if defined $Live;
 
 #------------Create project files------------------------
 $Live->GenerateFiles;	
-$Live->SaveTofile;
+$Live->SaveTofile("$Live->{project}{name}".".cfg");
 
 #------------Now PLay !------------------------
 
+print Dumper $Live;
 
 print "\n";

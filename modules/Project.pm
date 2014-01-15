@@ -9,6 +9,9 @@ use Data::Dumper;
 use Mixer;
 use Song;
 use Plumbing;
+use Bridge;
+
+#-------------------------------------GENERATION-----------------------------------------------------
 
 sub new {
 	my $class = shift;
@@ -42,8 +45,10 @@ sub init {
 	$project->AddSongs;	
 
 	#----------------Add plumbing-----------------------------
-	#TODO
 	$project->AddPlumbing;
+
+	#----------------Add bridge-----------------------------
+	$project->AddOscMidiBridge;
 }
 
 sub AddMixers {
@@ -93,13 +98,16 @@ sub AddSongs {
 }
 
 sub AddOscMidiBridge {	
-	# 	#------------------------BRIDGE-----------------------------------
-	# 	#create/reset the oscmidipath file
-	# 	Bridge::Init_file();	
-	#
-	# 	Bridge::Close_file();
-	return;
+	my $project = shift;
+	#TODO
+	$project->{bridge}{status} = "notcreated";
+	bless $project->{bridge}, Bridge::;
+
+	my @bridgelines = Bridge->create_lines($project);
+	#print Dumper @bridgelines;
+	$project->{bridge}{lines} = \@bridgelines;
 }
+
 sub AddPlumbing {
 	my $project = shift;
 
@@ -110,7 +118,6 @@ sub AddPlumbing {
 	my @plumbing_rules = Plumbing->create_rules($project);
 	#print Dumper @plumbing_rules;
 	$project->{connections}{rules} = \@plumbing_rules;
-
 }
 
 sub GenerateFiles {
@@ -171,7 +178,7 @@ sub GenerateFiles {
 		#we're asked to generate the plumbing file
 		my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
 		$project->{connections}{file} = $plumbingfilepath;
-		bless $project->{connections} , Plumbing::;
+		# bless $project->{connections} , Plumbing::;
 		print "Project: creating plumbing file $plumbingfilepath\n";
 		$project->{connections}->create;
 		$project->{connections}->save;
@@ -180,35 +187,141 @@ sub GenerateFiles {
 		print "Project: jack.plumbing isn't defined as active. Not creating file.";
 	}
 
+	#----------------BRIDGE FILE------------------------
+	#TODO define bridge option
+	if (1) {
+		#we're asked to generate the bridge file
+		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
+		$project->{bridge}{file} = $filepath;
+		print "Project: creating bridge file $filepath\n";
+		$project->{bridge}->create;
+		$project->{bridge}->save;
+	}
+	else {
+		print "Project: midi/osc bridge isn't defined as active. Not creating file.";
+	}
+
 }
 
 sub SaveTofile {
 	my $project = shift;
 	my $outfile = shift;
-
-	$Data::Dumper::Purity = 1;
-	#TODO check how to send parameter !? its too late....
-	#open FILE, ">$outfile" or die "Can't open file to write:$!";
-	open FILE, ">project.cfg" or die "Can't open file to write:$!";
-	print FILE Dumper $project;
-	close FILE;
-# use Storable;
-# store $Live, 'tree.stor';
-# $hashref = retrieve('file');
-#>>>works but output is not readable
+#Data::Dumper
+	# $Data::Dumper::Purity = 1;
+		#TODO check how to send parameter !? its too late....
+		#open FILE, ">$outfile" or die "Can't open file to write:$!";
+	# open FILE, ">project.cfg" or die "Can't open file to write:$!";
+	# print FILE Dumper $project;
+	# close FILE;
+#Storable
+	 use Storable;
+	#>>>works but output is not human readable
+	store $project, $outfile;
+	# $hashref = retrieve('file');
+#use JSON::XS
+	# $utf8_encoded_json_text = encode_json $perl_hash_or_arrayref;
+ 	# $perl_hash_or_arrayref  = decode_json $utf8_encoded_json_text;
 }
 
 sub LoadFromFile {
 	my $project = shift;
 	my $infile = shift;
 
-	#restore
-	open FILE, $infile;
-	undef $/;
-	#TODO verify this thing
-	eval <FILE>;
-	close FILE;
+	use Storable;
+	$project = retrieve($infile);
+
+#Data::Dumper
+	# #restore
+	# open FILE, $infile;
+	# undef $/;
+	# #TODO verify this thing
+	# eval <FILE>;
+	# close FILE;
 }
 
+#-------------------------------------LIVE USE-----------------------------------------------------
+
+sub Start {
+	my $project = shift;
+
+	#TODO verify Project is valid
+
+	# copy jack plumbing
+	if ($project->{connections}{"jack.plumbing"} eq 1) {
+		my $homedir = $ENV{"HOME"};
+		warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
+		use File::Copy;
+		copy("$project->{connections}{file}","$homedir/.jack.plumbing") or die "Copy failed: $!";
+	}
+
+	#verify that backends are active
+	#TODO make a hash of backends/PID, or add to project {process}
+	my $pid_jackd = qx(pgrep jackd);
+	die "JACK server is not running" unless $pid_jackd;
+	print "JACK server running with PID $pid_jackd";
+	#TODO verify jack parameters
+
+	my $pid_jpmidi = qx(pgrep jpmidi);
+	die "JPMIDI server is not running" unless $pid_jpmidi;
+	print "JPMIDI server running with PID $pid_jpmidi";
+
+	if ($project->{linuxsampler}{enable}) {
+		my $pid_linuxsampler = qx(pgrep linuxsampler);
+		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
+		print "LINUXSAMPLER running with PID $pid_linuxsampler\n";
+	}
+	
+	# get song list
+	my @songkeys = sort keys %{$project->{songs}};
+	my @songlist;
+	push (@songlist,$project->{songs}{$_}{song_globals}{friendly_name}) foreach @songkeys;
+	print "SONGS :\n";
+	print " - $_\n" foreach @songlist;
+
+	# start mixers
+	print "Starting mixers\n";
+	my @pid_mixers;
+	my $pid_mixer;
+	# $SIG{CHLD} = 'IGNORE'; #don't wait for child status
+
+	# #TODO verify if mixer is not already running
+	#my $ps = qx(ps ax);
+	#print "Using existing Ecasound server", return
+	#	if  $ps =~ /ecasound/
+	#	and $ps =~ /--server/
+	#	and ($ps =~ /tcp-port=$port/ or $port == $default_port);
+	foreach my $mixername (keys %{$project->{mixers}}) {
+		print " - mixer $mixername\n";
+		my $mixerfile = $project->{mixers}{$mixername}{ecasound}{ecsfile};
+		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
+		my $port = $project->{mixers}{$mixername}{ecasound}{port};
+		#print "ecasound -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port\n";
+		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
+		#fork and exec
+			$SIG{CHLD} = sub { wait };
+			$pid_mixer = fork();
+			die "unable to fork: $!" unless defined($pid_mixer);
+			push (@pid_mixers,$pid_mixer);
+			if ($pid_mixer) {
+				print "new pid_mixer = $pid_mixer\n";
+			   	print "$command\n";
+			    #exec( $command );
+		        # die "unable to exec: $!";
+			    system( $command );
+			    print "started ok\n";
+			    exit 0;
+			}
+			sleep(1);
+			print ".../\n"
+	}
+
+	print "finished with table of pid =\n";
+	print Dumper @pid_mixers;
+	# load song chainsetups + dummy
+	# start plumbing
+
+	# now should have sound
+
+}
 
 1;

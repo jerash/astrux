@@ -11,27 +11,11 @@ use feature 'state';
 use Data::Dumper;
 
 use lib '/home/seijitsu/astrux/modules';
-use Bridge;
+#use Bridge;
 use Project qw($baseurl);
 
 my $debug = 0;
 
-#------------------------------------------------------------------------------------------
-# get the options assignables to midi from a defined effect in effect_preset ecasoudn file
-# it allows midi assignation of effects defined for that project only .sic.
-#
-# taken as a prerequisite : 
-#	plugin name must be on line start (first character)
-#	pn; ppu, ppl ..etc definitions are on different lines separated by \
-#
-# input : $plugin = plugin name define in effect_preset file to find
-#
-# return ($code,$string,%hash)
-#	$code : 0 = error/not found, 1 = ok
-#	$string : "error message" if code 0, "ok" if code 1
-#	%hash : empty hash if code 0, hash of controls if code 1
-#
-#------------------------------------------------------------------------------------------
 sub new {
 	my $class = shift;
 	my $effect = shift;
@@ -44,7 +28,9 @@ sub new {
 		"fxname" => $effect,
 		"generatekm" => $km,
 		"ecsline" => "",
-		"position" => $position
+		"position" => $position,
+		"rien" => "",
+		"CCs" => (),
 	};
 	bless $ecafx,$class;
 	
@@ -194,8 +180,8 @@ sub Generate_km {
 		my $low = (shift @lows);
 		my $high = (shift @highs);
 		$ecafx->{ecsline} .= " -km:" . $nb++ . ",$low,$high,$CC,$channel";
-		#update the midistate.csv file
-		#Bridge::Add_to_file($path . "/$param," . (shift @defaults) . ";$low;$high;$CC,$channel\n");
+		#push channel and CC values
+		push (@{$ecafx->{CCs}},join(',',($CC,$channel)));
 	}
 	#remove trailing whitespace
 	$ecafx->{ecsline} =~ s/\s+$//;
