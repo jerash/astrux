@@ -111,7 +111,7 @@ sub aux_init {
 	delete $strip->{connect}; 
 	delete $strip->{friendly_name}; 
 	delete $strip->{can_be_backed}; 
-	
+
 	#add pan and volume
 	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 }
@@ -172,43 +172,6 @@ sub create_submix_output_chain {
 	my $name = shift;
 
 	return "-a:all -f:f32_le,2,48000 -o:jack,,sub_$name";
-}
-
-sub create_aux_input_chains {
-	my $in = shift;
-	my $out = shift;
-	my $mixer = shift;
-
-	my $line;
-	foreach my $input (@$in) {
-		$line .= "-a:";
-		foreach my $busname (@$out) {
-			if ( $mixer->{channels}{$busname}{return} and ( $mixer->{channels}{$busname}{return} eq $input )) {
-				print "   |_info: discarding sendbus to himself ($busname) \n";
-			}
-			else {
-				$line .= "$input" . "_to_$busname,";
-			}
-		}
-		chop($line);
-		$line .=  " -f:f32_le,2,48000 -i:loop,$input\n";
-	}
-	return $line;
-}
-sub create_aux_output_chains {
-	my $in = shift;
-	my $out = shift;
-	my $mixer = shift;
-	my $line;
-	foreach my $busname (@$out) {
-		foreach my $input (@$in) {
-			#ingore send busname to himself
-			next if ( $mixer->{channels}{$busname}{return} and ( $mixer->{channels}{$busname}{return} eq $input ));
-			my $inserts = $mixer->{channels}{$busname}->create_chain_add_inserts();
-			$line .= "-a:" . $input . "_to_$busname -f:f32_le,2,48000 -o:jack,,to_bus_$busname $inserts\n";
-		}
-	}
-	return $line;
 }
 
 #-------------------------------------------------------------------
