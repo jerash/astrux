@@ -30,10 +30,14 @@ sub new {
 		"ecsline" => "",
 		"position" => $position,
 		"rien" => "",
-		"CCs" => (),
+		"CCs" => ""
 	};
 	bless $ecafx,$class;
 	
+	#force array
+	$ecafx->{CCs} = ();
+	
+	#init effect
 	$ecafx->init if $effect ne "";
 
 	return $ecafx;

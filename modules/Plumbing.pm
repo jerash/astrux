@@ -5,26 +5,14 @@ package Plumbing;
 use strict;
 use warnings;
 
-use Config::IniFiles;
-
-my $debug = 0;
-#-----------------------PROJECT INI---------------------------------
-#project file
-# my $ini_project = new Config::IniFiles -file => "project.ini";
-# die "reading project ini file failed\n" until $ini_project;
-# #folder where to store generated files
-# #do we generate plumbing file ?
-# my $do_plumbing = $ini_project->val('jack.plumbing','enable');
-#--------------------------------------------------------------------
-
 sub create {
 	#create the file (overwrite)
 	my $connections = shift;
 
 	#get path to file
 	my $path = $connections->{file};
-	#print "---connections:create\n path = $path\n";
-	die "no path to create ecs file\n" unless (defined $path);
+	die "no path to create plumbing file\n" unless (defined $path);
+	
 	#create an empty file (overwrite existing)
 	#TODO : check for existence and ask for action
 	open my $handle, ">$path" or die $!;
@@ -68,7 +56,7 @@ sub create_rules {
 				#take the Nth one, will be undef if connect is empty or undef
 				my $plumbin = $table[$i-1]; 
 				my $plumbout = $project->{mixers}{$mixername}{ecasound}{name}.":$channelname"."_$i";
-				
+				#jack plumbing will need a certain order for hardware connects
 				if ($mixer->{$channelname}->is_hardware_out) {
 					push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
 				}
