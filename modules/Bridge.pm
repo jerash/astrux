@@ -73,6 +73,26 @@ sub create_lines {
 					$i++;
 				}
 			}
+			# --- LOOP THROUGH AUX ROUTES ---
+			foreach my $auxroute (keys %{$channel->{aux_route}}) {
+				#create route reference
+				my $route = $channel->{aux_route}{$auxroute}{inserts}{panvol};
+				# --- LOOP THROUGH route PARAMETERS ---
+				my $i = 0;
+				foreach my $paramname (@{$route->{paramnames}}) {
+					#construct line with
+					# /mixername/channelname/aux_to/route/paramname;value;min;max;CC;channel
+					my $value = $route->{defaultvalues}[$i];
+					my $min = $route->{lowvalues}[$i];
+					my $max = $route->{highvalues}[$i];
+					my ($CC,$channel) = ('','');
+					($CC,$channel) = split(',',$route->{CCs}[$i]) if $route->{CCs}; #ignore if CC not created					
+					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;$value;$min;$max;$CC;$channel";
+					push(@osclines,$line);
+					# print "**$line \n";
+					$i++;
+				}
+			}
 		}
 	}
 	#TODO : find a way to acces channels routing CCs

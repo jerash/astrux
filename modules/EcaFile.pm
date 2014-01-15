@@ -24,35 +24,6 @@ sub create {
 	close $handle;
 }
 
-# sub build_header {
-# 	my $ecafile = shift;
-
-# 	my $name = $ecafile->{name};
-# 	my $header = "#GENERAL\n";
-# 	$header .= "-b:".$ecafile->{buffersize} if $ecafile->{buffersize};
-# 	$header .= " -r:".$ecafile->{realtime} if $ecafile->{realtime};
-# 	my @zoptions = split(",",$ecafile->{z});
-# 	foreach (@zoptions) {
-# 		$header .= " -z:".$_;
-# 	}
-# 	$header .= " -n:\"$name\"";
-# 	$header .= " -z:mixmode,".$ecafile->{mixmode} if $ecafile->{mixmode};
-# 	$header .= " -G:jack,$name,notransport" if ($ecafile->{sync} == 0);
-# 	$header .= " -G:jack,$name,sendrecv" if ($ecafile->{sync});
-# 	$header .= " -Md:".$ecafile->{midi} if $ecafile->{midi};
-# 	#add header to file
-# 	#print "--Ecafile:build_header\n header = $header\n";
-# 	die "ecs file has not been created" if ($ecafile->{status} eq "notcreated");
-# 	#open file handle
-# 	open my $handle, ">>$ecafile->{ecsfile}" or die $!;
-# 	#append to file
-# 	print $handle $header or die $!;
-# 	#close file
-# 	close $handle or die $!;
-# 	#update status
-# 	$ecafile->{status} = "header";
-# }
-
 sub build_header {
 	my $ecafile = shift;
 
