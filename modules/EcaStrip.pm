@@ -171,7 +171,7 @@ sub create_submix_output_chain {
 	my $strip = shift;
 	my $name = shift;
 
-	return "-a:all -f:f32_le,2,48000 -o:jack,,sub_$name";
+	return "-a:all -f:f32_le,2,48000 -o:jack,,$name";
 }
 
 #-------------------------------------------------------------------

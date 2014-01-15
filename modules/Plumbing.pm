@@ -68,8 +68,13 @@ sub create_rules {
 				#take the Nth one, will be undef if connect is empty or undef
 				my $plumbin = $table[$i-1]; 
 				my $plumbout = $project->{mixers}{$mixername}{ecasound}{name}.":$channelname"."_$i";
-				#$plumbing->Add("(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
-				push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+				
+				if ($mixer->{$channelname}->is_hardware_out) {
+					push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
+				}
+				else {
+					push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+				}
 			}
 			#if this is a bus out, create generic channels routing to this bus
 			if ($mixer->{$channelname}->is_hardware_out) {
