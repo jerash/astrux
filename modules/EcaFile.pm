@@ -59,7 +59,7 @@ sub verify {
 		warn "cannot verify an ecs file not containing chains\n";
 		return;
 	}
-	#open it with ecasound and check return code
+	#TODO open it with ecasound and check return code
 	
 	$ecaecs->{status} = "verified";
 }

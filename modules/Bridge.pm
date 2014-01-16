@@ -89,13 +89,11 @@ sub create_lines {
 					($CC,$channel) = split(',',$route->{CCs}[$i]) if $route->{CCs}; #ignore if CC not created					
 					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;$value;$min;$max;$CC;$channel";
 					push(@osclines,$line);
-					# print "**$line \n";
 					$i++;
 				}
 			}
 		}
 	}
-	#TODO : find a way to acces channels routing CCs
 	return @osclines;
 }
 

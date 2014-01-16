@@ -99,7 +99,7 @@ sub AddSongs {
 
 sub AddOscMidiBridge {	
 	my $project = shift;
-	#TODO
+	
 	$project->{bridge}{status} = "notcreated";
 	bless $project->{bridge}, Bridge::;
 
@@ -161,6 +161,8 @@ sub GenerateFiles {
 		#copy header from player mixer
 		if (defined $project->{mixers}{players}{ecasound}{header}) {
 			$song->{ecasound}{header} = $project->{mixers}{players}{ecasound}{header};
+			#replace -n:"players" with song name to have unique chainsetup name
+			$song->{ecasound}{header} =~ s/-n:\"players\"/-n:\"$songname\"/;
 		}
 		else {
 			die "Error : can't find a player mixer header\n";
@@ -189,7 +191,7 @@ sub GenerateFiles {
 
 	#----------------BRIDGE FILE------------------------
 	#TODO define bridge option
-	if (1) {
+	if ($project->{controls}{bridge} == 1) {
 		#we're asked to generate the bridge file
 		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
 		$project->{bridge}{file} = $filepath;
@@ -208,7 +210,6 @@ sub SaveTofile {
 	my $outfile = shift;
 #Data::Dumper
 	# $Data::Dumper::Purity = 1;
-		#TODO check how to send parameter !? its too late....
 		#open FILE, ">$outfile" or die "Can't open file to write:$!";
 	# open FILE, ">project.cfg" or die "Can't open file to write:$!";
 	# print FILE Dumper $project;
@@ -234,7 +235,6 @@ sub LoadFromFile {
 	# #restore
 	# open FILE, $infile;
 	# undef $/;
-	# #TODO verify this thing
 	# eval <FILE>;
 	# close FILE;
 }
@@ -244,7 +244,7 @@ sub LoadFromFile {
 sub Start {
 	my $project = shift;
 
-	#TODO verify Project is valid
+	#TODO verify if Project is valid
 
 	# copy jack plumbing
 	if ($project->{connections}{"jack.plumbing"} eq 1) {
@@ -280,48 +280,65 @@ sub Start {
 
 	# start mixers
 	print "Starting mixers\n";
-	my @pid_mixers;
-	my $pid_mixer;
-	# $SIG{CHLD} = 'IGNORE'; #don't wait for child status
-
-	# #TODO verify if mixer is not already running
-	#my $ps = qx(ps ax);
-	#print "Using existing Ecasound server", return
-	#	if  $ps =~ /ecasound/
-	#	and $ps =~ /--server/
-	#	and ($ps =~ /tcp-port=$port/ or $port == $default_port);
+	# my @pid_mixers;
+	# my $pid_mixer;
+	
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		print " - mixer $mixername\n";
 		my $mixerfile = $project->{mixers}{$mixername}{ecasound}{ecsfile};
 		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
 		my $port = $project->{mixers}{$mixername}{ecasound}{port};
-		#print "ecasound -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port\n";
+		
+		#if mixer is already running on same port, then reconfigure it
+		my $ps = qx(ps ax);
+		if  ($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) {
+			print "Found existing Ecasound server on port $port, reconfiguring engine\n";
+			my $truc = "echo \"cs-load $mixerfile\" | nc localhost $port -C";
+			system ( $truc );
+			$truc = "echo \"cs-select $project->{mixers}{$mixername}{ecasound}{name}\" | nc localhost $port -C";
+			system ( $truc );
+			$truc = "echo \"cs-connect\" | nc localhost $port -C";
+			system ( $truc );
+			next;	
+			#TODO parse ecasound reply to check for errors
+		}
+
+		#if mixer is not existing, launch mixer with needed file
 		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
-		#fork and exec
-			$SIG{CHLD} = sub { wait };
-			$pid_mixer = fork();
-			if ($pid_mixer) {
-				#we are parent
-				print "new pid_mixer = $pid_mixer\n";
-			   	push (@pid_mixers,$pid_mixer);
-			}
-			elsif (defined $pid_mixer) {
-				#we are child
-				print "$command\n";
-			    exec( $command );
-		        die "unable to exec: $!";
-			}
-			else {
-				die "unable to fork: $!";
-			}
-			sleep(1);
-			print ".../\n"
+		system ( $command );
+		sleep(1);
+
+		# #fork and exec
+		# 	$SIG{CHLD} = sub { wait };
+		# 	$pid_mixer = fork();
+		# 	if ($pid_mixer) {
+		# 		#we are parent
+		# 		print "new pid_mixer = $pid_mixer\n";
+		# 	   	push (@pid_mixers,$pid_mixer);
+		# 		sleep(1);
+		# 	}
+		# 	elsif (defined $pid_mixer) {
+		# 		#we are child
+		# 		print "$command\n";
+		# 	    exec( $command );
+		#         die "unable to exec: $!";
+		# 	}
+		# 	else {
+		# 		die "unable to fork: $!";
+		# 	}
 	}
 
-	print "finished with table of pid =\n";
-	print Dumper @pid_mixers;
 	# load song chainsetups + dummy
+	foreach my $song (@songkeys) {
+		#load song chainsetup
+		print "songfile=$project->{songs}{$song}{ecasound}{ecsfile}\n";
+		system ( "echo \"cs-load $project->{songs}{$song}{ecasound}{ecsfile}\" | nc localhost $project->{mixers}{players}{ecasound}{port} -C" );
+	}
+	#load dummy song chainsetup
+	#cs-connect dummy
+
 	# start plumbing
+	system ( "jack.plumbing &" );
 
 	# now should have sound
 
