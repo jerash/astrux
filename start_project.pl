@@ -4,8 +4,7 @@ use warnings;
 
 use lib '/home/seijitsu/astrux/modules';
 use Project;
-
-use JSON::XS;
+use Live;
 
 use Data::Dumper;
 
@@ -28,7 +27,7 @@ use Storable;
 my $Live = retrieve($infile);
 
 #----------------------------------------
-$Live->Start;
+$Live->Live::Start;
 
 #------------Now PLay !------------------------
 

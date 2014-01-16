@@ -76,9 +76,9 @@ sub init {
 		print "   |_found ".$song->{$section}{channels}." channel(s) in wav file $filename\n";
 
 		#create ecs line for mono file
-		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,to_players_slot_$slotnumber" if $song->{$section}{channels} eq 1;
+		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 1;
 		#create ecs line for stereo file
-		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -o:jack,,to_players_slot_$slotnumber" if $song->{$section}{channels} eq 2;
+		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 2;
 		#TODO evaluate beter integration
 	}
 }
