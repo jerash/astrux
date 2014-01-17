@@ -5,9 +5,9 @@ package Live;
 use strict;
 use warnings;
 
+use Project;
 use Mixer;
 use Song;
-use Plumbing;
 use Bridge;
 
 #-------------------------------------LIVE USE-----------------------------------------------------
@@ -116,7 +116,11 @@ sub Start {
 
 	# now should have sound
 	#--------------------------------
+	&Play;
+}
 
+sub Play {
+	print "i'm playing!";
 }
 
 sub EngineLoad {

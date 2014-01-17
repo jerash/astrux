@@ -1,14 +1,11 @@
 dnas tous les trucs à écrire dans un fichiers ou on est susceptible d'avoir plusieurs lignes : mettre sous forme de tableau (push) poru éviter d'avoir une mise en forme du Dumper illisible.
 
-in mixer.pm we remove IO info not necessary anymore
-	> unless we want to reactivate channels ?
-	> it would need to reconfigurate everything, so what's the point ? 'dbetter mute unused channels'
-
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?
 	
 dans le fichiers oscmidistate.csv  
 	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
+	ben non ne fait, chaque ecasound génère un nouveau port midi ... envoyer vers les 3 ?
 
 option to keep ecasound player opened after transport stop
 
@@ -40,38 +37,3 @@ modifier jack_smf-player pour créer un port midi par piste avec le nom de la pi
 
 change grep (wav;mid..etc) in song check to a global definition list
 intégrer player type vidéo avec xjadeo
-
-----DONE----
-modifier la génération des submix ecs pour être générique avec plusieurs fichiers
-:24271433
-générer jack.plumbing : 
-:28956eb
-add global ecasound header generation (options) to project.ini : 
-:5b95963
-vérifier l'intégration des insert sur les outputs : corrigé 
-:2100b92
-check each project folder and generate ecs files
-add override global ecasound header in song.ini 
-valider l'idée d'une seul player, pouvant avoir plusieurs outputs si nécessaire. voir cohérence avec génération du bon nombre de pistes sur le mixer. >> ok, numéroter les sorties pour chaque piste, et faire le plumbing de manière adéquate
-trouver une idée pour pouvoir avoir des CC sur les pistes du player sans générer un CC unique pour chaque chanson.
-	> définir le nombre de piste player dans le projet > ok
-	> assigner chaque fichier à jouer à une piste > ok
-:c5a0fe2
-create ecasound send command with all cs-load for players
-:1cb21f23
-mono player tracks are opened to stereo out, but play on left channel !
-parse type=player input definitions
-ajouter jack.plumbing pour les players
-correction de bugs sur les nommages plumbing
-correction de bugs sur les nommages oscmidi
-supprimer le préfixe submix_ dans le nom du submix après import
-ajouter jack.plumbing pour les sampler
-:
-stockage des fichiers générés dans un sous dossier
-:063a82a64
-export csv : remplacer les , par des ;
-externaliser l'accès au fichier csv dans un module (Bridge)
-remplacer /mixer/drums par /mixer/submix/drums
-::?
-mode orienté object, quelques réorganisations de fichiers et de définitions ini
-intégrer les effets d'insert dans les strips

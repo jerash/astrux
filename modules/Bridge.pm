@@ -5,19 +5,8 @@ package Bridge;
 use strict;
 use warnings;
 
-use Config::IniFiles;
-
-my $debug = 0;
-
-# sub new {
-      # my $class = shift;
-      # open my $file, ">$files_folder/oscmidistate.csv" or die $!;
-      # bless $file, $class;
-      # return $file;
-# }
-
-		#update the midistate.csv file
-		#Bridge::Add_to_file($path . "/$param," . (shift @defaults) . ";$low;$high;$CC,$channel\n");
+# PERL midi = MIDI::ALSA
+#http://search.cpan.org/~pjb/MIDI-ALSA-1.18/ALSA.pm
 
 sub create  {
 	my $bridge = shift;
