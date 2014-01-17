@@ -8,7 +8,7 @@ use IO::Socket::INET;
 
 my $osc = Protocol::OSC->new;
 #make packet
-my $data = $osc->message(my @specs = qw(/mixer/inputs/mic_diane/volpan/lolume_db is 3 ping));
+my $data = $osc->message(my @specs = qw(/main/player_2/panvol/volume_db f -3.2));
     # or
     #use Time::HiRes 'time';
     #my $data $osc->bundle(time, [@specs], [@specs2], ...);
