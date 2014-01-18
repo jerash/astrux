@@ -52,7 +52,7 @@ if [[ -n $JPMIDI_PID ]]
   fi
  else
   echo lancement de jpmidi en mode serveur
-  /usr/local/bin/jpmidi -s /home/seijitsu/2.TestProject/0x.nosong/dummy.mid &
+  /usr/local/bin/jpmidi -s /home/seijitsu/astrux/0x.nosong/dummy.mid &
   sleep 1
   sendjpmidi "connect 2"
 fi
@@ -84,6 +84,7 @@ echo --Init Hdspmixer---------------------------------------------
 
 #custom script
 #(hdspinit | sed s/^/HDSPINIT: /)
+source ~/scripts/hdspinit
 
 echo --mididings---------------------------------------------
 echo TODO
@@ -92,9 +93,6 @@ echo --a2jmidi bridge----------------------------------------
 echo TODO
 
 echo --jack.plumbing----------------------------------------
-echo TODO
-
- echo YESSAI
-fi
+echo TODO or at project level
 
 export ASTRUXBACKEND=1

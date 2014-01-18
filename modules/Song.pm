@@ -85,7 +85,6 @@ sub init {
 
 sub build_song_header {
 	my $song = shift;
-print "building...";
 	#print "--song:build_header\n header = $header\n";
 	die "ecs file has not been created" if ($song->{ecasound}{status} eq "notcreated");
 	#open file handle
@@ -99,7 +98,6 @@ print "building...";
 }
 sub add_songfile_chain {
 	my $song = shift;
-print "adding...";
 	#open file in add mode
 	open my $handle, ">>$song->{ecasound}{ecsfile}" or die $!;
 	print $handle "\n";

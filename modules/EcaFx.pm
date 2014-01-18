@@ -20,16 +20,11 @@ sub new {
 	my $class = shift;
 	my $effect = shift;
 	my $km = shift;
-	state $position = 0;
 	
-	$position++;
-	#TODO : find solution to give an number for inserts
 	my $ecafx = {
 		"fxname" => $effect,
 		"generatekm" => $km,
 		"ecsline" => "",
-		"position" => $position,
-		"rien" => "",
 		"CCs" => ""
 	};
 	bless $ecafx,$class;

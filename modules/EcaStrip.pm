@@ -76,7 +76,7 @@ sub init {
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
 	
 	#add inserts
-	my $order = 0;
+	my $order = 1;
 	foreach my $effect (@effects) {
 		die "Can't have more than 20 inserts on a track\n" if ($order eq 21);
 		$ecastrip->{inserts}{$effect} = EcaFx->new($effect,$km);
@@ -121,9 +121,28 @@ sub aux_init {
 sub create_chain_add_inserts {
 	my $strip = shift;
 	my $line;
-	#TODO : respect an order to inserts !!! or sort is enough ?
-	foreach my $insert (sort keys %{$strip->{inserts}}){
-		$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
+
+	#get a list of inserts
+	my @inserts = keys %{$strip->{inserts}};
+
+	#return empty line if there is no effects (should never be as panvol is added)
+	return '' unless defined @inserts;
+
+	#make sure to add effects with the correct order
+	for my $i (1..$#inserts) {
+		for my $nb (0..$#inserts){
+			my $insertname = $inserts[$nb];
+			next if $strip->{inserts}{$insertname}{nb} ne $i;
+			#when we found the good one, create line
+			my $insert = $inserts[$nb];
+			print "   | |_adding effect $insert\n";
+			$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
+		}
+	}
+	#add pan/volume
+	if ((defined $strip->{inserts}{panvol}{nb}) and ($strip->{inserts}{panvol}{nb} eq 99)) {
+		print "   | |_adding Pan and volume\n";
+		$line .= $strip->{inserts}{panvol}{ecsline} if (defined $strip->{inserts}{panvol}{ecsline});			
 	}
 	return $line;	
 }

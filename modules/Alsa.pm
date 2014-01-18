@@ -25,9 +25,11 @@ print "successfully connected alsa midi port\n";
 
 my $value = 0;
 while (1) {
+	
 	#build data packet
 	#@CCdata= ($channel, unused,unused,unused, $param, $value)
 	my @CC = (1, 7,'',$value,7,$value);
+
 	#send midi data
 	#output($type,$flags,$tag,$queue,$time,\@source,\@destination,\@data)
 	$status = MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@CC);

@@ -6,6 +6,7 @@ in mixer ini file
 dans le fichiers oscmidistate.csv  
 	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
 	ben non ne fait, chaque ecasound génère un nouveau port midi ... envoyer vers les 3 ?
+	>demande envoyé à la ML ecasound pour nommer les ports
 
 option to keep ecasound player opened after transport stop
 

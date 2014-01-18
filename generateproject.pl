@@ -33,6 +33,6 @@ $Live->SaveTofile("$Live->{project}{name}".".cfg");
 
 #------------Now PLay !------------------------
 
-print Dumper $Live;
+#print Dumper $Live;
 
 print "\n";

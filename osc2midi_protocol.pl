@@ -30,7 +30,7 @@ print "successfully connected alsa midi port\n";
 # INIT OSC
 #------------
 my $osc = Protocol::OSC->new;
-my $oscport = 4000;
+my $oscport = 7001;
 #create OSC input socket
 my $in = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
 print "successfully created OSC UDP port $oscport\n";
@@ -50,8 +50,8 @@ close FILE;
 #print Dumper %rules;
 #TODO we may need a "type" flag on each line...
 
-# START WAITING FOR OSC PACKETS
-#--------------------------------
+# START WAITING FOR OSC PACKETS (using Protocol::OSC)
+#------------------------------------------------------
 while (1) {
 	#wait for packet
     $in->recv(my $packet, $in->sockopt(SO_RCVBUF));
@@ -67,11 +67,11 @@ while (1) {
 	print "type=$type\n";
 	print "arg=$_\n" foreach @args;
 	
-	my $inval = $args[0];
-
 	#check if received message must be translated
 	if (exists $rules{$path}) {
 		
+		my $inval = $args[0];
+
 		#get elements
 		my $min = $rules{$path}[1];
 		my $max = $rules{$path}[2];
@@ -85,9 +85,20 @@ while (1) {
 		my @outCC = ($channel, '','','',$CC,$outval);
 		$status = MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@outCC);
 		warn "could not send midi data\n" unless $status;
-
+		#update value in structure
+		$rules{$path}[0] = $outval;
+	}
+	elsif ($path =~ /^\/bridge/) {
+		print "Are you talking to me ?\n";
+		exit(0) if ($args[0] eq "quit");
+	}
+	else {
+		print "ignored=$path $args[0]\n";
 	}
 	
 }
+
+#TODO clean exit with save and update oscmidistate.csv
+
 #see also
 # http://search.cpan.org/~crenz/Net-OpenSoundControl-0.05/lib/Net/OpenSoundControl/Server.pm
