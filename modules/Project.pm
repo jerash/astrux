@@ -133,7 +133,7 @@ sub GenerateFiles {
 		#add path to ecasound info
 		$mixer->{ecasound}{ecsfile} = $ecsfilepath;
 		#bless structure to access data with module functions
-		bless $mixer->{ecasound} , EcaFile::;
+		bless $mixer->{ecasound} , EcaEngine::;
 		#create the file
 		$mixer->{ecasound}->create;
 		#add ecasound header to file
@@ -155,7 +155,7 @@ sub GenerateFiles {
 		#add path to song info
 		$song->{ecasound}{ecsfile} = $ecsfilepath;
 		#bless structure to access data with module functions
-		bless $song->{ecasound} , EcaFile::;
+		bless $song->{ecasound} , EcaEngine::;
 		#create the file
 		$song->{ecasound}->create;
 		#copy header from player mixer

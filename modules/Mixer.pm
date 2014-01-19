@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Config::IniFiles;
-use EcaFile;
+use EcaEngine;
 use EcaStrip;
 
 use Data::Dumper;
