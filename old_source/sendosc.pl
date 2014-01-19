@@ -8,10 +8,11 @@ use IO::Socket::INET;
 
 my $osc = Protocol::OSC->new;
 #make packet
-my $data = $osc->message(my @specs = qw(/main/mic_raf/panvol/volume_db f 1));
+#my $data = $osc->message(my @specs = qw(/main/mic_raf/panvol/volume_db f 1));
 #my $data = $osc->message(my @specs = qw(/bridge s quit));
 #my $data = $osc->message(my @specs = qw(/toto i 8943));
-    # or
+my $data = $osc->message(my @specs = qw(/refresh i 1));
+#    # or
     #use Time::HiRes 'time';
     #my $data $osc->bundle(time, [@specs], [@specs2], ...);
 	

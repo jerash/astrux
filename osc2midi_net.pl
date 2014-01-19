@@ -18,19 +18,6 @@ $SIG{'INT'} = sub {
 	&SaveFile;
 };
 
-sub SaveFile {
-	open FILE, ">/home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
-	foreach my $path (keys %rules) {
-		my $value = $rules{$path}[0];
-		my $min = $rules{$path}[1];
-		my $max = $rules{$path}[2];
-		my $CC = $rules{$path}[3];
-		my $channel = $rules{$path}[4];
-		print FILE "$path;$value;$min;$max;$CC;$channel\n";
-	}
-	close FILE;	
-}
-
 # INIT MIDI
 #------------
 my @alsa_output = ("astruxbridge",0);
@@ -51,7 +38,12 @@ print "successfully created OSC UDP port $oscport\n";
 # LOAD BRIDGE RULES FILE
 #------------------------
 open FILE, "</home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
-while (<FILE>) { #fill the hash with the file info
+#check first line
+my $firstline = <FILE>; 
+chomp $firstline;
+die "bad header....\n" unless $firstline eq "path;value;min;max;CC;channel";
+#fill the hash with the file info
+while (<FILE>) { 
 	chomp($_);
 	my @values = split(';',$_);
 	my $path = shift @values;
@@ -112,7 +104,10 @@ sub DoTheBridge {
 		exit(0) if ($message[2] eq "quit");
 	}
 	elsif ($path =~ /^\/reload/) {
-		#TODO send current values to sender
+		#TODO reload file
+	}
+	elsif ($path =~ /^\/refresh/) {
+		&Refresh;
 	}
 	elsif ($path =~ /^\/ping/) {
 		#TODO send pong back for keep alive info
@@ -122,6 +117,19 @@ sub DoTheBridge {
 		print "$_ " foreach @message;
 		print "\n";
 	}
+}
+
+sub SaveFile {
+	open FILE, ">/home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
+	foreach my $path (keys %rules) {
+		my $value = $rules{$path}[0];
+		my $min = $rules{$path}[1];
+		my $max = $rules{$path}[2];
+		my $CC = $rules{$path}[3];
+		my $channel = $rules{$path}[4];
+		print FILE "$path;$value;$min;$max;$CC;$channel\n";
+	}
+	close FILE;	
 }
 
 sub ScaleValue {
@@ -143,6 +151,32 @@ sub ScaleValue {
 sub SendCC {
 	my $outCC = shift;
 	return MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,$outCC);
+}
+
+sub Refresh {
+	print "Sending all midi data!!\n";
+	foreach my $path (keys %rules) {
+		#get elements
+		my $inval = $rules{$path}[0];
+		my $min = $rules{$path}[1];
+		my $max = $rules{$path}[2];
+		my $CC = $rules{$path}[3];
+		my $channel = $rules{$path}[4];
+
+		next if (
+			!defined $inval or
+			!defined $min or
+			!defined $max or
+			!defined $CC or
+			!defined $channel
+			);
+		#print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
+		my $outval = &ScaleValue($inval,$min,$max);
+
+		#send midi data
+		my @outCC = ($channel-1, '','','',$CC,$outval);
+		warn "could not send midi data\n" unless &SendCC(\@outCC);
+	}
 }
 
 #see also
