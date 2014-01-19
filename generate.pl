@@ -28,7 +28,7 @@ my $Live = Project->new($ini_project_ref);
 print " -- Live Project Created :) --\n" if defined $Live;
 
 #------------Create project files------------------------
-$Live->GenerateFiles;	
+$Live->GenerateFiles;
 $Live->SaveTofile("$Live->{project}{name}".".cfg");
 
 #------------Now PLay !------------------------

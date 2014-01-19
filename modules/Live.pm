@@ -16,9 +16,10 @@ sub Start {
 	my $project = shift;
 
 	#TODO verify if Project is valid
+	print "--------- Init Project $project->{project}{name} ---------\n";
 
-	# copy jack plumbing
-	#----------------------
+	# copy jack plumbing file
+	#-------------------------
 	if ($project->{connections}{"jack.plumbing"} eq 1) {
 		my $homedir = $ENV{"HOME"};
 		warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
@@ -28,30 +29,51 @@ sub Start {
 
 	#verify that backends are active
 	#---------------------------------
-	#TODO make a hash of backends/PID, or add to project {process}
-
+	
 	#JACK
 	my $pid_jackd = qx(pgrep jackd);
-	die "JACK server is not running" unless $pid_jackd;
-	print "JACK server running with PID $pid_jackd";
+	if (!$pid_jackd) {
+		print "Strange ...JACK server is not running ?? Starting it\n";
+		my $command = $project->{JACK}{start};
+		system ($command) if $command; 
+	}
+	else {
+		print "JACK server running with PID $pid_jackd";
+	}
 	#TODO verify jack parameters
+	$project->{backends}{JACK} = $pid_jackd;
 
 	#JPMIDI
 	my $pid_jpmidi = qx(pgrep jpmidi);
-	die "JPMIDI server is not running" unless $pid_jpmidi;
-	print "JPMIDI server running with PID $pid_jpmidi";
+	if ($project->{midi_player}{enable}) {
+		die "JPMIDI server is not running" unless $pid_jpmidi;
+		print "JPMIDI server running with PID $pid_jpmidi";
+	}
+	$project->{backends}{JPMIDI} = $pid_jpmidi;
 
 	#SAMPLER
+	my $pid_linuxsampler = qx(pgrep linuxsampler);
 	if ($project->{linuxsampler}{enable}) {
-		my $pid_linuxsampler = qx(pgrep linuxsampler);
 		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
-		print "LINUXSAMPLER running with PID $pid_linuxsampler\n";
+		print "LINUXSAMPLER running with PID $pid_linuxsampler";
 	}
+	$project->{backends}{LINUXSAMPLER} = $pid_linuxsampler;
 
-	#TODO jack.plumbing
+	#jack.plumbing
+	my $pid_jackplumbing = qx(pgrep jack.plumbing);
+	if ($project->{connections}{"jack.plumbing"} eq 1) {
+		die "jack.plumbing is not running" unless $pid_jackplumbing;
+		print "jack.plumbing running with PID $pid_jackplumbing";
+	}
+	$project->{backends}{JACKPLUMBING} = $pid_jackplumbing;
 
-	#TODO OSC/MIDI BRIDGE
-
+	#OSC/MIDI BRIDGE
+	my $pid_osc2midibridge = qx(pgrep -f osc2midi);
+	if ($project->{osc2midi}{enable} eq 1) {
+		die "osc2midi bridge is not running" unless $pid_osc2midibridge;
+		print "osc2midi bridge running with PID $pid_osc2midibridge";
+	}
+	$project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
 	
 	# get song list
 	#---------------
@@ -120,14 +142,12 @@ sub Start {
 	#load dummy song chainsetup
 	&EngineReselect("players",$playersport);
 
-	# Start OSC2midi bridge
-	#--------------------------------
-	#$project->{bridge}->run;
+	#send previous state to ecasound engines
+	#--------------------------------------
+	&OSC_send("/refresh i 1");
 
-	# now should have sound
-	#--------------------------------
-	print "i'm ready to play!\n";
-	
+	# now we should be back to saved state
+	#--------------------------------------
 }
 
 sub EngineLoad {
@@ -159,6 +179,44 @@ sub EngineReselect {
 	system ( $command );
 	$command = "echo \"engine-launch\" | nc localhost $port -C";
 	system ( $command );
+}
+
+sub PlayIt {
+	my $project = shift;
+
+	print "\n--------- Project $project->{project}{name} ---------\n";
+	while (1) {
+		print "$project->{project}{name}> ";
+		my $command = <STDIN>;
+		chomp $command;
+		#exit with save
+		return 1 if ($command =~ /exit|x|quit/);
+		#exit without save
+		return 0 if ($command =~ /bye|z/);
+		#save
+		$project->SaveTofile("$project->{project}{name}".".cfg") if ($command eq "save");
+	}
+}
+
+sub Exit {
+	my $project = shift;
+
+}
+
+sub OSC_send {
+	use Protocol::OSC;
+	use IO::Socket::INET;
+
+	my $osc = Protocol::OSC->new;
+	#make packet
+	my $data = $osc->message(my @specs = qw(/refresh i 1));
+    # or
+    #use Time::HiRes 'time';
+    #my $data $osc->bundle(time, [@specs], [@specs2], ...);
+		
+	#send
+	my $udp = IO::Socket::INET->new( PeerAddr => 'localhost', PeerPort => '8000', Proto => 'udp', Type => SOCK_DGRAM) || die $!;
+	$udp->send($data);	
 }
 
 1;

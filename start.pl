@@ -30,7 +30,12 @@ my $Live = retrieve($infile);
 $Live->Live::Start;
 
 #------------Now PLay !------------------------
+my $do_save = $Live->Live::PlayIt;
 
-# give user interface
+#back here is we need to exit
+if ($do_save) {
+	print "Saving state...\n";
+	$Live->SaveTofile("$Live->{project}{name}".".cfg");
+}
 
 print "\n";
