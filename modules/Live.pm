@@ -48,6 +48,8 @@ sub Start {
 		print "LINUXSAMPLER running with PID $pid_linuxsampler\n";
 	}
 
+	#TODO jack.plumbing
+
 	#TODO OSC/MIDI BRIDGE
 
 	
@@ -84,7 +86,9 @@ sub Start {
 		#if mixer is not existing, launch mixer with needed file
 		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
 		system ( $command );
-		sleep(1);
+		#wait for ecasound engines to be ready
+		sleep(1) until $project->{mixers}{$mixername}{ecasound}->is_ready;
+		print "Ecasound $mixername is ready\n";
 
 		# #fork and exec
 		# 	$SIG{CHLD} = sub { wait };
@@ -119,15 +123,11 @@ sub Start {
 	# Start OSC2midi bridge
 	#--------------------------------
 	#$project->{bridge}->run;
-	print "------------HEREIAM-------------\n";
 
 	# now should have sound
 	#--------------------------------
-	&Play;
-}
-
-sub Play {
-	print "i'm playing!";
+	print "i'm ready to play!\n";
+	
 }
 
 sub EngineLoad {

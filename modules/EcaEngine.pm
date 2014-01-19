@@ -64,10 +64,35 @@ sub verify {
 	$ecaengine->{status} = "verified";
 }
 
-sub is_ready {
-	#check if chainsetup file is valid
+sub tcp_send {
+	#send a tcp message to the engine
 	my $ecaengine = shift;
+	my $command = shift;
+	#get answer
+	return qx(echo $command | nc localhost $ecaengine->{port} -C);
+}
 
+sub is_ready {
+	#check if chainsetup is connected and engine launched
+	my $ecaengine = shift;
+	#send the question
+	my $reply = $ecaengine->tcp_send("cs-status");
+	#do we have a reply ?
+	return "unknown" unless defined $reply;
+	#transform line into array
+	my @lines = split "\n" , $reply;
+	#read first line
+	my $line = shift @lines;
+	return unless defined $line;
+	my ($dummy,$bytes,$type) = split " ",$line;
+	#check for error message
+	return if $type eq "e"; #error
+	$line = shift @lines; #drop next line (### Chainsetup status ###)
+	#verify the line
+	$line = shift @lines; #here it is (Chainsetup (1) "main" [selected] [connected])
+	my $enginename = $ecaengine->{name};
+	return 1 if ($line =~ m/\"$enginename\" \[selected\] \[connected\]/);
+	return 0;
 }
 
 1;
