@@ -38,3 +38,5 @@ modifier jack_smf-player pour créer un port midi par piste avec le nom de la pi
 
 change grep (wav;mid..etc) in song check to a global definition list
 intégrer player type vidéo avec xjadeo
+
+write a list of perl dependencies

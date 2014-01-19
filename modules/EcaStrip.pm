@@ -126,7 +126,7 @@ sub create_chain_add_inserts {
 	my @inserts = keys %{$strip->{inserts}};
 
 	#return empty line if there is no effects (should never be as panvol is added)
-	return '' unless defined @inserts;
+	return '' unless @inserts;
 
 	#make sure to add effects with the correct order
 	for my $i (1..$#inserts) {

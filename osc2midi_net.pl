@@ -10,6 +10,27 @@ use Net::OpenSoundControl::Server;
 use MIDI::ALSA;
 use POSIX; #for ceil/floor function
 
+my %rules; #hash where the rules are stocked
+
+# Catch TERM signal to save data
+$SIG{'INT'} = sub {
+	print "Oh oh we need to stop\nSAVING STATE\n";
+	&SaveFile;
+};
+
+sub SaveFile {
+	open FILE, ">/home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
+	foreach my $path (keys %rules) {
+		my $value = $rules{$path}[0];
+		my $min = $rules{$path}[1];
+		my $max = $rules{$path}[2];
+		my $CC = $rules{$path}[3];
+		my $channel = $rules{$path}[4];
+		print FILE "$path;$value;$min;$max;$CC;$channel\n";
+	}
+	close FILE;	
+}
+
 # INIT MIDI
 #------------
 my @alsa_output = ("astruxbridge",0);
@@ -30,7 +51,6 @@ print "successfully created OSC UDP port $oscport\n";
 # LOAD BRIDGE RULES FILE
 #------------------------
 open FILE, "</home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
-my %rules;
 while (<FILE>) { #fill the hash with the file info
 	chomp($_);
 	my @values = split(';',$_);
@@ -68,6 +88,7 @@ sub DoTheBridge {
 		my $CC = $rules{$path}[3];
 		my $channel = $rules{$path}[4];
 		#print "I've found you !!! $inval $min $max $CC $channel\n";
+print "-\n";
 		return if (
 			!defined $inval or
 			!defined $min or
@@ -76,24 +97,26 @@ sub DoTheBridge {
 			!defined $channel
 			);
 		
-		#verify if data is within min max range
-		$inval = $min if $inval < $min;
-		$inval = $max if $inval > $max;
+		#update value in structure
+		$rules{$path}[0] = $inval;
 		
-		#scale value to midi range
-		my $outval = floor((127*($inval-$min))/($max-$min)) ;
-		# print "outval=$outval\n";
+		# #verify if data is within min max range
+		# $inval = $min if $inval < $min;
+		# $inval = $max if $inval > $max;
 		
-		#verify if outdata is within min max range
-		$outval = 0 if $outval < 0;
-		$outval = 127 if $outval > 127;
+		# #scale value to midi range
+		# my $outval = floor((127*($inval-$min))/($max-$min)) ;
+		# # print "outval=$outval\n";
 		
+		# #verify if outdata is within min max range
+		# $outval = 0 if $outval < 0;
+		# $outval = 127 if $outval > 127;
+		my $outval = &ScaleValue($inval,$min,$max);
+print "outval=$outval\n";
 		#send midi data
 		my @outCC = ($channel-1, '','','',$CC,$outval);
 		#$status = MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@outCC);
 		warn "could not send midi data\n" unless &SendCC(\@outCC);
-		#update value in structure
-		$rules{$path}[0] = $outval;
 	}
 	elsif ($path =~ /^\/bridge/) {
 		print "Are you talking to me ? ok i'm leaving !\n";
@@ -113,14 +136,26 @@ sub DoTheBridge {
 }
 
 sub ScaleValue {
-	#return floor((127*($inval-$min))/($max-$min));
+	my $inval = shift;
+	my $min = shift;
+	my $max = shift;
+	#verify if data is within min max range
+	$inval = $min if $inval < $min;
+	$inval = $max if $inval > $max;
+	#scale value
+	my $out = floor((127*($inval-$min))/($max-$min));
+	#verify if outdata is within MIDI min max range
+	$out = 0 if $out < 0;
+	$out = 127 if $out > 127;
+	#return scaled value
+	return $out;
 }
 
 sub SendCC {
 	my $outCC = shift;
 	return MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,$outCC);
 }
-#TODO clean exit with save and update oscmidistate.csv
 
 #see also
 # http://search.cpan.org/~crenz/Net-OpenSoundControl-0.05/lib/Net/OpenSoundControl/Server.pm
+

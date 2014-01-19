@@ -29,20 +29,27 @@ sub Start {
 	#verify that backends are active
 	#---------------------------------
 	#TODO make a hash of backends/PID, or add to project {process}
+
+	#JACK
 	my $pid_jackd = qx(pgrep jackd);
 	die "JACK server is not running" unless $pid_jackd;
 	print "JACK server running with PID $pid_jackd";
 	#TODO verify jack parameters
 
+	#JPMIDI
 	my $pid_jpmidi = qx(pgrep jpmidi);
 	die "JPMIDI server is not running" unless $pid_jpmidi;
 	print "JPMIDI server running with PID $pid_jpmidi";
 
+	#SAMPLER
 	if ($project->{linuxsampler}{enable}) {
 		my $pid_linuxsampler = qx(pgrep linuxsampler);
 		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 		print "LINUXSAMPLER running with PID $pid_linuxsampler\n";
 	}
+
+	#TODO OSC/MIDI BRIDGE
+
 	
 	# get song list
 	#---------------
@@ -109,10 +116,10 @@ sub Start {
 	#load dummy song chainsetup
 	&EngineReselect("players",$playersport);
 
-	# start plumbing
-	#-----------------
-	my $ps = qx(ps ax);
-	system ( "jack.plumbing &" ) unless ($ps =~ /jack.plumbing/);
+	# Start OSC2midi bridge
+	#--------------------------------
+	#$project->{bridge}->run;
+	print "------------HEREIAM-------------\n";
 
 	# now should have sound
 	#--------------------------------

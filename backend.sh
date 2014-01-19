@@ -84,7 +84,14 @@ echo --Init Hdspmixer---------------------------------------------
 
 #custom script
 #(hdspinit | sed s/^/HDSPINIT: /)
-source ~/scripts/hdspinit
+if [[ -n $HDSPINIT ]]
+ then
+  echo SYSTEM: Initializing HDSP card
+  source ~/scripts/hdspinit
+  export HDSPINIT=1
+ else
+  echo SYSTEM: HDSP card has already been initialized
+fi
 
 echo --mididings---------------------------------------------
 echo TODO
@@ -93,6 +100,18 @@ echo --a2jmidi bridge----------------------------------------
 echo TODO
 
 echo --jack.plumbing----------------------------------------
-echo TODO or at project level
+JACKPLUMBING_PID=$(pgrep jack.plumbing)
+if [[ -n $JACKPLUMBING_PID ]]
+ then
+  if [[ $ASTRUXBACKEND == 0 ]]
+   then
+    echo SYSTEM: jack.plumbing est deja en tache de fond
+    echo JACKPLUMBING_PID $JACKPLUMBING_PID
+  fi
+ else
+  echo Lancement de jack.plumbing
+  jack.plumbing > /dev/null 2>&1 &
+  #sleep 2
+fi
 
 export ASTRUXBACKEND=1
