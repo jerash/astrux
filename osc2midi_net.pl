@@ -88,7 +88,7 @@ sub DoTheBridge {
 		my $CC = $rules{$path}[3];
 		my $channel = $rules{$path}[4];
 		#print "I've found you !!! $inval $min $max $CC $channel\n";
-print "-\n";
+
 		return if (
 			!defined $inval or
 			!defined $min or
@@ -100,19 +100,8 @@ print "-\n";
 		#update value in structure
 		$rules{$path}[0] = $inval;
 		
-		# #verify if data is within min max range
-		# $inval = $min if $inval < $min;
-		# $inval = $max if $inval > $max;
-		
-		# #scale value to midi range
-		# my $outval = floor((127*($inval-$min))/($max-$min)) ;
-		# # print "outval=$outval\n";
-		
-		# #verify if outdata is within min max range
-		# $outval = 0 if $outval < 0;
-		# $outval = 127 if $outval > 127;
 		my $outval = &ScaleValue($inval,$min,$max);
-print "outval=$outval\n";
+
 		#send midi data
 		my @outCC = ($channel-1, '','','',$CC,$outval);
 		#$status = MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@outCC);
