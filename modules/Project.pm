@@ -4,7 +4,6 @@ package Project;
 
 use strict;
 use warnings;
-use Data::Dumper;
 
 use Mixer;
 use Song;
@@ -104,7 +103,6 @@ sub AddOscMidiBridge {
 	bless $project->{bridge}, Bridge::;
 
 	my @bridgelines = Bridge->create_lines($project);
-	#print Dumper @bridgelines;
 	$project->{bridge}{lines} = \@bridgelines;
 }
 
@@ -116,7 +114,6 @@ sub AddPlumbing {
 	bless $project->{connections} , Plumbing::;
 
 	my @plumbing_rules = Plumbing->create_rules($project);
-	#print Dumper @plumbing_rules;
 	$project->{connections}{rules} = \@plumbing_rules;
 }
 

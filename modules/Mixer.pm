@@ -5,11 +5,8 @@ package Mixer;
 use strict;
 use warnings;
 
-use Config::IniFiles;
 use EcaEngine;
 use EcaStrip;
-
-use Data::Dumper;
 
 sub new {
 	my $class = shift;
@@ -31,6 +28,7 @@ sub init {
 	my $mixer = shift;
 	my $ini_mixer_file = shift;
 	
+	use Config::IniFiles;
 	#ouverture du fichier ini de configuration des channels
 	tie my %mixer_io, 'Config::IniFiles', ( -file => $ini_mixer_file );
 	die "reading I/O ini file failed\n" until %mixer_io;
@@ -289,9 +287,8 @@ sub get_ecasoundchains {
 
 	#update structure
 	@{$mixer->{ecasound}{all_chains}} = @table;
-	# remove unneeded lines?
-	#print Dumper $mixer->{ecasound}{all_chains};
 }
+
 #--------------Test functions-------------------------
 sub is_main {
 	my $mixer = shift;

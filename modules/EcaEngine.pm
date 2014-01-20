@@ -5,8 +5,6 @@ package EcaEngine;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 #--------------------OBJECT---------------------------------------
 sub create {
 	#create the file (overwrite)
