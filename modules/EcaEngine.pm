@@ -101,52 +101,43 @@ sub reply_is_ok { #verify if there is an error mentioned, drop the first line, r
 	my ($dummy,$bytes,$errorcode) = split " ",$line;
 	#check for error message
 	return if $errorcode eq "e"; #error
-	return @lines;
+	#send back ecasound reply line if they are
+	return @lines if @lines;
+	#else return 1
+	return 1;
 }
 
 sub LoadFromFile {
 	my $ecaengine = shift;
 	my $file = shift;
 	
-	$ecaengine->tcp_send("cs-load $file");
-	#TODO check return for errors
+	return unless $ecaengine->tcp_send("cs-load $file");
 }
 sub LoadAndStart {
 	my $ecaengine = shift;
 	my $file = shift;
 
-	$ecaengine->tcp_send("cs-load $ecaengine->{ecsfile}");
-	#TODO check return for errors
-	$ecaengine->tcp_send("cs-connect");
-	#TODO check return for errors
-	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
-	#TODO,  check return for errors
-	$ecaengine->tcp_send("start");
-	#TODO check return for errors
+	return unless $ecaengine->tcp_send("cs-load $ecaengine->{ecsfile}");
+	return unless $ecaengine->tcp_send("cs-connect");
+	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	return unless $ecaengine->tcp_send("start");
 }
 sub LoadAndStartFromFile {
 	my $ecaengine = shift;
 	my $file = shift;
 
-	$ecaengine->tcp_send("cs-load $file");
-	#TODO check return for errors
-	$ecaengine->tcp_send("cs-connect");
-	#TODO check return for errors
-	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
-	#TODO,  check return for errors
-	$ecaengine->tcp_send("start");
-	#TODO check return for errors
+	return unless $ecaengine->tcp_send("cs-load $file");
+	return unless $ecaengine->tcp_send("cs-connect");
+	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	return unless $ecaengine->tcp_send("start");
 }
 sub SelectAndConnectChainsetup {
 	my $ecaengine = shift;
 	my $chainsetup = shift;
 
-	$ecaengine->tcp_send("cs-select $chainsetup");
-	#TODO check return for errors
-	$ecaengine->tcp_send("cs-connect");
-	#TODO check return for errors
-	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
-	#TODO,  check return for errors
+	return unless $ecaengine->tcp_send("cs-select $chainsetup");
+	return unless $ecaengine->tcp_send("cs-connect");
+	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
 }
 
 1;
