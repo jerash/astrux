@@ -116,18 +116,9 @@ sub PlayIt {
 		print "$project->{project}{name}> ";
 		my $command = <STDIN>;
 		chomp $command;
-		#exit with save
-		return 1 if ($command =~ /exit|x|quit/);
-		#exit without save
-		return 0 if ($command =~ /bye|z/);
-		#save
-		$project->SaveTofile("$project->{project}{name}".".cfg") if ($command eq "save");
+		return if ($command =~ /exit|x|quit/);
+		$project->execute_command($command);
 	}
-}
-
-sub Exit {
-	my $project = shift;
-
 }
 
 sub OSC_send {

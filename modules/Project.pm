@@ -248,4 +248,18 @@ sub StartEngines {
 	}
 }
 
+sub execute_command {
+	my $project = shift;
+	my $command = shift;
+
+	use feature qw/switch/;
+	given ($command) {
+		when (/^save$/) { $project->SaveTofile("$project->{project}{name}".".cfg"); }
+		when (/^status$/) { print "will give you the status one day\n"; }
+		when (/^song/) { 
+			print "aha you wan to start $command\n"; }
+		#default { print "Other"; }
+	}
+}
+
 1;
