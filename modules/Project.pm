@@ -259,7 +259,7 @@ sub execute_command {
 		when (/^song/) { 
 			print "aha you wan to start $command\n"; }
 		when (/^send/) { 
-			my $mixer = grep (//,$command)
+			my $mixer = grep (/main/,$command); #TODO replace the false grep
 			print "to ecasound $command\n"; }
 		#default { print "Other"; }
 	}

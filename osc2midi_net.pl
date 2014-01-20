@@ -41,7 +41,7 @@ open FILE, "</home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
 #check first line
 my $firstline = <FILE>; 
 chomp $firstline;
-die "bad header....\n" unless $firstline eq "path;value;min;max;CC;channel";
+die "bad header....\n" unless $firstline eq "path;type;value;min;max;[CC;channel]";
 #fill the hash with the file info, without header
 while (<FILE>) { 
 	chomp($_);
@@ -75,13 +75,15 @@ sub DoTheBridge {
 	if (exists $rules{$path}) {
 		my $inval = $message[2];
 		#get elements
-		my $min = $rules{$path}[1];
-		my $max = $rules{$path}[2];
-		my $CC = $rules{$path}[3];
-		my $channel = $rules{$path}[4];
+		my $type = $rules{$path}[0]; 
+		my $min = $rules{$path}[2];
+		my $max = $rules{$path}[3];
+		my $CC = $rules{$path}[4];
+		my $channel = $rules{$path}[5];
 		#print "I've found you !!! $inval $min $max $CC $channel\n";
 
 		return if (
+			!defined $type or
 			!defined $inval or
 			!defined $min or
 			!defined $max or
@@ -90,7 +92,7 @@ sub DoTheBridge {
 			);
 		
 		#update value in structure
-		$rules{$path}[0] = $inval;
+		$rules{$path}[1] = $inval;
 		
 		my $outval = &ScaleValue($inval,$min,$max);
 
@@ -122,15 +124,16 @@ sub DoTheBridge {
 sub SaveFile {
 	open FILE, ">/home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
 	#add header
-	print FILE "path;value;min;max;CC;channel";
+	print FILE "path;type;value;min;max;[CC;channel]";
 	#add lines
 	foreach my $path (keys %rules) {
-		my $value = $rules{$path}[0];
-		my $min = $rules{$path}[1];
-		my $max = $rules{$path}[2];
-		my $CC = $rules{$path}[3];
-		my $channel = $rules{$path}[4];
-		print FILE "$path;$value;$min;$max;$CC;$channel\n";
+		my $type = $rules{$path}[0];
+		my $value = $rules{$path}[1];
+		my $min = $rules{$path}[2];
+		my $max = $rules{$path}[3];
+		my $CC = $rules{$path}[4];
+		my $channel = $rules{$path}[5];
+		print FILE "$path;$type;$value;$min;$max;$CC;$channel\n";
 	}
 	close FILE;	
 }
@@ -160,13 +163,15 @@ sub Refresh {
 	print "Sending all midi data!!\n";
 	foreach my $path (keys %rules) {
 		#get elements
-		my $inval = $rules{$path}[0];
-		my $min = $rules{$path}[1];
-		my $max = $rules{$path}[2];
-		my $CC = $rules{$path}[3];
-		my $channel = $rules{$path}[4];
+		my $type = $rules{$path}[0];
+		my $inval = $rules{$path}[1];
+		my $min = $rules{$path}[2];
+		my $max = $rules{$path}[3];
+		my $CC = $rules{$path}[4];
+		my $channel = $rules{$path}[5];
 
 		next if (
+			!defined $type or
 			!defined $inval or
 			!defined $min or
 			!defined $max or
@@ -174,11 +179,14 @@ sub Refresh {
 			!defined $channel
 			);
 		#print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
-		my $outval = &ScaleValue($inval,$min,$max);
 
-		#send midi data
-		my @outCC = ($channel-1, '','','',$CC,$outval);
-		warn "could not send midi data\n" unless &SendCC(\@outCC);
+		if ($type eq "midi"){
+			my $outval = &ScaleValue($inval,$min,$max);
+			#send midi data
+			my @outCC = ($channel-1, '','','',$CC,$outval);
+			warn "could not send midi data\n" unless &SendCC(\@outCC);
+		}
+		#TODO check for non midi type !
 	}
 }
 
