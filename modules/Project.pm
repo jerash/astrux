@@ -258,6 +258,9 @@ sub execute_command {
 		when (/^status$/) { print "will give you the status one day\n"; }
 		when (/^song/) { 
 			print "aha you wan to start $command\n"; }
+		when (/^send/) { 
+			my $mixer = grep (//,$command)
+			print "to ecasound $command\n"; }
 		#default { print "Other"; }
 	}
 }

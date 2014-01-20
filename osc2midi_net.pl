@@ -42,7 +42,7 @@ open FILE, "</home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
 my $firstline = <FILE>; 
 chomp $firstline;
 die "bad header....\n" unless $firstline eq "path;value;min;max;CC;channel";
-#fill the hash with the file info
+#fill the hash with the file info, without header
 while (<FILE>) { 
 	chomp($_);
 	my @values = split(';',$_);
@@ -121,6 +121,9 @@ sub DoTheBridge {
 
 sub SaveFile {
 	open FILE, ">/home/seijitsu/2.TestProject/files/oscmidistate.csv" or die $!;
+	#add header
+	print FILE "path;value;min;max;CC;channel";
+	#add lines
 	foreach my $path (keys %rules) {
 		my $value = $rules{$path}[0];
 		my $min = $rules{$path}[1];
