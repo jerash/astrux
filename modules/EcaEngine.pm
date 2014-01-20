@@ -95,4 +95,49 @@ sub is_ready {
 	return 0;
 }
 
+sub LoadFromFile {
+	my $ecaengine = shift;
+	my $file = shift;
+	
+	$ecaengine->tcp_send("cs-load $file");
+	#TODO check return for errors
+}
+sub LoadAndStart {
+	my $ecaengine = shift;
+	my $file = shift;
+
+	$ecaengine->tcp_send("cs-load $ecaengine->{ecsfile}");
+	#TODO check return for errors
+	$ecaengine->tcp_send("cs-connect");
+	#TODO check return for errors
+	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	#TODO,  check return for errors
+	$ecaengine->tcp_send("start");
+	#TODO check return for errors
+}
+sub LoadAndStartFromFile {
+	my $ecaengine = shift;
+	my $file = shift;
+
+	$ecaengine->tcp_send("cs-load $file");
+	#TODO check return for errors
+	$ecaengine->tcp_send("cs-connect");
+	#TODO check return for errors
+	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	#TODO,  check return for errors
+	$ecaengine->tcp_send("start");
+	#TODO check return for errors
+}
+sub SelectAndConnectChainsetup {
+	my $ecaengine = shift;
+	my $chainsetup = shift;
+
+	$ecaengine->tcp_send("cs-select $chainsetup");
+	#TODO check return for errors
+	$ecaengine->tcp_send("cs-connect");
+	#TODO check return for errors
+	$ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	#TODO,  check return for errors
+}
+
 1;

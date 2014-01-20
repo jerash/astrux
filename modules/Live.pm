@@ -100,7 +100,8 @@ sub Start {
 		if  ($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) {
 			print "Found existing Ecasound server on port $port, reconfiguring engine\n";
 			#reconfigure ecasound engine with ecs file
-			&EngineReconfigure($mixerfile,$project->{mixers}{$mixername}{ecasound}{name},$port);
+			#&EngineReconfigure($mixerfile,$project->{mixers}{$mixername}{ecasound}{name},$port);
+			$project->{mixers}{$mixername}{ecasound}->LoadAndStart;
 			next;	
 			#TODO parse ecasound reply to check for errors
 		}
@@ -137,10 +138,12 @@ sub Start {
 	my $playersport = $project->{mixers}{players}{ecasound}{port};
 	foreach my $song (@songkeys) {
 		#load song chainsetup
-		&EngineLoad($project->{songs}{$song}{ecasound}{ecsfile},$playersport);
+		# &EngineLoad($project->{songs}{$song}{ecasound}{ecsfile},$playersport);
+		$project->{mixers}{players}{ecasound}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
 	}
 	#load dummy song chainsetup
-	&EngineReselect("players",$playersport);
+	#&EngineReselect("players",$playersport);
+	$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup("players");
 
 	#send previous state to ecasound engines
 	#--------------------------------------
@@ -150,36 +153,38 @@ sub Start {
 	#--------------------------------------
 }
 
-sub EngineLoad {
-	my $file = shift;
-	my $port = shift;
-	system ( "echo \"cs-load $file\" | nc localhost $port -C" );	
-}
-sub EngineReconfigure {
-	my $file = shift;
-	my $name = shift;
-	my $port = shift;
+# sub EngineLoad {
+# 	my $file = shift;
+# 	my $port = shift;
+# 	system ( "echo \"cs-load $file\" | nc localhost $port -C" );	
+# }
+# sub EngineReconfigure {
+# 	my $file = shift;
+# 	my $name = shift;
+# 	my $port = shift;
 
-	my $command = "echo \"cs-load $file\" | nc localhost $port -C";
-	system ( $command );
-	$command = "echo \"cs-select $name\" | nc localhost $port -C";
-	system ( $command );
-	$command = "echo \"cs-connect\" | nc localhost $port -C";
-	system ( $command );
-	$command = "echo \"engine-launch\" | nc localhost $port -C";
-	system ( $command );
-}
-sub EngineReselect {
-	my $song = shift;
-	my $port = shift;
+# 	my $command = "echo \"cs-load $file\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"cs-select $name\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"cs-connect\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"engine-launch\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"start\" | nc localhost $port -C";
+# 	system ( $command );
+# }
+# sub EngineReselect {
+# 	my $song = shift;
+# 	my $port = shift;
 
-	my $command = "echo \"cs-select $song\" | nc localhost $port -C";
-	system ( $command );
-	$command = "echo \"cs-connect\" | nc localhost $port -C";
-	system ( $command );
-	$command = "echo \"engine-launch\" | nc localhost $port -C";
-	system ( $command );
-}
+# 	my $command = "echo \"cs-select $song\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"cs-connect\" | nc localhost $port -C";
+# 	system ( $command );
+# 	$command = "echo \"engine-launch\" | nc localhost $port -C";
+# 	system ( $command );
+# }
 
 sub PlayIt {
 	my $project = shift;
