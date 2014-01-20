@@ -7,6 +7,7 @@ use warnings;
 
 use Data::Dumper;
 
+#--------------------OBJECT---------------------------------------
 sub create {
 	#create the file (overwrite)
 	my $ecaengine = shift;
@@ -24,6 +25,7 @@ sub create {
 	close $handle;
 }
 
+#--------------------ENGINE FILE---------------------------------------
 sub build_header {
 	my $ecaengine = shift;
 
@@ -64,6 +66,23 @@ sub verify {
 	$ecaengine->{status} = "verified";
 }
 
+#--------------------STATUS---------------------------------------
+sub is_ready {
+	#check if chainsetup is connected and engine launched
+	my $ecaengine = shift;
+	#send the question
+	my $reply = $ecaengine->tcp_send("cs-status");
+	my @lines =();
+	return unless @lines = reply_is_ok($reply);
+	my $line = shift @lines; #drop next line (### Chainsetup status ###)
+	#verify the line
+	$line = shift @lines; #here it is (Chainsetup (1) "main" [selected] [connected])
+	my $enginename = $ecaengine->{name};
+	return 1 if ($line =~ m/\"$enginename\" \[selected\] \[connected\]/);
+	return 0;
+}
+
+#--------------------COMMUNICATION---------------------------------------
 sub tcp_send {
 	#send a tcp message to the engine
 	my $ecaengine = shift;
@@ -71,28 +90,19 @@ sub tcp_send {
 	#get answer
 	return qx(echo $command | nc localhost $ecaengine->{port} -C);
 }
-
-sub is_ready {
-	#check if chainsetup is connected and engine launched
-	my $ecaengine = shift;
-	#send the question
-	my $reply = $ecaengine->tcp_send("cs-status");
+sub reply_is_ok { #verify if there is an error mentioned, drop the first line, returns an array of lines
+	my $reply = shift;
 	#do we have a reply ?
-	return "unknown" unless defined $reply;
-	#transform line into array
+	return unless defined $reply;
+	#transform reply into array (256 nbytes errorcode)
 	my @lines = split "\n" , $reply;
 	#read first line
 	my $line = shift @lines;
 	return unless defined $line;
-	my ($dummy,$bytes,$type) = split " ",$line;
+	my ($dummy,$bytes,$errorcode) = split " ",$line;
 	#check for error message
-	return if $type eq "e"; #error
-	$line = shift @lines; #drop next line (### Chainsetup status ###)
-	#verify the line
-	$line = shift @lines; #here it is (Chainsetup (1) "main" [selected] [connected])
-	my $enginename = $ecaengine->{name};
-	return 1 if ($line =~ m/\"$enginename\" \[selected\] \[connected\]/);
-	return 0;
+	return if $errorcode eq "e"; #error
+	return @lines;
 }
 
 sub LoadFromFile {
