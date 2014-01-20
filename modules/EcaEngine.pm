@@ -79,6 +79,13 @@ sub is_ready {
 	return 1 if ($line =~ m/\"$enginename\" \[selected\] \[connected\]/);
 	return 0;
 }
+sub is_running {
+	#check if an ecasound engine is running on the engine's defined port
+	my $ecaengine = shift;
+	my $port = $ecaengine->{port};
+	my $ps = qx(ps ax);
+	($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) ? return 1 : return 0;
+}
 
 #--------------------COMMUNICATION---------------------------------------
 sub tcp_send {

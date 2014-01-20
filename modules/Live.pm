@@ -85,53 +85,8 @@ sub Start {
 
 	# start mixers
 	#---------------
-	print "Starting mixers\n";
-	# my @pid_mixers;
-	# my $pid_mixer;
-	
-	foreach my $mixername (keys %{$project->{mixers}}) {
-		print " - mixer $mixername\n";
-		my $mixerfile = $project->{mixers}{$mixername}{ecasound}{ecsfile};
-		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
-		my $port = $project->{mixers}{$mixername}{ecasound}{port};
-		
-		#if mixer is already running on same port, then reconfigure it
-		my $ps = qx(ps ax);
-		if  ($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) {
-			print "Found existing Ecasound server on port $port, reconfiguring engine\n";
-			#reconfigure ecasound engine with ecs file
-			print "Error: unable to reconfigure engine $mixername\n" unless
-				$project->{mixers}{$mixername}{ecasound}->LoadAndStart;
-			next;	
-			#TODO parse ecasound reply to check for errors
-		}
-
-		#if mixer is not existing, launch mixer with needed file
-		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
-		system ( $command );
-		#wait for ecasound engines to be ready
-		sleep(1) until $project->{mixers}{$mixername}{ecasound}->is_ready;
-		print "Ecasound $mixername is ready\n";
-
-		# #fork and exec
-		# 	$SIG{CHLD} = sub { wait };
-		# 	$pid_mixer = fork();
-		# 	if ($pid_mixer) {
-		# 		#we are parent
-		# 		print "new pid_mixer = $pid_mixer\n";
-		# 	   	push (@pid_mixers,$pid_mixer);
-		# 		sleep(1);
-		# 	}
-		# 	elsif (defined $pid_mixer) {
-		# 		#we are child
-		# 		print "$command\n";
-		# 	    exec( $command );
-		#         die "unable to exec: $!";
-		# 	}
-		# 	else {
-		# 		die "unable to fork: $!";
-		# 	}
-	}
+	print "Starting mixers\n"; 
+	$project->StartEngines;
 
 	# load song chainsetups + dummy
 	#--------------------------------

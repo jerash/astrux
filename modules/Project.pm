@@ -208,20 +208,10 @@ sub GenerateFiles {
 sub SaveTofile {
 	my $project = shift;
 	my $outfile = shift;
-#Data::Dumper
-	# $Data::Dumper::Purity = 1;
-		#open FILE, ">$outfile" or die "Can't open file to write:$!";
-	# open FILE, ">project.cfg" or die "Can't open file to write:$!";
-	# print FILE Dumper $project;
-	# close FILE;
-#Storable
-	 use Storable;
+
+	use Storable;
 	#>>>works but output is not human readable
 	store $project, $outfile;
-	# $hashref = retrieve('file');
-#use JSON::XS
-	# $utf8_encoded_json_text = encode_json $perl_hash_or_arrayref;
- 	# $perl_hash_or_arrayref  = decode_json $utf8_encoded_json_text;
 }
 
 sub LoadFromFile {
@@ -230,13 +220,35 @@ sub LoadFromFile {
 
 	use Storable;
 	$project = retrieve($infile);
+}
 
-#Data::Dumper
-	# #restore
-	# open FILE, $infile;
-	# undef $/;
-	# eval <FILE>;
-	# close FILE;
+#-------------------------------------LIVE COMMANDS-----------------------------------------------------
+sub StartEngines {
+	my $project = shift;
+	#reload if $engine->is_running
+	#$engine->StartMixer
+	foreach my $mixername (keys %{$project->{mixers}}) {
+		print " - mixer $mixername\n";
+		my $mixerfile = $project->{mixers}{$mixername}{ecasound}{ecsfile};
+		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
+		my $port = $project->{mixers}{$mixername}{ecasound}{port};
+		
+		#if mixer is already running on same port, then reconfigure it
+		if  ($project->{mixers}{$mixername}{ecasound}->is_running) {
+			print "    > Found existing Ecasound engine on port $port, reconfiguring engine\n";
+			#reconfigure ecasound engine with ecs file
+			print "Error: unable to reconfigure engine $mixername\n" unless
+				$project->{mixers}{$mixername}{ecasound}->LoadAndStart;
+			next;	
+		}
+
+		#if mixer is not existing, launch mixer with needed file
+		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
+		system ( $command );
+		#wait for ecasound engines to be ready
+		sleep(1) until $project->{mixers}{$mixername}{ecasound}->is_ready;
+		print "Ecasound $mixername is ready\n";
+	}
 }
 
 1;

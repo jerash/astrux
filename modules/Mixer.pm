@@ -323,4 +323,6 @@ sub is_midi_controllable {
 	return $mixer->{ecasound}{generatekm};
 }
 
+#--------------Live functions-------------------------
+
 1;
