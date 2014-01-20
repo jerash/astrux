@@ -71,9 +71,7 @@ sub is_ready {
 	#check if chainsetup is connected and engine launched
 	my $ecaengine = shift;
 	#send the question
-	my $reply = $ecaengine->tcp_send("cs-status");
-	my @lines =();
-	return unless @lines = reply_is_ok($reply);
+	return unless my @lines = $ecaengine->tcp_send("cs-status");
 	my $line = shift @lines; #drop next line (### Chainsetup status ###)
 	#verify the line
 	$line = shift @lines; #here it is (Chainsetup (1) "main" [selected] [connected])
@@ -88,7 +86,8 @@ sub tcp_send {
 	my $ecaengine = shift;
 	my $command = shift;
 	#get answer
-	return qx(echo $command | nc localhost $ecaengine->{port} -C);
+	my $reply = qx(echo $command | nc localhost $ecaengine->{port} -C);
+	return reply_is_ok($reply);
 }
 sub reply_is_ok { #verify if there is an error mentioned, drop the first line, returns an array of lines
 	my $reply = shift;
