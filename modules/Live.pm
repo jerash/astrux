@@ -43,13 +43,13 @@ sub Start {
 	#TODO verify jack parameters
 	$project->{backends}{JACK} = $pid_jackd;
 
-	#JPMIDI
-	my $pid_jpmidi = qx(pgrep jpmidi);
-	if ($project->{midi_player}{enable}) {
-		die "JPMIDI server is not running" unless $pid_jpmidi;
-		print "JPMIDI server running with PID $pid_jpmidi";
-	}
-	$project->{backends}{JPMIDI} = $pid_jpmidi;
+	#JPMIDI << problem in server mode can't load new midi file....
+	# my $pid_jpmidi = qx(pgrep jpmidi);
+	# if ($project->{midi_player}{enable}) {
+	# 	die "JPMIDI server is not running" unless $pid_jpmidi;
+	# 	print "JPMIDI server running with PID $pid_jpmidi";
+	# }
+	# $project->{backends}{JPMIDI} = $pid_jpmidi;
 
 	#SAMPLER
 	my $pid_linuxsampler = qx(pgrep linuxsampler);
@@ -74,6 +74,14 @@ sub Start {
 		print "osc2midi bridge running with PID $pid_osc2midibridge";
 	}
 	$project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
+
+	#a2jmidid
+	my $pid_a2jmidid = qx(pgrep -f osc2midi);
+	if ($project->{osc2midi}{enable} eq 1) {
+		die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
+		print "a2jmidid running with PID $pid_a2jmidid";
+	}
+	$project->{backends}{A2JMIDID} = $pid_a2jmidid;
 	
 	# get song list
 	#---------------

@@ -268,6 +268,9 @@ sub execute_command {
 		$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
 		#loading midifile
 		#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
+		#autostart ?
+		$project->{mixers}{players}{ecasound}->tcp_send("start") 
+			if $project->{songs}{$songname}{song_globals}{autostart};
 	}
 	elsif ($command =~ /^play$/) { 
 		print "Starting play\n";
