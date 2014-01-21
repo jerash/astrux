@@ -144,5 +144,9 @@ sub SelectAndConnectChainsetup {
 	return unless $ecaengine->tcp_send("cs-connect");
 	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
 }
+sub Status {
+	my $ecaengine = shift;	
+	return $ecaengine->tcp_send("cs-status");
+}
 
 1;

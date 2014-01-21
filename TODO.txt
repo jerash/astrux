@@ -1,5 +1,3 @@
-dnas tous les trucs à écrire dans un fichiers ou on est susceptible d'avoir plusieurs lignes : mettre sous forme de tableau (push) poru éviter d'avoir une mise en forme du Dumper illisible.
-
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?
 	
@@ -7,6 +5,7 @@ dans le fichiers oscmidistate.csv
 	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
 	ben non ne fait, chaque ecasound génère un nouveau port midi ... envoyer vers les 3 ?
 	>demande envoyé à la ML ecasound pour nommer les ports
+	ben c'est pareil pour les commandes ecs....mais là on peut pas envoyer aux 3 !
 
 option to keep ecasound player opened after transport stop
 

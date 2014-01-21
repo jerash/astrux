@@ -252,17 +252,41 @@ sub execute_command {
 	my $project = shift;
 	my $command = shift;
 
-	use feature qw/switch/;
-	given ($command) {
-		when (/^save$/) { $project->SaveTofile("$project->{project}{name}".".cfg"); }
-		when (/^status$/) { print "will give you the status one day\n"; }
-		when (/^song/) { 
-			print "aha you wan to start $command\n"; }
-		when (/^send/) { 
-			my $mixer = grep (/main/,$command); #TODO replace the false grep
-			print "to ecasound $command\n"; }
-		#default { print "Other"; }
+	if ($command =~ /^save$/) { 
+		$project->SaveTofile("$project->{project}{name}".".cfg"); 
 	}
+	elsif ($command =~ /^status$/) { 
+		foreach my $mixer (keys %{$project->{mixers}}) {
+			print $project->{mixers}{$mixer}{ecasound}->Status . "\n";
+		}
+	}
+	elsif ($command =~ /^song /) { 
+		my $songname = substr $command,5;
+		return unless exists $project->{songs}{$songname};
+		print "Starting song $songname\n";
+		#loading players
+		$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
+		#loading midifile
+		#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
+	}
+	elsif ($command =~ /^play$/) { 
+		print "Starting play\n";
+		$project->{mixers}{players}{ecasound}->tcp_send("start");
+	}
+	elsif ($command =~ /^stop$/) { 
+		print "Stopping\n";
+		$project->{mixers}{players}{ecasound}->tcp_send("stop");
+	}
+	elsif ($command =~ /^zero$/) { 
+		print "Stopping\n";
+		$project->{mixers}{players}{ecasound}->tcp_send("setpos 0");
+	}
+	elsif ($command =~ /^send/) { 
+		my $mixer = grep (/main/,$command); #TODO replace the false grep
+		print "to ecasound $command\n"; 
+	}
+	#default { print "Other"; }
 }
+
 
 1;

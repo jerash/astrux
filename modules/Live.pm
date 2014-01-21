@@ -111,6 +111,12 @@ sub Start {
 sub PlayIt {
 	my $project = shift;
 
+	#TODO here should be the global parser accepting many thing like:
+	#	tcp commands
+	#	OSC messages
+	#	gui actions (from tcp commands is best)
+	#	front panel actions (from tcp commands)
+
 	print "\n--------- Project $project->{project}{name} ---------\n";
 	while (1) {
 		print "$project->{project}{name}> ";
