@@ -108,6 +108,7 @@ sub process_osc_command {
 	my $osc = $project->{osc};
 	
 	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	print $packet;
     my $p = $osc->parse($packet);
 
 	#say "got OSC: ", Dumper $p;

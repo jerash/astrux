@@ -5,12 +5,21 @@ package Live;
 use strict;
 use warnings;
 
+use Protocol::OSC;
+use IO::Socket::INET;
+use AnyEvent;
+#autoflush
+$| = 1;
+
 use Project;
 use Mixer;
 use Song;
 use Bridge;
 
-#-------------------------------------LIVE USE-----------------------------------------------------
+use Data::Dumper;
+#-------------------------------------INIT LIVE -----------------------------------
+
+use vars qw($project);
 
 sub Start {
 	my $project = shift;
@@ -68,12 +77,12 @@ sub Start {
 	$project->{backends}{JACKPLUMBING} = $pid_jackplumbing;
 
 	#OSC/MIDI BRIDGE
-	my $pid_osc2midibridge = qx(pgrep -f osc2midi);
-	if ($project->{osc2midi}{enable} eq 1) {
-		die "osc2midi bridge is not running" unless $pid_osc2midibridge;
-		print "osc2midi bridge running with PID $pid_osc2midibridge";
-	}
-	$project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
+	# my $pid_osc2midibridge = qx(pgrep -f osc2midi);
+	# if ($project->{osc2midi}{enable} eq 1) {
+	# 	die "osc2midi bridge is not running" unless $pid_osc2midibridge;
+	# 	print "osc2midi bridge running with PID $pid_osc2midibridge";
+	# }
+	# $project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
 
 	#a2jmidid
 	my $pid_a2jmidid = qx(pgrep -f osc2midi);
@@ -116,16 +125,26 @@ sub Start {
 	#--------------------------------------
 }
 
+#-------------------------MAIN LOOP---------------------------------------------
+
 sub PlayIt {
 	my $project = shift;
+	#update the global project variable
+	$Live::project = $project;
 
 	#TODO here should be the global parser accepting many thing like:
 	#	tcp commands
+#$project->init_tcp_server if $project->{TCP}{enable};
 	#	OSC messages
+	$project->Live::init_osc_server if $project->{OSC}{enable};
 	#	gui actions (from tcp commands is best)
 	#	front panel actions (from tcp commands)
 
-	print "\n--------- Project $project->{project}{name} ---------\n";
+	#main loop waiting
+	my $cv = AE::cv;
+	$cv->recv;
+
+	print "\n--------- Project $project->{project}{name} Running---------\n";
 	while (1) {
 		print "$project->{project}{name}> ";
 		my $command = <STDIN>;
@@ -135,6 +154,33 @@ sub PlayIt {
 	}
 }
 
+#-------------------------OSC---------------------------------------------
+
+sub init_osc_server {
+	#my $project = shift;
+	
+	my $oscport = $Live::project->{OSC}{port};
+	print ("Starting OSC listener on port $oscport\n");
+	my $osc_in = $Live::project->{OSC}{osc_socket} = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
+	$Live::project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	$Live::project->{OSC}{object} = Protocol::OSC->new;
+}
+sub process_osc_command {
+	#my $project = shift;
+	
+	my $in = $Live::project->{OSC}{osc_socket};
+	my $osc = $Live::project->{OSC}{object};
+	
+	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	my $p = $osc->parse($packet);
+
+	#say "got OSC: ", Dumper $p;
+	my $input = $p->[0];
+	my $type = $p->[1];
+	my $value = $p->[2];
+	print "OSC==$p p0=$input p1=$type p2=$value\n";
+	#TODO do something with the received OSC message
+}
 sub OSC_send {
 	use Protocol::OSC;
 	use IO::Socket::INET;

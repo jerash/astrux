@@ -236,6 +236,8 @@ sub StartEngines {
 			#reconfigure ecasound engine with ecs file
 			print "Error: unable to reconfigure engine $mixername\n" unless
 				$project->{mixers}{$mixername}{ecasound}->LoadAndStart;
+			#create socket for communiaction
+			$project->{mixers}{$mixername}{ecasound}->init_socket($port);
 			next;	
 		}
 
@@ -245,6 +247,8 @@ sub StartEngines {
 		#wait for ecasound engines to be ready
 		sleep(1) until $project->{mixers}{$mixername}{ecasound}->is_ready;
 		print "Ecasound $mixername is ready\n";
+		#create socket for communiaction
+		$project->{mixers}{$mixername}{ecasound}->init_socket($port);
 	}
 }
 
@@ -287,6 +291,18 @@ sub execute_command {
 	elsif ($command =~ /^send/) { 
 		my $mixer = grep (/main/,$command); #TODO replace the false grep
 		print "to ecasound $command\n"; 
+	}
+	elsif ($command =~ /^eca/) {
+	my ($mixer, $cmd) =
+		$command =~ /eca  # eca
+					 \    # space
+					 (.+)# characters (mixername)
+					 \    # space
+					 (.+)  # rest of string
+					/sx;  # s-flag: . matches newline
+		
+		$project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd)
+		# print "to ecasound $command\n"; 
 	}
 	#default { print "Other"; }
 }

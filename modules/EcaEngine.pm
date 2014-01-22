@@ -149,4 +149,61 @@ sub Status {
 	return $ecaengine->tcp_send("cs-status");
 }
 
+#--------------------COMMUNICATION 2---------------------------------------
+sub init_socket {
+	my $ecaengine = shift;	
+	my $port = shift;
+	print ("   Creating engine socket on port $port.\n");
+	$ecaengine->{socket} = new IO::Socket::INET (
+		PeerAddr => 'localhost', 
+		PeerPort => $port, 
+		Proto => 'tcp', 
+	); 
+	die "Could not create socket: $!\n" unless $ecaengine->{socket}; 
+}
+
+sub SendCmdGetReply {
+	my $ecaengine = shift;	
+	my $cmd = shift;
+	
+	$cmd =~ s/\s*$//s; # remove trailing white space
+
+	#TODO verify if socket is active (after a reload for example)
+	
+	#send command
+	$ecaengine->{socket}->send("$cmd\r\n");
+	my $buf;
+	# get socket reply
+	my $result = $ecaengine->{socket}->recv($buf, 65536);
+	defined $result or warn "no answer from ecasound\n", return;
+	#parse reply
+	my ($return_value, $setup_length, $type, $reply) =
+		$buf =~ /(\d+)# digits
+				 \    # space
+				 (\d+)# digits
+				 \    # space
+ 				 ([^\r\n]+) # a line of text, probably one character 
+				\r\n    # newline
+				(.+)  # rest of string
+				/sx;  # s-flag: . matches newline
+	#check for errors
+	if(	! $return_value == 256 ){
+		warn "Net-ECI bad return value: $return_value (expected 256)";
+		return;
+	}
+	$reply =~ s/\s+$//; 
+	if( $type eq 'e')
+	{
+		warn "ECI error! Command: $cmd Reply: $reply";
+		return;
+	}
+	else
+	#return reply text
+	{ 	#print "Net-ECI  got: $reply";
+		#return $reply;
+		print $reply;
+	}
+	
+}
+
 1;
