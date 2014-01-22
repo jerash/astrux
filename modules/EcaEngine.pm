@@ -82,10 +82,10 @@ sub is_running {
 	my $ecaengine = shift;
 	my $port = $ecaengine->{port};
 	my $ps = qx(ps ax);
+	# print "***\n $ps \n***\n";
 	($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) ? return 1 : return 0;
 }
 
-#--------------------COMMUNICATION---------------------------------------
 sub tcp_send {
 	#send a tcp message to the engine
 	my $ecaengine = shift;
@@ -111,42 +111,43 @@ sub reply_is_ok { #verify if there is an error mentioned, drop the first line, r
 	#else return 1
 	return 1;
 }
+#--------------------COMMUNICATION---------------------------------------
 
 sub LoadFromFile {
 	my $ecaengine = shift;
 	my $file = shift;
 	
-	return unless $ecaengine->tcp_send("cs-load $file");
+	return $ecaengine->SendCmdGetReply("cs-load $file");
 }
 sub LoadAndStart {
 	my $ecaengine = shift;
 	my $file = shift;
 
-	return unless $ecaengine->tcp_send("cs-load $ecaengine->{ecsfile}");
-	return unless $ecaengine->tcp_send("cs-connect");
-	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
-	return unless $ecaengine->tcp_send("start");
+	return $ecaengine->SendCmdGetReply("cs-load $ecaengine->{ecsfile}");
+	return $ecaengine->SendCmdGetReply("cs-connect");
+	return $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
+	return $ecaengine->SendCmdGetReply("start");
 }
 sub LoadAndStartFromFile {
 	my $ecaengine = shift;
 	my $file = shift;
 
-	return unless $ecaengine->tcp_send("cs-load $file");
-	return unless $ecaengine->tcp_send("cs-connect");
-	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
-	return unless $ecaengine->tcp_send("start");
+	return $ecaengine->SendCmdGetReply("cs-load $file");
+	return $ecaengine->SendCmdGetReply("cs-connect");
+	return $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
+	return $ecaengine->SendCmdGetReply("start");
 }
 sub SelectAndConnectChainsetup {
 	my $ecaengine = shift;
 	my $chainsetup = shift;
 
-	return unless $ecaengine->tcp_send("cs-select $chainsetup");
-	return unless $ecaengine->tcp_send("cs-connect");
-	return unless $ecaengine->tcp_send("engine-launch"); #maybe not necessary with start after?
+	return $ecaengine->SendCmdGetReply("cs-select $chainsetup");
+	return $ecaengine->SendCmdGetReply("cs-connect");
+	return $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
 }
 sub Status {
 	my $ecaengine = shift;	
-	return $ecaengine->tcp_send("cs-status");
+	return $ecaengine->SendCmdGetReply("cs-status");
 }
 
 #--------------------COMMUNICATION 2---------------------------------------
@@ -199,9 +200,9 @@ sub SendCmdGetReply {
 	}
 	else
 	#return reply text
-	{ 	#print "Net-ECI  got: $reply";
-		#return $reply;
-		print $reply;
+	{ 	#print "Net-ECI command ok\n";
+		return $reply;
+		#print $reply;
 	}
 	
 }

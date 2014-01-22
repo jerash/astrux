@@ -7,18 +7,20 @@ use warnings;
 
 use Protocol::OSC;
 use IO::Socket::INET;
+
 use AnyEvent;
-#autoflush
-$| = 1;
+use AnyEvent::Socket;
+use AnyEvent::ReadLine::Gnu;
 
 use Project;
 use Mixer;
 use Song;
 use Bridge;
 
-use Data::Dumper;
 #-------------------------------------INIT LIVE -----------------------------------
 
+#autoflush
+$| = 1;
 use vars qw($project);
 
 sub Start {
@@ -110,12 +112,11 @@ sub Start {
 	my $playersport = $project->{mixers}{players}{ecasound}{port};
 	foreach my $song (@songkeys) {
 		#load song chainsetup
-		print "Error: unable to load song $song\n" unless 
-			$project->{mixers}{players}{ecasound}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
+		print "Loading song $song\n"; 
+		print $project->{mixers}{players}{ecasound}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
 	}
 	#load dummy song chainsetup
-	print "Error: unable to connect dummy player\n" unless
-		$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup("players");
+	$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup("players");
 
 	#send previous state to ecasound engines
 	#--------------------------------------
@@ -132,43 +133,105 @@ sub PlayIt {
 	#update the global project variable
 	$Live::project = $project;
 
-	#TODO here should be the global parser accepting many thing like:
+	print "\n--------- Project $project->{project}{name} Running---------\n";
+	#Start the global parser accepting many things like:
 	#	tcp commands
-#$project->init_tcp_server if $project->{TCP}{enable};
+	$project->Live::init_tcp_server if $project->{TCP}{enable};
 	#	OSC messages
 	$project->Live::init_osc_server if $project->{OSC}{enable};
+	#	command line interface
+	$project->Live::init_cli_server if $project->{CLI}{enable};	
 	#	gui actions (from tcp commands is best)
 	#	front panel actions (from tcp commands)
 
 	#main loop waiting
 	my $cv = AE::cv;
 	$cv->recv;
-
-	print "\n--------- Project $project->{project}{name} Running---------\n";
-	while (1) {
-		print "$project->{project}{name}> ";
-		my $command = <STDIN>;
-		chomp $command;
-		return if ($command =~ /exit|x|quit/);
-		$project->execute_command($command);
-	}
+	# old static CLI
+	# while (1) {
+	# 	print "$project->{project}{name}> ";
+	# 	my $command = <STDIN>;
+	# 	chomp $command;
+	# 	return if ($command =~ /exit|x|quit/);
+	# 	$project->execute_command($command);
+	# }
+}
+#-------------------------CLI---------------------------------------------
+sub init_cli_server {
+	my $rl; $rl = new AnyEvent::ReadLine::Gnu prompt => "$Live::project->{project}{name}>  ", on_line => sub {
+		# called for each line entered by the user
+		# AnyEvent::ReadLine::Gnu->print ("you entered: $_[0]\n");
+		undef $rl unless process_cli($_[0]);
+ }
+}
+sub process_cli {
+	my $command = shift;
+	return if ($command =~ /exit|x|quit/);
+	print $project->execute_command($command);
+	return 1;
 }
 
-#-------------------------OSC---------------------------------------------
+#-------------------------TCP---------------------------------------------
+sub init_tcp_server {
+	my $tcpport = $project->{TCP}{port};
+	# creating a listening socket
+	my $tcpsocket = new IO::Socket::INET (
+	    LocalHost => '0.0.0.0',
+	    LocalPort => $tcpport,
+	    Proto => 'tcp',
+	    Listen => 5,
+	    Reuse => 1
+	);
+	warn "cannot create socket $!\n" unless $tcpsocket;
+	print "Starting TCP listener on port $tcpport\n";
+	$project->{TCP}{socket} = $tcpsocket;
+ 	$Live::project->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
+}
+sub process_tcp_command {
 
+	#TODO for persistent connection we should fork the connection and put it in a loop until clients asks to exit
+
+    my $socket = $project->{TCP}{socket};
+    # waiting for a new client connection
+    my $client_socket = $socket->accept();
+ 
+    # get information about a newly connected client
+    my $client_address = $client_socket->peerhost();
+    my $client_port = $client_socket->peerport();
+    #print "connection from $client_address:$client_port\n";
+ 
+    # read up to 256 characters from the connected client
+    my $data = "";
+    $client_socket->recv($data, 256);
+    print "received data: $data\n";
+
+    chomp($data);
+	my $reply = $project->execute_command($data);
+
+    # write response data to the connected client
+    $data = "ok\n";
+    $data .= " : $reply\n" if $reply;
+    $client_socket->send($data);
+   
+    # notify client that response has been sent
+    shutdown($client_socket, 1);
+}
+#$socket->close();
+
+#-------------------------OSC---------------------------------------------
 sub init_osc_server {
 	#my $project = shift;
 	
 	my $oscport = $Live::project->{OSC}{port};
 	print ("Starting OSC listener on port $oscport\n");
-	my $osc_in = $Live::project->{OSC}{osc_socket} = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
+	my $osc_in = $Live::project->{OSC}{socket} = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
 	$Live::project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
 	$Live::project->{OSC}{object} = Protocol::OSC->new;
 }
 sub process_osc_command {
 	#my $project = shift;
 	
-	my $in = $Live::project->{OSC}{osc_socket};
+	my $in = $Live::project->{OSC}{socket};
 	my $osc = $Live::project->{OSC}{object};
 	
 	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
