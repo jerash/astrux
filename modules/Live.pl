@@ -18,13 +18,34 @@ use Song;
 use Bridge;
 
 #-------------------------------------INIT LIVE -----------------------------------
-
 #autoflush
 $| = 1;
 use vars qw($project);
+#----------------------------------------------------------------
+# This is the main entry point for Astrux Live
+#----------------------------------------------------------------
+
+if ($#ARGV+1 eq 0) {
+	die "usage : start_project project_name.cfg\n";
+}
+
+#------------LOAD project structure----------------------------
+
+my $infile = $ARGV[0];
+print "Opening : $infile\n";
+
+use Storable;
+our $project = retrieve($infile);
+die "Could not load file $infile\n" unless $project;
+
+&Start;
+
+#------------Now PLay !------------------------
+&PlayIt;
+
+#------------------------------------------------------------------------
 
 sub Start {
-	my $project = shift;
 
 	#TODO verify if Project is valid
 	print "--------- Init Project $project->{project}{name} ---------\n";
@@ -52,7 +73,7 @@ sub Start {
 		print "JACK server running with PID $pid_jackd";
 	}
 	#TODO verify jack parameters
-	$project->{backends}{JACK} = $pid_jackd;
+	$project->{backends}{JACK}{PID} = $pid_jackd;
 
 	#JPMIDI << problem in server mode can't load new midi file....
 	# my $pid_jpmidi = qx(pgrep jpmidi);
@@ -68,7 +89,7 @@ sub Start {
 		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 		print "LINUXSAMPLER running with PID $pid_linuxsampler";
 	}
-	$project->{backends}{LINUXSAMPLER} = $pid_linuxsampler;
+	$project->{backends}{LINUXSAMPLER}{PID} = $pid_linuxsampler;
 
 	#jack.plumbing
 	my $pid_jackplumbing = qx(pgrep jack.plumbing);
@@ -76,7 +97,7 @@ sub Start {
 		die "jack.plumbing is not running" unless $pid_jackplumbing;
 		print "jack.plumbing running with PID $pid_jackplumbing";
 	}
-	$project->{backends}{JACKPLUMBING} = $pid_jackplumbing;
+	$project->{backends}{JACKPLUMBING}{PID} = $pid_jackplumbing;
 
 	#OSC/MIDI BRIDGE
 	# my $pid_osc2midibridge = qx(pgrep -f osc2midi);
@@ -87,12 +108,10 @@ sub Start {
 	# $project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
 
 	#a2jmidid
-	my $pid_a2jmidid = qx(pgrep -f osc2midi);
-	if ($project->{osc2midi}{enable} eq 1) {
-		die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
-		print "a2jmidid running with PID $pid_a2jmidid";
-	}
-	$project->{backends}{A2JMIDID} = $pid_a2jmidid;
+	my $pid_a2jmidid = qx(pgrep -f a2jmidid);
+	die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
+	print "a2jmidid running with PID $pid_a2jmidid";
+	$project->{backends}{A2JMIDID}{PID} = $pid_a2jmidid;
 	
 	# get song list
 	#---------------
@@ -129,18 +148,15 @@ sub Start {
 #-------------------------MAIN LOOP---------------------------------------------
 
 sub PlayIt {
-	my $project = shift;
-	#update the global project variable
-	$Live::project = $project;
 
 	print "\n--------- Project $project->{project}{name} Running---------\n";
 	#Start the global parser accepting many things like:
 	#	tcp commands
-	$project->Live::init_tcp_server if $project->{TCP}{enable};
+	&init_tcp_server if $project->{TCP}{enable};
 	#	OSC messages
-	$project->Live::init_osc_server if $project->{OSC}{enable};
+	&init_osc_server if $project->{OSC}{enable};
 	#	command line interface
-	$project->Live::init_cli_server if $project->{CLI}{enable};	
+	&init_cli_server if $project->{CLI}{enable};	
 	#	gui actions (from tcp commands is best)
 	#	front panel actions (from tcp commands)
 
@@ -158,7 +174,7 @@ sub PlayIt {
 }
 #-------------------------CLI---------------------------------------------
 sub init_cli_server {
-	my $rl; $rl = new AnyEvent::ReadLine::Gnu prompt => "$Live::project->{project}{name}>  ", on_line => sub {
+	my $rl; $rl = new AnyEvent::ReadLine::Gnu prompt => "$project->{project}{name}>  ", on_line => sub {
 		# called for each line entered by the user
 		# AnyEvent::ReadLine::Gnu->print ("you entered: $_[0]\n");
 		undef $rl unless process_cli($_[0]);
@@ -185,7 +201,7 @@ sub init_tcp_server {
 	warn "cannot create socket $!\n" unless $tcpsocket;
 	print "Starting TCP listener on port $tcpport\n";
 	$project->{TCP}{socket} = $tcpsocket;
- 	$Live::project->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
+ 	$project->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
 }
 sub process_tcp_command {
 
@@ -222,17 +238,17 @@ sub process_tcp_command {
 sub init_osc_server {
 	#my $project = shift;
 	
-	my $oscport = $Live::project->{OSC}{port};
+	my $oscport = $project->{OSC}{port};
 	print ("Starting OSC listener on port $oscport\n");
-	my $osc_in = $Live::project->{OSC}{socket} = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
-	$Live::project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
-	$Live::project->{OSC}{object} = Protocol::OSC->new;
+	my $osc_in = $project->{OSC}{socket} = IO::Socket::INET->new( qw(LocalAddr localhost LocalPort), $oscport, qw(Proto udp Type), SOCK_DGRAM ) || die $!;
+	$project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	$project->{OSC}{object} = Protocol::OSC->new;
 }
 sub process_osc_command {
 	#my $project = shift;
 	
-	my $in = $Live::project->{OSC}{socket};
-	my $osc = $Live::project->{OSC}{object};
+	my $in = $project->{OSC}{socket};
+	my $osc = $project->{OSC}{object};
 	
 	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
 	my $p = $osc->parse($packet);
