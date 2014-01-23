@@ -50,7 +50,7 @@ sub generate_km {
 	&getnextCC();
 	my $line = "-km:1,0,100," . $midiCCchannel[0] . "," . $midiCCchannel[1];
 }	
-#TODO : get plugin range
+#TBD : get plugin range
 #DOING : make decision to use ecasound effect_preset file exclusively to standardize format
 
 # print @midiCCchannel;

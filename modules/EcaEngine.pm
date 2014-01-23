@@ -15,7 +15,6 @@ sub create {
 	#print "---EcaEngine:create\n path = $path\n";
 	die "no path to create ecs file\n" unless (defined $path);
 	#create an empty file (overwrite existing)
-	#TODO : check for existence and ask for action
 	open my $handle, ">$path" or die $!;
 	#update mixer status
 	$ecaengine->{status} = "new";
@@ -59,7 +58,7 @@ sub verify {
 		warn "cannot verify an ecs file not containing chains\n";
 		return;
 	}
-	#TODO open it with ecasound and check return code
+	#TODO if possible open it with ecasound and check return code
 
 	$ecaengine->{status} = "verified";
 }
@@ -169,8 +168,8 @@ sub SendCmdGetReply {
 	
 	$cmd =~ s/\s*$//s; # remove trailing white space
 
-	#TODO verify if socket is active (after a reload for example)
-	
+	#verify if socket is active (after a reload for example)
+	return unless $ecaengine->{socket};
 	#send command
 	$ecaengine->{socket}->send("$cmd\r\n");
 	my $buf;

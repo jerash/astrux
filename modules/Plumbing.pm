@@ -14,7 +14,6 @@ sub create {
 	die "no path to create plumbing file\n" unless (defined $path);
 	
 	#create an empty file (overwrite existing)
-	#TODO : check for existence and ask for action
 	open my $handle, ">$path" or die $!;
 	#update mixer status
 	$connections->{status} = "new";
@@ -30,8 +29,7 @@ sub save {
 		print $handle "$_\n" for @{$connections->{rules}};
 		close $handle;
 	} else {
-		#TODO better handling
-		warn "Plumbing file doesn't exist!!\n";
+		warn "Plumbing file has not been initialized!!\n";
 	}
 }
 

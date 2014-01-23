@@ -72,7 +72,7 @@ $| = 1;
 #     };
 #     $@ and throw("caught error: $@, resetting..."), reset_remote_control_socket(), return;
 # 	#process_command($input);
-# 	#TODO
+# 	#TBD
 # 	print "Will process command : $input";
 # 	my $out;
 # 	{ no warnings 'uninitialized';
