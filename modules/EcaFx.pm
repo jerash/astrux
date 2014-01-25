@@ -171,7 +171,7 @@ sub Generate_km {
 	my @lows = @{$ecafx->{lowvalues}};
 	my @highs = @{$ecafx->{highvalues}};
 
-	#iterate through each parameter
+	#iterate through each parameters
 	my $nb =1;
 	foreach my $param (@{$ecafx->{paramnames}}) {
 		#get mim/max parameter range, and new unique CC/channel
@@ -184,10 +184,21 @@ sub Generate_km {
 	}
 	#remove trailing whitespace
 	$ecafx->{ecsline} =~ s/\s+$//;
-	return 1;		
+	return 1;
 }
 
 
+sub is_param_ok {
+	#grab parameter name in parameter
+	my $ecafx = shift;
+	my $paramtotest = shift;
 
+	#iterate through each parameters
+	my $nb =1;
+	foreach my $param (@{$ecafx->{paramnames}}) {
+		return 1 if $paramtotest eq $param;
+	}
+	return 0;
+}
 
 1;

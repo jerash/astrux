@@ -273,23 +273,55 @@ use Socket qw(getnameinfo NI_NUMERICHOST);
 	#grab osc packet arguments
 	my ($path, $types, @args) = @$p;
 
-	print "grabbed path=$path types=$types and args";
-	print Dumper @args;
-	print "\n";
+	# print "grabbed path=$path types=$types and args";
+	# print Dumper @args;
+	# print "\n";
 
 	#verify how many arguments we have
 	if ( length($types) == 0 ) {
-		warn "ignored osc message without arguments\n"
+		warn "ignored osc message without arguments\n";
 		return;
 	}
 	elsif ( length($types) > 1 ) {
-		warn "ignored osc message with multiple arguments\n"
+		warn "ignored osc message with multiple arguments\n";
 	}
 
 	#go on with a single argument osc message
+	#cleanup path
+	$path =~ s(^/)();
+	$path =~ s(/$)();
+	#split path elements
 	my @pathelements = split '/',$path;
-
-	#TODO do something with the received OSC message
+	#TODO verify number of elements
+	#element 1 = mixername OR TODO system command
+	my $mixername = shift @pathelements;
+		#print " mixer $mixername\n";
+	return unless exists $project->{mixers}{$mixername};
+	#element 2 = trackname OR TODO system command arguments
+	my $trackname = shift @pathelements;
+		#print " track $trackname\n";
+	return unless exists $project->{mixers}{$mixername}{channels}{$trackname};
+	#element 3 = fx name OR 'aux_to' OR special command
+	my $el3 = shift @pathelements;
+	print " el3 $el3\n";
+	if ($el3 eq 'aux_to') {
+		print "track $trackname aux_to\n";
+	}
+	elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
+		my $insertname = $el3;
+		my $insertparam = shift @pathelements;
+		return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3}->is_param_ok($insertparam);
+		my $value = shift @args;
+		warn "empty value on param $insertparam!\n" unless defined $value;
+		print "effect $el3 change param $insertparam with value $value on track $trackname\n";
+		#TODO send ecasound command
+	}
+	elsif ($el3 eq 'mute') {
+		print "mute track $trackname\n";
+	}
+	else {
+		warn "unknown osc parameter $el3\n";
+	}
 
 	#TODO check if we send back information
 	if ($project->{OSC}{sendback}) {
