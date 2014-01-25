@@ -52,7 +52,7 @@ if [[ -n $JPMIDI_PID ]]
   fi
  else
   echo lancement de jpmidi en mode serveur
-  /usr/local/bin/jpmidi -s /home/seijitsu/astrux/0x.nosong/dummy.mid &
+  /usr/local/bin/jpmidi -s /home/seijitsu/astrux/0x.nosong/dummy.mid 2>&1 &
   sleep 1
   sendjpmidi "connect 2"
 fi
@@ -69,7 +69,7 @@ if [[ -n $LINUXSAMPLER_PID ]]
   fi
  else
   echo Lancement de linuxsampler
-  #linuxsampler &
+  #linuxsampler 2>&1 &
   #sleep 2
 fi
 

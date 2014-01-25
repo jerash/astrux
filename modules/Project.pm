@@ -255,55 +255,58 @@ sub execute_command {
 	my $project = shift;
 	my $command = shift;
 
+	my $reply = '';
+
 	if ($command =~ /^save$/) { 
 		$project->SaveTofile("$project->{project}{name}".".cfg"); 
 	}
 	elsif ($command =~ /^status$/) { 
 		foreach my $mixer (keys %{$project->{mixers}}) {
-			print $project->{mixers}{$mixer}{ecasound}->Status . "\n";
+			$reply = $project->{mixers}{$mixer}{ecasound}->Status . "\n";
 		}
 	}
 	elsif ($command =~ /^song /) { 
 		my $songname = substr $command,5;
 		return unless exists $project->{songs}{$songname};
-		print "Starting song $songname\n";
+		$reply = "Starting song $songname\n";
 		#loading players
-		$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
+		$reply .= $project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
 		#loading midifile
 		#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
 		#autostart ?
-		return $project->{mixers}{players}{ecasound}->SendCmdGetReply("start") 
+		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start") 
 			if $project->{songs}{$songname}{song_globals}{autostart};
 	}
 	elsif ($command =~ /^play$/) { 
-		print "Starting play\n";
-		return $project->{mixers}{players}{ecasound}->SendCmdGetReply("start");
+		$reply = "Starting play\n";
+		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start");
 	}
 	elsif ($command =~ /^stop$/) { 
-		print "Stopping\n";
-		return $project->{mixers}{players}{ecasound}->SendCmdGetReply("stop");
+		$reply = "Stopping\n";
+		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("stop");
 	}
 	elsif ($command =~ /^zero$/) { 
-		print "Stopping\n";
-		return $project->{mixers}{players}{ecasound}->SendCmdGetReply("setpos 0");
+		$reply = "back to the roots\n";
+		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("setpos 0");
 	}
 	elsif ($command =~ /^send/) { 
 		my $mixer = grep (/main/,$command); #TODO replace the false grep
-		print "to ecasound $command\n"; 
+		$reply = "to ecasound $command\n"; 
 	}
 	elsif ($command =~ /^eca/) {
-	my ($mixer, $cmd) =
-		$command =~ /eca  # eca
-					 \    # space
-					 (.+)# characters (mixername)
-					 \    # space
-					 (.+)  # rest of string
-					/sx;  # s-flag: . matches newline
+		my ($mixer, $cmd) =
+			$command =~ /eca  # eca
+						 \    # space
+						 (.+)# characters (mixername)
+						 \    # space
+						 (.+)  # rest of string
+						/sx;  # s-flag: . matches newline
 		#TODO check that $cmd is valid
-		return $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
-		# print "to ecasound $command\n"; 
+		$reply .= $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
+		# $reply = "to ecasound $command\n"; 
 	}
-	#default { print "Other"; }
+	#default { $reply = "Other"; }
+	return $reply;
 }
 
 
