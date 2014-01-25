@@ -186,18 +186,18 @@ sub GenerateFiles {
 		print "Project: jack.plumbing isn't defined as active. Not creating file.";
 	}
 
-	#----------------BRIDGE FILE------------------------
+	#----------------OSC2MIDI BRIDGE FILE------------------------
 	#TODO define bridge option
-	if ($project->{controls}{bridge} == 1) {
+	if ($project->{controls}{osc2midi} == 1) {
 		#we're asked to generate the bridge file
 		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
-		$project->{bridge}{file} = $filepath;
-		print "Project: creating bridge file $filepath\n";
-		$project->{bridge}->create;
-		$project->{bridge}->save;
+		$project->{osc2midi}{file} = $filepath;
+		print "Project: creating osc2midi file $filepath\n";
+		$project->{osc2midi}->create;
+		$project->{osc2midi}->save;
 	}
 	else {
-		print "Project: midi/osc bridge isn't defined as active. Not creating file.";
+		print "Project: midi2osc bridge isn't defined as active. Not creating file.";
 	}
 
 }

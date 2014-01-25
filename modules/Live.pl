@@ -243,40 +243,64 @@ sub process_tcp_command {
 #-------------------------OSC---------------------------------------------
 	#version using Protocol::OSC
 sub init_osc_server {
-	#my $project = shift;
 	
-	my $oscip = $project->{OSC}{ip};
-	my $oscport = $project->{OSC}{port};
+	my $oscip = $project->{OSC}{ip} || 'localhost';
+	my $oscport = $project->{OSC}{inport} || '8000';
 	print ("Starting OSC listener on port $oscport\n");
+	#init socket on osc port
 	my $osc_in = $project->{OSC}{socket} = IO::Socket::INET->new(
 		LocalAddr => $oscip, #default is localhost
 		LocalPort => $oscport,
 		Proto	  => 'udp',
 		Type	  =>  SOCK_DGRAM) || die $!;
 	warn "cannot create socket $!\n" unless $osc_in;
+	#create the anyevent watcher on this socket
 	$project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	#init an osc object
 	$project->{OSC}{object} = Protocol::OSC->new;
 }
 sub process_osc_command {
-	#my $project = shift;
-print "x";	
+use Socket qw(getnameinfo NI_NUMERICHOST);
+
 	my $in = $project->{OSC}{socket};
 	my $osc = $project->{OSC}{object};
 	
-	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	#grab the message, and get the sender
+	my $sender = $in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	#parse the osc packet
 	my $p = $osc->parse($packet);
+	#TODO deal with osc bundles
+	#grab osc packet arguments
+	my ($path, $types, @args) = @$p;
 
-	#say "got OSC: ", Dumper $p;
-	my $input = $p->[0];
-	my $type = $p->[1];
-	my $value = $p->[2];
-	print "OSC==$p p0=$input p1=$type p2=$value\n";
+	print "grabbed path=$path types=$types and args";
+	print Dumper @args;
+	print "\n";
+
+	#verify how many arguments we have
+	if ( length($types) == 0 ) {
+		warn "ignored osc message without arguments\n"
+		return;
+	}
+	elsif ( length($types) > 1 ) {
+		warn "ignored osc message with multiple arguments\n"
+	}
+
+	#go on with a single argument osc message
+	my @pathelements = split '/',$path;
+
 	#TODO do something with the received OSC message
+
+	#TODO check if we send back information
+	if ($project->{OSC}{sendback}) {
+		#resolve the sender adress
+		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
+	}
 }
 
 	#version with Net::OpenSoundControl
 # sub init_osc_server {
-# 	my $oscport = $project->{OSC}{port};
+# 	my $oscport = $project->{OSC}{inport};
 # 	print ("Starting OSC listener on port $oscport\n");
 # 	$project->{OSC}{object} = Net::OpenSoundControl::Server->new(
 # 	      Port => $oscport, Handler => \&process_osc_command) or
