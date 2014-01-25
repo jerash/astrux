@@ -241,7 +241,6 @@ sub process_tcp_command {
 #$socket->close();
 
 #-------------------------OSC---------------------------------------------
-	#version using Protocol::OSC
 sub init_osc_server {
 	
 	my $oscip = $project->{OSC}{ip} || 'localhost';
@@ -261,6 +260,7 @@ sub init_osc_server {
 }
 sub process_osc_command {
 use Socket qw(getnameinfo NI_NUMERICHOST);
+my $debug = 1;
 
 	my $in = $project->{OSC}{socket};
 	my $osc = $project->{OSC}{object};
@@ -273,9 +273,9 @@ use Socket qw(getnameinfo NI_NUMERICHOST);
 	#grab osc packet arguments
 	my ($path, $types, @args) = @$p;
 
-	# print "grabbed path=$path types=$types and args";
-	# print Dumper @args;
-	# print "\n";
+	print "OSC MESSAGE\n------------\npath=$path types=$types and args" if $debug;
+	print Dumper @args if $debug;
+	print "\n" if $debug;
 
 	#verify how many arguments we have
 	if ( length($types) == 0 ) {
@@ -289,35 +289,49 @@ use Socket qw(getnameinfo NI_NUMERICHOST);
 	#go on with a single argument osc message
 	#cleanup path
 	$path =~ s(^/)();
-	$path =~ s(/$)();
+	$path =~ s(/$)(); #this one should never be
 	#split path elements
 	my @pathelements = split '/',$path;
 	#TODO verify number of elements
 	#element 1 = mixername OR TODO system command
 	my $mixername = shift @pathelements;
-		#print " mixer $mixername\n";
+	print " mixer $mixername\n" if $debug;
 	return unless exists $project->{mixers}{$mixername};
 	#element 2 = trackname OR TODO system command arguments
 	my $trackname = shift @pathelements;
-		#print " track $trackname\n";
+	print " track $trackname\n" if $debug;
 	return unless exists $project->{mixers}{$mixername}{channels}{$trackname};
 	#element 3 = fx name OR 'aux_to' OR special command
 	my $el3 = shift @pathelements;
-	print " el3 $el3\n";
+	print " el3 $el3\n" if $debug;
 	if ($el3 eq 'aux_to') {
 		print "track $trackname aux_to\n";
+		#element 4 = channel destination
+		my $destination = shift @pathelements;
+		return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
+		#element 5 = parameter (pan or volume)
+		my $param = shift @pathelements;
+		return unless $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
+		#associate with value
+		my $value = shift @args;
+		warn "empty value on param $param!\n" unless defined $value;
+		print "sending $trackname to $destination with volume $value\n" if $debug;
+		#TODO send ecasound command
 	}
 	elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 		my $insertname = $el3;
+		#element 4 = fx parameter
 		my $insertparam = shift @pathelements;
 		return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3}->is_param_ok($insertparam);
+		#associate with value
 		my $value = shift @args;
 		warn "empty value on param $insertparam!\n" unless defined $value;
-		print "effect $el3 change param $insertparam with value $value on track $trackname\n";
+		print "effect $el3 change param $insertparam with value $value on track $trackname\n" if $debug;
 		#TODO send ecasound command
 	}
 	elsif ($el3 eq 'mute') {
 		print "mute track $trackname\n";
+		#TODO send ecasound command
 	}
 	else {
 		warn "unknown osc parameter $el3\n";
@@ -329,39 +343,6 @@ use Socket qw(getnameinfo NI_NUMERICHOST);
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 	}
 }
-
-	#version with Net::OpenSoundControl
-# sub init_osc_server {
-# 	my $oscport = $project->{OSC}{inport};
-# 	print ("Starting OSC listener on port $oscport\n");
-# 	$project->{OSC}{object} = Net::OpenSoundControl::Server->new(
-# 	      Port => $oscport, Handler => \&process_osc_command) or
-# 	      die "Could not start server: $@\n";
-# 	$project->{OSC}{event} = AE::io( $project->{OSC}{object}{SOCKET}, 0, \&process_osc_event );
-# 	print Dumper $project->{OSC};
-# }
-# sub process_osc_event{
-# 	my $MAXLEN = 1024;
-# 	my ($msg, $host);
-#     $project->{OSC}{object}{SOCKET}->recv($msg, $MAXLEN);
-#     my ($port, $ipaddr) = sockaddr_in($project->{OSC}{object}{SOCKET}->peername);
-#     $host = gethostbyaddr($ipaddr, AF_INET) || '';
-
-#     $project->{OSC}{object}{HANDLER}->($host, Net::OpenSoundControl::decode($msg))
-#       if defined $project->{OSC}{object}{HANDLER};
-
-#     return if ($msg =~ /exit/);
-# }
-# sub process_osc_command {
-# 	my ($sender, $machin) = @_;
-# 	#print Dumper @_;
-# 	my @message = @{$machin};
-# 	# print "path=$message[0]\n";
-# 	# print "type=$message[1]\n";
-# 	# print "value=$message[2]\n";
-# 	print Dumper @message;
-# 	my $path = $message[0];
-# }
 
 	#osc send tool
 sub OSC_send {
