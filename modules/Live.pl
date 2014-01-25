@@ -5,8 +5,8 @@ package Live;
 use strict;
 use warnings;
 
-use Net::OpenSoundControl::Server;
-# use Protocol::OSC;
+#use Net::OpenSoundControl::Server;
+use Protocol::OSC;
 use IO::Socket::INET;
 
 use AnyEvent;
@@ -241,70 +241,71 @@ sub process_tcp_command {
 #$socket->close();
 
 #-------------------------OSC---------------------------------------------
-	#version using Protocol::OSC (can't make it work correctly with TouchOSC)
-# sub init_osc_server {
-# 	#my $project = shift;
-	
-# 	my $oscport = $project->{OSC}{port};
-# 	print ("Starting OSC listener on port $oscport\n");
-# 	my $osc_in = $project->{OSC}{socket} = IO::Socket::INET->new(
-# 		LocalAddr => 'localhost',
-# 		LocalPort => $oscport,
-# 		Proto	  => 'udp',
-# 		Type	  =>  SOCK_DGRAM) || die $!;
-# 	warn "cannot create socket $!\n" unless $osc_in;
-# 	$project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
-# 	$project->{OSC}{object} = Protocol::OSC->new;
-# }
-# sub process_osc_command {
-# 	#my $project = shift;
-# print "x";	
-# 	my $in = $project->{OSC}{socket};
-# 	my $osc = $project->{OSC}{object};
-	
-# 	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
-# 	my $p = $osc->parse($packet);
-
-# 	#say "got OSC: ", Dumper $p;
-# 	my $input = $p->[0];
-# 	my $type = $p->[1];
-# 	my $value = $p->[2];
-# 	print "OSC==$p p0=$input p1=$type p2=$value\n";
-# 	#TODO do something with the received OSC message
-# }
-
-	#version with Net::OpenSoundControl
+	#version using Protocol::OSC
 sub init_osc_server {
+	#my $project = shift;
+	
+	my $oscip = $project->{OSC}{ip};
 	my $oscport = $project->{OSC}{port};
 	print ("Starting OSC listener on port $oscport\n");
-	$project->{OSC}{object} = Net::OpenSoundControl::Server->new(
-	      Port => $oscport, Handler => \&process_osc_command) or
-	      die "Could not start server: $@\n";
-	$project->{OSC}{event} = AE::io( $project->{OSC}{object}{SOCKET}, 0, \&process_osc_event );
-	print Dumper $project->{OSC};
-}
-sub process_osc_event{
-	my $MAXLEN = 1024;
-	my ($msg, $host);
-    $project->{OSC}{object}{SOCKET}->recv($msg, $MAXLEN);
-    my ($port, $ipaddr) = sockaddr_in($project->{OSC}{object}{SOCKET}->peername);
-    $host = gethostbyaddr($ipaddr, AF_INET) || '';
-
-    $project->{OSC}{object}{HANDLER}->($host, Net::OpenSoundControl::decode($msg))
-      if defined $project->{OSC}{object}{HANDLER};
-
-    return if ($msg =~ /exit/);
+	my $osc_in = $project->{OSC}{socket} = IO::Socket::INET->new(
+		LocalAddr => $oscip, #default is localhost
+		LocalPort => $oscport,
+		Proto	  => 'udp',
+		Type	  =>  SOCK_DGRAM) || die $!;
+	warn "cannot create socket $!\n" unless $osc_in;
+	$project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	$project->{OSC}{object} = Protocol::OSC->new;
 }
 sub process_osc_command {
-	my ($sender, $machin) = @_;
-	#print Dumper @_;
-	my @message = @{$machin};
-	# print "path=$message[0]\n";
-	# print "type=$message[1]\n";
-	# print "value=$message[2]\n";
-	print Dumper @message;
-	my $path = $message[0];
+	#my $project = shift;
+print "x";	
+	my $in = $project->{OSC}{socket};
+	my $osc = $project->{OSC}{object};
+	
+	$in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	my $p = $osc->parse($packet);
+
+	#say "got OSC: ", Dumper $p;
+	my $input = $p->[0];
+	my $type = $p->[1];
+	my $value = $p->[2];
+	print "OSC==$p p0=$input p1=$type p2=$value\n";
+	#TODO do something with the received OSC message
 }
+
+	#version with Net::OpenSoundControl
+# sub init_osc_server {
+# 	my $oscport = $project->{OSC}{port};
+# 	print ("Starting OSC listener on port $oscport\n");
+# 	$project->{OSC}{object} = Net::OpenSoundControl::Server->new(
+# 	      Port => $oscport, Handler => \&process_osc_command) or
+# 	      die "Could not start server: $@\n";
+# 	$project->{OSC}{event} = AE::io( $project->{OSC}{object}{SOCKET}, 0, \&process_osc_event );
+# 	print Dumper $project->{OSC};
+# }
+# sub process_osc_event{
+# 	my $MAXLEN = 1024;
+# 	my ($msg, $host);
+#     $project->{OSC}{object}{SOCKET}->recv($msg, $MAXLEN);
+#     my ($port, $ipaddr) = sockaddr_in($project->{OSC}{object}{SOCKET}->peername);
+#     $host = gethostbyaddr($ipaddr, AF_INET) || '';
+
+#     $project->{OSC}{object}{HANDLER}->($host, Net::OpenSoundControl::decode($msg))
+#       if defined $project->{OSC}{object}{HANDLER};
+
+#     return if ($msg =~ /exit/);
+# }
+# sub process_osc_command {
+# 	my ($sender, $machin) = @_;
+# 	#print Dumper @_;
+# 	my @message = @{$machin};
+# 	# print "path=$message[0]\n";
+# 	# print "type=$message[1]\n";
+# 	# print "value=$message[2]\n";
+# 	print Dumper @message;
+# 	my $path = $message[0];
+# }
 
 	#osc send tool
 sub OSC_send {
