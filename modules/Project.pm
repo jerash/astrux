@@ -206,23 +206,74 @@ sub SaveTofile {
 	my $project = shift;
 	my $outfile = shift;
 
-	use Storable;
-	#works great but output is not human readable
-	store $project, ($outfile.".cfg");
-
-	#so we create a dumper too
+	#we create a dumper file (human readable)
 	use Data::Dumper;
+	$Data::Dumper::Purity = 1;
 	open my $handle, ">$outfile.dmp" or die $!;
 	print $handle Dumper $project;
 	close $handle;
+
+	#remove all filehandles from structure (storable limitation)
+	my %hash;
+	if (defined $project->{TCP}{socket}) {
+		$hash{TCP}{socket} = delete $project->{TCP}{socket};
+		$hash{TCP}{events} = delete $project->{TCP}{events};
+	}
+	if (defined $project->{OSC}{socket}) {
+		$hash{OSC}{socket} = delete $project->{OSC}{socket};
+		$hash{OSC}{object} = delete $project->{OSC}{object};
+		$hash{OSC}{events} = delete $project->{OSC}{events};
+	}
+	foreach my $mixer (keys $project->{mixers}) {
+		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{ecasound}{socket}; 
+	}
+
+	#Storable : create a project file, not working with opened sockets
+	$outfile .= ".cfg";
+	use Storable;
+	$Storable::Deparse = 1; #warn if CODE encountered
+	store $project, $outfile;
+
+	#store values back
+	if (defined $hash{TCP}{socket}) {
+		$project->{TCP}{socket} = delete $hash{TCP}{socket};
+		$project->{TCP}{events} = delete $hash{TCP}{events};
+	}
+	if (defined $hash{OSC}{socket}) {
+		$project->{OSC}{socket} = delete $hash{OSC}{socket};
+		$project->{OSC}{object} = delete $hash{OSC}{object};
+		$project->{OSC}{events} = delete $hash{OSC}{events};
+	}
+	foreach my $mixer (keys $hash{mixers}) {
+		$project->{mixers}{$mixer}{ecasound}{socket} = delete $hash{mixers}{$mixer}; 
+	}
+	undef %hash;
+
 }
 
 sub LoadFromFile {
 	my $project = shift;
 	my $infile = shift;
 
-	use Storable;
-	$project = retrieve($infile);
+	# use Storable;
+	# $project = retrieve($infile);
+
+	my $in = open "<$infile";
+    local($/) = "";
+    my $str = <$in>;
+    close $in;
+
+    print "Input: $str";
+
+    my $hashref;
+    eval $str;
+    my(%hash) = %$hashref;
+
+    foreach my $key (sort keys %hash)
+    {
+        print "$key: @{$hash{$key}}\n";
+    }
+
 }
 
 #-------------------------------------LIVE COMMANDS-----------------------------------------------------
@@ -264,7 +315,7 @@ sub execute_command {
 	my $reply = '';
 
 	if ($command =~ /^save$/) { 
-		$project->SaveTofile("$project->{project}{name}".".cfg"); 
+		$project->SaveTofile("$project->{project}{name}"); 
 	}
 	elsif ($command =~ /^status$/) { 
 		foreach my $mixer (keys %{$project->{mixers}}) {
@@ -292,28 +343,4 @@ sub execute_command {
 		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("stop");
 	}
 	elsif ($command =~ /^zero$/) { 
-		$reply = "back to the roots\n";
-		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("setpos 0");
-	}
-	elsif ($command =~ /^send/) { 
-		my $mixer = grep (/main/,$command); #TODO replace the false grep
-		$reply = "to ecasound $command\n"; 
-	}
-	elsif ($command =~ /^eca/) {
-		my ($mixer, $cmd) =
-			$command =~ /eca  # eca
-						 \    # space
-						 (.+)# characters (mixername)
-						 \    # space
-						 (.+)  # rest of string
-						/sx;  # s-flag: . matches newline
-		#TODO check that $cmd is valid
-		$reply .= $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
-		# $reply = "to ecasound $command\n"; 
-	}
-	#default { $reply = "Other"; }
-	return $reply;
-}
-
-
-1;
+		$reply = "bac

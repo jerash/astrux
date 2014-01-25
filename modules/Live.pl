@@ -37,7 +37,6 @@ if ($#ARGV+1 eq 0) {
 
 my $infile = $ARGV[0];
 print "Opening : $infile\n";
-
 use Storable;
 our $project = retrieve($infile);
 die "Could not load file $infile\n" unless $project;
@@ -269,6 +268,7 @@ my $debug = 1;
 	my $sender = $in->recv(my $packet, $in->sockopt(SO_RCVBUF));
 	#parse the osc packet
 	my $p = $osc->parse($packet);
+
 	#TODO deal with osc bundles
 	#grab osc packet arguments
 	my ($path, $types, @args) = @$p;
@@ -304,8 +304,17 @@ my $debug = 1;
 	#element 3 = fx name OR 'aux_to' OR special command
 	my $el3 = shift @pathelements;
 	print " el3 $el3\n" if $debug;
-	if ($el3 eq 'aux_to') {
-		print "track $trackname aux_to\n";
+	#dependin on the third element
+	if ($el3 eq 'mute') {
+		#channel mute
+		print "mute track $trackname\n" if $debug;
+		#send ecasound command
+		$project->{mixers}{$mixername}->mute_channel($trackname);
+		#TODO udpate current status in strucutre
+	}
+	elsif ($el3 eq 'aux_to') {
+		#channel aux send
+		print "track $trackname aux_to\n" if $debug;
 		#element 4 = channel destination
 		my $destination = shift @pathelements;
 		return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
@@ -316,9 +325,11 @@ my $debug = 1;
 		my $value = shift @args;
 		warn "empty value on param $param!\n" unless defined $value;
 		print "sending $trackname to $destination with volume $value\n" if $debug;
-		#TODO send ecasound command
+		#TODO send ecasound command to EcaStrip
+		#TODO udpate current status in strucutre
 	}
 	elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
+		#fx change
 		my $insertname = $el3;
 		#element 4 = fx parameter
 		my $insertparam = shift @pathelements;
@@ -327,11 +338,8 @@ my $debug = 1;
 		my $value = shift @args;
 		warn "empty value on param $insertparam!\n" unless defined $value;
 		print "effect $el3 change param $insertparam with value $value on track $trackname\n" if $debug;
-		#TODO send ecasound command
-	}
-	elsif ($el3 eq 'mute') {
-		print "mute track $trackname\n";
-		#TODO send ecasound command
+		#TODO send ecasound command to EcaFx
+		#TODO udpate current status in strucutre
 	}
 	else {
 		warn "unknown osc parameter $el3\n";

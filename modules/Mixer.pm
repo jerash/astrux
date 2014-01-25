@@ -44,6 +44,8 @@ sub init {
 	#add ecasound info to mixer
 	$mixer->{ecasound} =\%globals;
 	$mixer->{ecasound}{status} = "notcreated";
+	#bless structure to access data with module functions
+	bless $mixer->{ecasound} , EcaEngine::;
 	#remove mixer globals from IO hash to prevent further ignore
 	delete $mixer_io_ref->{mixer_globals};
 
@@ -182,6 +184,14 @@ sub CreateMainMixer {
 
 	#add output chains to ecasound info
 	$mixer->{ecasound}{o_chains} = \@o_chaintab if @o_chaintab;
+
+	#udpate mixer info with curretly selected chainsetup
+	$mixer->{current}{chainsetup} = $mixer->{ecasound}->get_selected_chainsetup;
+	#udpate mixer info with curretly selected chain (channel)
+	$mixer->{current}{channel} = $mixer->{ecasound}->get_selected_channel;
+	#udpate mixer info with curretly selected effect
+	$mixer->{current}{effect} = $mixer->{ecasound}->get_selected_effect;
+
 }
 
 sub CreateSubmix {
@@ -259,7 +269,7 @@ sub CreatePlayers {
 sub get_ecasoundchains {
 	my $mixer = shift;
 
-	#option to cleanup strucutre by removing io chains after compiling to all_chains
+	#TODO option to cleanup strucutre by removing io chains after compiling to all_chains
 	my $remove = 1;
 
 	my @table;
@@ -321,5 +331,14 @@ sub is_midi_controllable {
 }
 
 #--------------Live functions-------------------------
+sub mute_channel {
+	my $mixer = shift;
+	my $channel = shift;
+	print "----muting $channel on $mixer received\n";
+	#c-muting no reply, toggle
+}
+
+
+
 
 1;

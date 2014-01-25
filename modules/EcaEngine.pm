@@ -110,50 +110,8 @@ sub reply_is_ok { #verify if there is an error mentioned, drop the first line, r
 	#else return 1
 	return 1;
 }
+
 #--------------------COMMUNICATION---------------------------------------
-use Time::HiRes;
-#  Time::HiRes::sleep(0.1)
-sub LoadFromFile {
-	my $ecaengine = shift;
-	my $file = shift;
-	
-	return $ecaengine->SendCmdGetReply("cs-load $file");
-}
-sub LoadAndStart {
-	my $ecaengine = shift;
-	my $file = shift;
-
-	my $reply = $ecaengine->SendCmdGetReply("cs-load $ecaengine->{ecsfile}");
-	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
-	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
-	$reply .= $ecaengine->SendCmdGetReply("start");
-	return $reply;
-}
-sub LoadAndStartFromFile {
-	my $ecaengine = shift;
-	my $file = shift;
-
-	my $reply = $ecaengine->SendCmdGetReply("cs-load $file");
-	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
-	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
-	$reply .= $ecaengine->SendCmdGetReply("start");
-	return $reply;
-}
-sub SelectAndConnectChainsetup {
-	my $ecaengine = shift;
-	my $chainsetup = shift;
-
-	my $reply = $ecaengine->SendCmdGetReply("cs-select $chainsetup");
-	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
-	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
-	return $reply;
-}
-sub Status {
-	my $ecaengine = shift;	
-	return $ecaengine->SendCmdGetReply("cs-status");
-}
-
-#--------------------COMMUNICATION 2---------------------------------------
 sub init_socket {
 	my $ecaengine = shift;	
 	my $port = shift;
@@ -209,5 +167,60 @@ sub SendCmdGetReply {
 	}
 	
 }
+
+#--------------------FUNCTIONS---------------------------------------
+
+sub LoadFromFile {
+	my $ecaengine = shift;
+	my $file = shift;
+	
+	return $ecaengine->SendCmdGetReply("cs-load $file");
+}
+sub LoadAndStart {
+	my $ecaengine = shift;
+	my $file = shift;
+
+	my $reply = $ecaengine->SendCmdGetReply("cs-load $ecaengine->{ecsfile}");
+	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
+	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
+	$reply .= $ecaengine->SendCmdGetReply("start");
+	return $reply;
+}
+sub LoadAndStartFromFile {
+	my $ecaengine = shift;
+	my $file = shift;
+
+	my $reply = $ecaengine->SendCmdGetReply("cs-load $file");
+	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
+	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
+	$reply .= $ecaengine->SendCmdGetReply("start");
+	return $reply;
+}
+sub SelectAndConnectChainsetup {
+	my $ecaengine = shift;
+	my $chainsetup = shift;
+
+	my $reply = $ecaengine->SendCmdGetReply("cs-select $chainsetup");
+	$reply .= $ecaengine->SendCmdGetReply("cs-connect");
+	$reply .= $ecaengine->SendCmdGetReply("engine-launch"); #maybe not necessary with start after?
+	return $reply;
+}
+sub Status {
+	my $ecaengine = shift;	
+	return $ecaengine->SendCmdGetReply("cs-status");
+}
+sub get_selected_chainsetup {
+	my $ecaengine = shift;
+	return $ecaengine->SendCmdGetReply("cs-selected");
+}
+sub get_selected_channel {
+	my $ecaengine = shift;
+	return $ecaengine->SendCmdGetReply("c-selected");
+}
+sub get_selected_effect {
+	my $ecaengine = shift;
+	return $ecaengine->SendCmdGetReply("cop-selected");
+}
+
 
 1;
