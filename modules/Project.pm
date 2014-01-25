@@ -207,8 +207,14 @@ sub SaveTofile {
 	my $outfile = shift;
 
 	use Storable;
-	#>>>works but output is not human readable
-	store $project, $outfile;
+	#works great but output is not human readable
+	store $project, ($outfile.".cfg");
+
+	#so we create a dumper too
+	use Data::Dumper;
+	open my $handle, ">$outfile.dmp" or die $!;
+	print $handle Dumper $project;
+	close $handle;
 }
 
 sub LoadFromFile {

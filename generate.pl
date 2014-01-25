@@ -29,7 +29,7 @@ print " -- Live Project Created :) --\n" if defined $Live;
 
 #------------Create project files------------------------
 $Live->GenerateFiles;
-$Live->SaveTofile("$Live->{project}{name}".".cfg");
+$Live->SaveTofile("$Live->{project}{name}");
 
 #------------Now PLay !------------------------
 
