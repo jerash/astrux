@@ -137,7 +137,7 @@ sub SendCmdGetReply {
 	my $buf;
 	# get socket reply
 	my $result = $ecaengine->{socket}->recv($buf, 65536);
-	defined $result or warn "no answer from ecasound\n", return;
+	defined $result or return "no answer from ecasound";
 	#parse reply
 	my ($return_value, $setup_length, $type, $reply) =
 		$buf =~ /(\d+)# digits
@@ -149,15 +149,18 @@ sub SendCmdGetReply {
 				(.+)  # rest of string
 				/sx;  # s-flag: . matches newline
 	#check for errors
-	if(	! $return_value == 256 ){
-		warn "Net-ECI bad return value: $return_value (expected 256)";
+	if (!defined $return_value) {
+		return "no answer from ecasound engine";
+		#TODO try to restart ecasound ?
+	}
+	if(	$return_value != 256 ){
+		$reply = "Net-ECI bad return value: $return_value (expected 256)";
 		return;
 	}
-	$reply =~ s/\s+$//; 
 	if( $type eq 'e')
 	{
-		warn "ECI error! Command: $cmd Reply: $reply";
-		return;
+		$reply = "ECI error! Command: $cmd Reply: $reply";
+		return $reply;
 	}
 	else
 	#return reply text

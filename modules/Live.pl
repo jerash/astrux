@@ -230,7 +230,6 @@ sub process_tcp_command {
 	my $reply = $project->execute_command($data);
 
     # write response data to the connected client
-    $data = "ok\n";
     $data .= " : $reply\n" if $reply;
     $client_socket->send($data);
    

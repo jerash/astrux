@@ -325,7 +325,7 @@ sub execute_command {
 	elsif ($command =~ /^song /) { 
 		my $songname = substr $command,5;
 		return unless exists $project->{songs}{$songname};
-		$reply = "Starting song $songname\n";
+		$reply = "Starting song $songname";
 		#loading players
 		$reply .= $project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
 		#loading midifile
@@ -335,12 +335,36 @@ sub execute_command {
 			if $project->{songs}{$songname}{song_globals}{autostart};
 	}
 	elsif ($command =~ /^play$/) { 
-		$reply = "Starting play\n";
+		$reply = "Starting play";
 		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start");
 	}
 	elsif ($command =~ /^stop$/) { 
-		$reply = "Stopping\n";
+		$reply = "Stopping";
 		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("stop");
 	}
 	elsif ($command =~ /^zero$/) { 
-		$reply = "bac
+		$reply = "back to the beginning";
+		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("setpos 0");
+	}
+	elsif ($command =~ /^send/) { 
+		my $mixer = grep (/main/,$command); #TODO replace the false grep
+		$reply = "to ecasound $command"; 
+	}
+	elsif ($command =~ /^eca/) {
+		my ($mixer, $cmd) =
+		$command =~ /eca  # eca
+			\    # space
+			(.+) # characters (mixername)
+			\    # space
+			(.+) # rest of string
+			/sx;  # s-flag: . matches newline
+		print "sending eca command = $cmd\n";
+		#TODO check that $cmd is valid
+		$reply .= $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
+		# $reply = "to ecasound $command\n"; 
+	}
+	#default { $reply = "Other"; }
+	return $reply;
+	}
+
+1;
