@@ -255,24 +255,24 @@ sub LoadFromFile {
 	my $project = shift;
 	my $infile = shift;
 
-	# use Storable;
-	# $project = retrieve($infile);
+	use Storable;
+	$project = retrieve($infile);
 
-	my $in = open "<$infile";
-    local($/) = "";
-    my $str = <$in>;
-    close $in;
+	# my $in = open "<$infile";
+ #    local($/) = "";
+ #    my $str = <$in>;
+ #    close $in;
 
-    print "Input: $str";
+ #    print "Input: $str";
 
-    my $hashref;
-    eval $str;
-    my(%hash) = %$hashref;
+ #    my $hashref;
+ #    eval $str;
+ #    my(%hash) = %$hashref;
 
-    foreach my $key (sort keys %hash)
-    {
-        print "$key: @{$hash{$key}}\n";
-    }
+ #    foreach my $key (sort keys %hash)
+ #    {
+ #        print "$key: @{$hash{$key}}\n";
+ #    }
 
 }
 

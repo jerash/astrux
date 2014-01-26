@@ -258,7 +258,7 @@ sub init_osc_server {
 }
 sub process_osc_command {
 use Socket qw(getnameinfo NI_NUMERICHOST);
-my $debug = 1;
+my $debug = 0;
 
 	my $in = $project->{OSC}{socket};
 	my $osc = $project->{OSC}{object};
@@ -326,6 +326,7 @@ my $debug = 1;
 		print "sending $trackname to $destination with volume $value\n" if $debug;
 		#TODO send ecasound command to EcaStrip
 		#TODO udpate current status in strucutre
+		$project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->update_current_value($param,$value);
 	}
 	elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 		#fx change
@@ -338,7 +339,8 @@ my $debug = 1;
 		warn "empty value on param $insertparam!\n" unless defined $value;
 		print "effect $el3 change param $insertparam with value $value on track $trackname\n" if $debug;
 		#TODO send ecasound command to EcaFx
-		#TODO udpate current status in strucutre
+		#udpate current status in strucutre
+		$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3}->update_current_value($insertparam,$value);
 	}
 	else {
 		warn "unknown osc parameter $el3\n";

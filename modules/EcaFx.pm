@@ -140,6 +140,7 @@ sub GetControls() {
 	#insert values
 	push( @{$ecafx->{paramnames}} ,@names);
 	push( @{$ecafx->{defaultvalues}} ,@defaults);
+	push( @{$ecafx->{currentvalues}} ,@defaults);
 	push( @{$ecafx->{lowvalues}} ,@lowvals);
 	push( @{$ecafx->{highvalues}} ,@highvals);
 
@@ -199,6 +200,24 @@ sub is_param_ok {
 		return 1 if $paramtotest eq $param;
 	}
 	return 0;
+}
+
+sub update_current_value {
+	my $ecafx = shift;
+	my $parameter = shift;
+	my $value = shift;
+
+	#find parameter position
+	#TODO this index looking could be in is_param_ok ?
+	my @names = @{$ecafx->{paramnames}};
+	my $indexe;
+	for my $index (0..$#names) {
+		$indexe = $index;
+		last if ($names[$index] eq $parameter);
+	}
+	#update value
+	print "EcaFx : updating at index $indexe with value $value\n";
+	$ecafx->{currentvalues}[$indexe] = $value;
 }
 
 1;
