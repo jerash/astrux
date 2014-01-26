@@ -99,11 +99,11 @@ sub AddSongs {
 sub AddOscMidiBridge {	
 	my $project = shift;
 	
-	$project->{bridge}{status} = "notcreated";
-	bless $project->{bridge}, Bridge::;
+	$project->{osc2midi}{status} = "notcreated";
+	bless $project->{osc2midi}, Bridge::;
 
 	my @bridgelines = Bridge->create_lines($project);
-	$project->{bridge}{lines} = \@bridgelines;
+	$project->{osc2midi}{lines} = \@bridgelines;
 }
 
 sub AddPlumbing {
@@ -188,7 +188,7 @@ sub GenerateFiles {
 
 	#----------------OSC2MIDI BRIDGE FILE------------------------
 	#TODO define bridge option
-	if ($project->{controls}{osc2midi} == 1) {
+	if ($project->{osc2midi}{enable} == 1) {
 		#we're asked to generate the bridge file
 		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
 		$project->{osc2midi}{file} = $filepath;
@@ -213,7 +213,8 @@ sub SaveTofile {
 	print $handle Dumper $project;
 	close $handle;
 
-	#remove all filehandles from structure (storable limitation)
+	# remove all filehandles from structure (storable limitation)
+	#TODO also remove AE containing sub (CODE)
 	my %hash;
 	if (defined $project->{TCP}{socket}) {
 		$hash{TCP}{socket} = delete $project->{TCP}{socket};
@@ -231,10 +232,10 @@ sub SaveTofile {
 	#Storable : create a project file, not working with opened sockets
 	$outfile .= ".cfg";
 	use Storable;
-	$Storable::Deparse = 1; #warn if CODE encountered
+	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $project, $outfile;
 
-	#store values back
+	# store values back
 	if (defined $hash{TCP}{socket}) {
 		$project->{TCP}{socket} = delete $hash{TCP}{socket};
 		$project->{TCP}{events} = delete $hash{TCP}{events};
@@ -352,13 +353,7 @@ sub execute_command {
 	}
 	elsif ($command =~ /^eca/) {
 		my ($mixer, $cmd) =
-		$command =~ /eca  # eca
-			\    # space
-			(.+) # characters (mixername)
-			\    # space
-			(.+) # rest of string
-			/sx;  # s-flag: . matches newline
-		print "sending eca command = $cmd\n";
+		$command =~ /eca\s(\S+)\s(.+)$/;
 		#TODO check that $cmd is valid
 		$reply .= $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
 		# $reply = "to ecasound $command\n"; 

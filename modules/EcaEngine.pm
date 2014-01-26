@@ -132,6 +132,9 @@ sub SendCmdGetReply {
 
 	#verify if socket is active (after a reload for example)
 	return unless $ecaengine->{socket};
+
+print "sending message \"$cmd\" to mixer $ecaengine->{name} using socket $ecaengine->{socket}\n";
+
 	#send command
 	$ecaengine->{socket}->send("$cmd\r\n");
 	my $buf;

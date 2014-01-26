@@ -333,12 +333,39 @@ sub is_midi_controllable {
 #--------------Live functions-------------------------
 sub mute_channel {
 	my $mixer = shift;
-	my $channel = shift;
-	print "----muting $channel on $mixer received\n";
+	my $trackname = shift;
+	print "----muting $trackname on $mixer received\n";
 	#c-muting no reply, toggle
+	$mixer->{ecasound}->SendCmdGetReply("c-select $trackname");
+	$mixer->{ecasound}->SendCmdGetReply("c-muting");
 }
 
+sub udpate_trackfx_value {
+	my $mixer = shift;
+	my $trackname = shift;
+	my $position = shift;
+	my $index = shift;
+	my $value = shift;
 
+	$trackname = "bus_$trackname" if $mixer->{channels}{$trackname}->is_hardware_out;
 
+	#TODO do something with message returns ?
+	$mixer->{ecasound}->SendCmdGetReply("c-select $trackname");
+	$mixer->{ecasound}->SendCmdGetReply("cop-set $position,$index,$value");
+}
 
+sub udpate_auxroutefx_value {
+	my $mixer = shift;
+	my $trackname = shift;
+	my $destination = shift;
+	my $position = shift;
+	my $index = shift;
+	my $value = shift;
+
+	my $chain = "$trackname"."_to_"."$destination";
+
+	#TODO do something with message returns ?
+	$mixer->{ecasound}->SendCmdGetReply("c-select $chain");
+	$mixer->{ecasound}->SendCmdGetReply("cop-set $position,$index,$value");
+}
 1;

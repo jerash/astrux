@@ -195,29 +195,24 @@ sub is_param_ok {
 	my $paramtotest = shift;
 
 	#iterate through each parameters
-	my $nb =1;
+	my $nb = 0;
 	foreach my $param (@{$ecafx->{paramnames}}) {
-		return 1 if $paramtotest eq $param;
+		$nb++;
+		#return index (starting at 1)
+		return $nb if $paramtotest eq $param;
 	}
 	return 0;
 }
 
 sub update_current_value {
 	my $ecafx = shift;
-	my $parameter = shift;
+	my $index = shift;
 	my $value = shift;
 
-	#find parameter position
-	#TODO this index looking could be in is_param_ok ?
-	my @names = @{$ecafx->{paramnames}};
-	my $indexe;
-	for my $index (0..$#names) {
-		$indexe = $index;
-		last if ($names[$index] eq $parameter);
-	}
+	#TOCO verify if value is within range, return adequately for next actions
 	#update value
-	print "EcaFx : updating at index $indexe with value $value\n";
-	$ecafx->{currentvalues}[$indexe] = $value;
+	print "EcaFx : updating at index $index with value $value\n";
+	$ecafx->{currentvalues}[$index-1] = $value;
 }
 
 1;

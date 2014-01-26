@@ -319,28 +319,34 @@ my $debug = 0;
 		return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
 		#element 5 = parameter (pan or volume)
 		my $param = shift @pathelements;
-		return unless $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
+		return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
 		#associate with value
 		my $value = shift @args;
 		warn "empty value on param $param!\n" unless defined $value;
-		print "sending $trackname to $destination with volume $value\n" if $debug;
+		print "sending $trackname to $destination with $param $value\n" if $debug;
 		#TODO send ecasound command to EcaStrip
-		#TODO udpate current status in strucutre
-		$project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->update_current_value($param,$value);
+		#my $position = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}{nb}; 
+		#TODO nb contains 99 for panvol and this is not compatible with ecasound index !!
+		my $position = 1; # this is ok for aux_route
+		$project->{mixers}{$mixername}->udpate_auxroutefx_value($trackname,$destination,$position,$index,$value);
+		#udpate current status in strucutre
+		$project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->update_current_value($index,$value);
 	}
 	elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 		#fx change
 		my $insertname = $el3;
 		#element 4 = fx parameter
 		my $insertparam = shift @pathelements;
-		return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3}->is_param_ok($insertparam);
+		return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
 		#associate with value
 		my $value = shift @args;
 		warn "empty value on param $insertparam!\n" unless defined $value;
-		print "effect $el3 change param $insertparam with value $value on track $trackname\n" if $debug;
-		#TODO send ecasound command to EcaFx
+		print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
+		#send ecasound command to EcaFx
+		my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
+		$project->{mixers}{$mixername}->udpate_trackfx_value($trackname,$position,$index,$value);
 		#udpate current status in strucutre
-		$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3}->update_current_value($insertparam,$value);
+		$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->update_current_value($index,$value);
 	}
 	else {
 		warn "unknown osc parameter $el3\n";
