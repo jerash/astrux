@@ -313,6 +313,7 @@ sub execute_command {
 	my $project = shift;
 	my $command = shift;
 
+	$command =~ s/\s*$//s; #remove trailing whitspaces
 	my $reply = '';
 
 	if ($command =~ /^save$/) { 
@@ -335,7 +336,7 @@ sub execute_command {
 		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start") 
 			if $project->{songs}{$songname}{song_globals}{autostart};
 	}
-	elsif ($command =~ /^play$/) { 
+	elsif ($command =~ /^play|start$/) { 
 		$reply = "Starting play";
 		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start");
 	}

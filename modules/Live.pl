@@ -104,20 +104,18 @@ sub Start {
 	}
 	$project->{backends}{JACKPLUMBING}{PID} = $pid_jackplumbing;
 
-	#OSC/MIDI BRIDGE
-	# my $pid_osc2midibridge = qx(pgrep -f osc2midi);
-	# if ($project->{osc2midi}{enable} eq 1) {
-	# 	die "osc2midi bridge is not running" unless $pid_osc2midibridge;
-	# 	print "osc2midi bridge running with PID $pid_osc2midibridge";
-	# }
-	# $project->{backends}{OSC2MIDI} = $pid_osc2midibridge;
-
 	#a2jmidid
 	my $pid_a2jmidid = qx(pgrep -f a2jmidid);
 	die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
 	print "a2jmidid running with PID $pid_a2jmidid";
 	$project->{backends}{A2JMIDID}{PID} = $pid_a2jmidid;
 	
+	#OSC/MIDI BRIDGE
+	#----------------
+	if ($project->{osc2midi}{enable} eq 1) {
+		$project->{osc2midi}->create_midi_out_port();
+	}
+
 	# get song list
 	#---------------
 	my @songkeys = sort keys %{$project->{songs}};
@@ -291,12 +289,20 @@ my $debug = 0;
 	$path =~ s(/$)(); #this one should never be
 	#split path elements
 	my @pathelements = split '/',$path;
-	#TODO verify number of elements
-	#element 1 = mixername OR TODO system command
+	#TODO verify number of path elements ?
+	#element 1 = mixername OR system command
 	my $mixername = shift @pathelements;
+	if ($mixername eq "astrux") {
+		my $command = '';
+		$command .= (shift @pathelements)." " while @pathelements;
+		print "will send command $command\n" if $debug;
+		print $project->execute_command($command);
+		return;
+	}
+	#element 1 = mixername
 	print " mixer $mixername\n" if $debug;
 	return unless exists $project->{mixers}{$mixername};
-	#element 2 = trackname OR TODO system command arguments
+	#element 2 = trackname
 	my $trackname = shift @pathelements;
 	print " track $trackname\n" if $debug;
 	return unless exists $project->{mixers}{$mixername}{channels}{$trackname};

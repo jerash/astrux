@@ -5,8 +5,8 @@ package Bridge;
 use strict;
 use warnings;
 
-# PERL midi = MIDI::ALSA
 #http://search.cpan.org/~pjb/MIDI-ALSA-1.18/ALSA.pm
+use MIDI::ALSA;
 
 sub create  {
 	my $bridge = shift;
@@ -88,7 +88,132 @@ sub create_lines {
 			}
 		}
 	}
+
+	#TODO (osc2midi) integrate this loop above, this is just a temporrary workaround
+	my @templines = @osclines;
+	my %rules;
+	foreach (@templines) { #fill the hash with the file info
+		chomp($_);
+		my @values = split(';',$_);
+		my $path = shift @values;
+		$rules{$path} = ();
+		push @{$rules{$path}} , @values;
+	}
+	$project->{osc2midi}{rules} = \%rules;
+
+
 	return @osclines;
+}
+
+sub create_midi_out_port {
+	my $bridge = shift;
+
+	#create alsa midi port with only 1 output
+	my @alsa_output = ("astrux",0);
+
+	#update bridge structure
+	$bridge->{midiout} = @alsa_output;
+
+	#client($name, $ninputports, $noutputports, $createqueue)
+	my $status = MIDI::ALSA::client("astrux",0,1,0) || die "could not create alsa midi port.\n";
+	print "successfully created alsa midi out port\n";
+	$bridge->{status} = 'created';
+}
+
+sub osc2midi {
+	my $bridge = shift;
+	my $path = shift;
+	my $inval = shift;
+
+	my %rules = %{$bridge->{rules}};
+	#check if received message can be translated
+	if (exists $rules{$path}) {
+		#get elements
+		my $type = $rules{$path}[0];
+		return if $type eq 'ecs';
+		my $default = $rules{$path}[1];
+		my $min = $rules{$path}[2];
+		my $max = $rules{$path}[3];
+		my $CC = $rules{$path}[4];
+		my $channel = $rules{$path}[5];
+		print "I've found you !!! $inval $min $max $CC $channel\n";
+
+		return if (
+			!defined $type or
+			!defined $inval or
+			!defined $min or
+			!defined $max or
+			!defined $CC or
+			!defined $channel
+			);
+		
+		#update value in structure
+		# $rules{$path}[1] = $inval;
+		
+		#scale value to midirange
+		my $outval = &ScaleValue($inval,$min,$max);
+
+		#prepare midi data
+		my @outCC = ($channel-1, '','','',$CC,$outval);
+		my @alsa_output = $bridge->{midiout};
+		#send midi data
+		warn "could not send midi data\n" unless MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@outCC);
+	}
+	else {
+		print "ignored=$path $inval\n";
+	}
+}
+
+sub ScaleValue {
+	my $inval = shift;
+	my $min = shift;
+	my $max = shift;
+	#verify if data is within min max range
+	$inval = $min if $inval < $min;
+	$inval = $max if $inval > $max;
+	#scale value
+	my $out = floor((127*($inval-$min))/($max-$min));
+	#verify if outdata is within MIDI min max range
+	$out = 0 if $out < 0;
+	$out = 127 if $out > 127;
+	#return scaled value
+	return $out;
+}
+
+
+sub Refresh {
+	my $bridge = shift;
+
+	my %rules = %{$bridge->{rules}};
+
+	print "Sending all midi data!!\n";
+	foreach my $path (keys %rules) {
+		#get elements
+		my $type = $rules{$path}[0];
+		my $inval = $rules{$path}[1];
+		my $min = $rules{$path}[2];
+		my $max = $rules{$path}[3];
+		my $CC = $rules{$path}[4];
+		my $channel = $rules{$path}[5];
+
+		next if (
+			!defined $type or
+			!defined $inval or
+			!defined $min or
+			!defined $max or
+			!defined $CC or
+			!defined $channel
+			);
+		#print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
+
+		if ($type eq "midi"){
+			my $outval = &ScaleValue($inval,$min,$max);
+			#send midi data
+			my @outCC = ($channel-1, '','','',$CC,$outval);
+			warn "could not send midi data\n" unless &SendCC(\@outCC);
+		}
+		#TBD check for non midi type !
+	}
 }
 
 1;
