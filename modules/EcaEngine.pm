@@ -5,6 +5,8 @@ package EcaEngine;
 use strict;
 use warnings;
 
+my $debug = 0;
+
 #--------------------OBJECT---------------------------------------
 sub create {
 	#create the file (overwrite)
@@ -133,7 +135,7 @@ sub SendCmdGetReply {
 	#verify if socket is active (after a reload for example)
 	return unless $ecaengine->{socket};
 
-print "sending message \"$cmd\" to mixer $ecaengine->{name} using socket $ecaengine->{socket}\n";
+	print "sending message \"$cmd\" to mixer $ecaengine->{name} using socket $ecaengine->{socket}\n" if $debug;
 
 	#send command
 	$ecaengine->{socket}->send("$cmd\r\n");

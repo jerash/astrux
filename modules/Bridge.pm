@@ -7,6 +7,9 @@ use warnings;
 
 #http://search.cpan.org/~pjb/MIDI-ALSA-1.18/ALSA.pm
 use MIDI::ALSA;
+use POSIX qw(ceil floor); #for floor/ceil function
+
+my $debug = 1;
 
 sub create  {
 	my $bridge = shift;
@@ -120,11 +123,14 @@ sub create_midi_out_port {
 	$bridge->{status} = 'created';
 }
 
-sub osc2midi {
+sub send_osc2midi {
 	my $bridge = shift;
 	my $path = shift;
 	my $inval = shift;
-
+	
+	print "in osc2midi\n" if $debug;
+	
+	#create a hash of rules, TODO change to use the project info
 	my %rules = %{$bridge->{rules}};
 	#check if received message can be translated
 	if (exists $rules{$path}) {
@@ -136,22 +142,25 @@ sub osc2midi {
 		my $max = $rules{$path}[3];
 		my $CC = $rules{$path}[4];
 		my $channel = $rules{$path}[5];
-		print "I've found you !!! $inval $min $max $CC $channel\n";
+		print "I've found you !!! $inval $min $max $CC $channel\n" if $debug;
 
-		return if (
-			!defined $type or
-			!defined $inval or
-			!defined $min or
-			!defined $max or
-			!defined $CC or
-			!defined $channel
-			);
+		if (	!defined $type or
+				!defined $inval or
+				!defined $min or
+				!defined $max or
+				!defined $CC or
+				!defined $channel
+				) {
+			warn "something is missing in type=$type inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
+			return;
+		}
 		
 		#update value in structure
 		# $rules{$path}[1] = $inval;
 		
 		#scale value to midirange
 		my $outval = &ScaleValue($inval,$min,$max);
+		print "value scaled to $outval\n" if $debug;
 
 		#prepare midi data
 		my @outCC = ($channel-1, '','','',$CC,$outval);
