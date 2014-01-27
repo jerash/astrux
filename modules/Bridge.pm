@@ -9,7 +9,7 @@ use warnings;
 use MIDI::ALSA;
 use POSIX qw(ceil floor); #for floor/ceil function
 
-my $debug = 1;
+my $debug = 0;
 
 sub create  {
 	my $bridge = shift;

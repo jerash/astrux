@@ -8,6 +8,8 @@ use warnings;
 use EcaEngine;
 use EcaStrip;
 
+my $debug = 0;
+
 sub new {
 	my $class = shift;
 	my $ini_mixer_file = shift;
@@ -334,7 +336,9 @@ sub is_midi_controllable {
 sub mute_channel {
 	my $mixer = shift;
 	my $trackname = shift;
-	print "----muting $trackname on $mixer received\n";
+	print "----muting $trackname on $mixer received\n" if $debug;
+	
+	$trackname = "bus_$trackname" if $mixer->{channels}{$trackname}->is_hardware_out;
 	#c-muting no reply, toggle
 	$mixer->{ecasound}->SendCmdGetReply("c-select $trackname");
 	$mixer->{ecasound}->SendCmdGetReply("c-muting");
