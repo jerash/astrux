@@ -94,7 +94,7 @@ sub init {
 			$ecastrip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 		}
 		#give panvol the last nb to place it at the end of insert chains
-		$ecastrip->{inserts}{panvol}{nb} = "99";
+		$ecastrip->{inserts}{panvol}{nb} = $order;
 	}
 
 }
@@ -129,7 +129,7 @@ sub create_chain_add_inserts {
 	return '' unless @inserts;
 
 	#make sure to add effects with the correct order
-	for my $i (1..$#inserts) {
+	for my $i (1..$#inserts+1) {
 		for my $nb (0..$#inserts){
 			my $insertname = $inserts[$nb];
 			next if $strip->{inserts}{$insertname}{nb} ne $i;
@@ -138,11 +138,6 @@ sub create_chain_add_inserts {
 			print "   | |_adding effect $insert\n";
 			$line .= $strip->{inserts}{$insert}{ecsline} if (defined $strip->{inserts}{$insert}{ecsline});
 		}
-	}
-	#add pan/volume
-	if ((defined $strip->{inserts}{panvol}{nb}) and ($strip->{inserts}{panvol}{nb} eq 99)) {
-		print "   | |_adding Pan and volume\n";
-		$line .= $strip->{inserts}{panvol}{ecsline} if (defined $strip->{inserts}{panvol}{ecsline});			
 	}
 	return $line;	
 }

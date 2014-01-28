@@ -144,7 +144,7 @@ sub GetControls() {
 	push( @{$ecafx->{lowvalues}} ,@lowvals);
 	push( @{$ecafx->{highvalues}} ,@highvals);
 
-	#print Dumper $ecafx;
+	#print Dumper $ecafx if $debug;
 	return 1;
 }
 
@@ -209,9 +209,9 @@ sub update_current_value {
 	my $index = shift;
 	my $value = shift;
 
-	#TOCO verify if value is within range, return adequately for next actions
+	#TODO verify if value is within range, return adequately for next actions
 	#update value
-	print "EcaFx : updating at index $index with value $value\n";
+	print "EcaFx : updating at index $index with value $value\n" if $debug;
 	$ecafx->{currentvalues}[$index-1] = $value;
 }
 

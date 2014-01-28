@@ -352,11 +352,12 @@ sub udpate_trackfx_value {
 	my $value = shift;
 
 	$trackname = "bus_$trackname" if $mixer->{channels}{$trackname}->is_hardware_out;
-	$index = 1 if $mixer->{channels}{$trackname}->is_hardware_out; #override index number TODO fix it
 
 	#TODO do something with message returns ?
 	$mixer->{ecasound}->SendCmdGetReply("c-select $trackname");
-	$mixer->{ecasound}->SendCmdGetReply("cop-set $position,$index,$value");
+	$mixer->{ecasound}->SendCmdGetReply("cop-select $position");
+	$mixer->{ecasound}->SendCmdGetReply("copp-select $index");
+	$mixer->{ecasound}->SendCmdGetReply("copp-set $value");
 }
 
 sub udpate_auxroutefx_value {
