@@ -43,7 +43,7 @@ sub create_rules {
 	# --- LOOP THROUGH MIXERs ---
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		#ignore players mixer
-		next if $project->{mixers}{$mixername}{ecasound}{name} eq "players";
+		next if $project->{mixers}{$mixername}{engine}{name} eq "players";
 		#create mixer reference
 		my $mixer = $project->{mixers}{$mixername}{channels};
 		# --- LOOP THROUGH CHANNELS ---
@@ -53,7 +53,7 @@ sub create_rules {
 				my @table = @{$mixer->{$channelname}{connect}};
 				#take the Nth one, will be undef if connect is empty or undef
 				my $plumbin = $table[$i-1]; 
-				my $plumbout = $project->{mixers}{$mixername}{ecasound}{name}.":$channelname"."_$i";
+				my $plumbout = $project->{mixers}{$mixername}{engine}{name}.":$channelname"."_$i";
 				#jack plumbing will need a certain order for hardware connects
 				if ($mixer->{$channelname}->is_hardware_out) {
 					push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;

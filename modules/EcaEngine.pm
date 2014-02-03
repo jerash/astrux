@@ -23,8 +23,46 @@ sub create {
 	#close file
 	close $handle;
 }
+sub add_header {
+	my $ecaengine = shift;
+
+	my $name = $ecaengine->{name};
+	my $header = "#GENERAL\n";
+	$header .= "-b:".$ecaengine->{buffersize} if $ecaengine->{buffersize};
+	$header .= " -r:".$ecaengine->{realtime} if $ecaengine->{realtime};
+	my @zoptions = split(",",$ecaengine->{z});
+	foreach (@zoptions) {
+		$header .= " -z:".$_;
+	}
+	$header .= " -n:\"$name\"";
+	$header .= " -z:mixmode,".$ecaengine->{mixmode} if $ecaengine->{mixmode};
+	$header .= " -G:jack,$name,notransport" if ($ecaengine->{sync} == 0);
+	$header .= " -G:jack,$name,sendrecv" if ($ecaengine->{sync});
+	$header .= " -Md:".$ecaengine->{midi} if $ecaengine->{midi};
+	#add to tructure
+	$ecaengine->{header} = $header;
+	#update status
+	$ecaengine->{status} = "header";
+}
 
 #--------------------ENGINE FILE---------------------------------------
+sub CreateEcsFile {
+	my $ecaengine = shift;
+	my $ecsfilepath = shift;
+
+	#add path to ecasound info
+	$ecaengine->{ecsfile} = $ecsfilepath;
+	#create the file
+	$ecaengine->create;
+	#add ecasound header to file
+	$ecaengine->build_header;
+	#get chains from structure
+	$ecaengine->get_ecasoundchains;
+	#add chains to file
+	$ecaengine->add_chains;
+	#TODO verify is the generated file can be opened by ecasound
+	#$ecaengine->verify;
+}
 sub build_header {
 	my $ecaengine = shift;
 
@@ -39,7 +77,35 @@ sub build_header {
 	#update status
 	$ecaengine->{status} = "header";
 }
+sub get_ecasoundchains {
+	my $ecaengine = shift;
 
+	my @table;
+
+	if (defined $ecaengine->{i_chains}) {
+		push @table , "\n#INPUTS\n";
+		push @table , @{$ecaengine->{i_chains}};
+		delete $ecaengine->{i_chains};
+	}
+	if (defined $ecaengine->{o_chains}) {
+		push @table , "\n#OUTPUTS\n";
+		push @table , @{$ecaengine->{o_chains}};
+		delete $ecaengine->{o_chains};
+	}
+	if (defined $ecaengine->{x_chains}) {
+		push @table , "\n#CHANNELS ROUTING\n";
+		push @table , @{$ecaengine->{x_chains}};
+		delete $ecaengine->{x_chains};
+	}
+	if (defined $ecaengine->{io_chains}) {
+		push @table , "\n#PLAYERS\n";
+		push @table , @{$ecaengine->{io_chains}};
+		delete $ecaengine->{io_chains};
+	}
+
+	#update structure
+	@{$ecaengine->{all_chains}} = @table;
+}
 sub add_chains {
 	my $ecaengine = shift;
 
@@ -230,5 +296,50 @@ sub get_selected_effect {
 	return $ecaengine->SendCmdGetReply("cop-selected");
 }
 
+#--------------Live functions-------------------------
+sub mute_channel {
+	my $ecaengine = shift;
+	my $trackname = shift;
+	print "----muting $trackname on $ecaengine received\n" if $debug;
+	
+	#TODO when we're moved to OSC remember to update the bus trackname ...
+	#$trackname = "bus_$trackname" if $mixer->{channels}{$trackname}->is_hardware_out;
+	
+	#c-muting no reply, toggle
+	$ecaengine->SendCmdGetReply("c-select $trackname");
+	$ecaengine->SendCmdGetReply("c-muting");
+}
+
+sub udpate_trackfx_value {
+	my $ecaengine = shift;
+	my $trackname = shift;
+	my $position = shift;
+	my $index = shift;
+	my $value = shift;
+
+	#TODO when we're moved to OSC remember to update the bus trackname ...
+	#$trackname = "bus_$trackname" if $mixer->{channels}{$trackname}->is_hardware_out;
+
+	#TODO do something with message returns ?
+	$ecaengine->SendCmdGetReply("c-select $trackname");
+	$ecaengine->SendCmdGetReply("cop-select $position");
+	$ecaengine->SendCmdGetReply("copp-select $index");
+	$ecaengine->SendCmdGetReply("copp-set $value");
+}
+
+sub udpate_auxroutefx_value {
+	my $ecaengine = shift;
+	my $trackname = shift;
+	my $destination = shift;
+	my $position = shift;
+	my $index = shift;
+	my $value = shift;
+
+	my $chain = "$trackname"."_to_"."$destination";
+
+	#TODO do something with message returns ?
+	$ecaengine->SendCmdGetReply("c-select $chain");
+	$ecaengine->SendCmdGetReply("cop-set $position,$index,$value");
+}
 
 1;
