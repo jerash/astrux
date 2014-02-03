@@ -3,6 +3,7 @@
 
 dust/
 old_source/
+tests/
 
 # OS generated files #
 ######################

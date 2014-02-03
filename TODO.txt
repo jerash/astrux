@@ -1,11 +1,5 @@
 in mixer ini file
 	if midi strip has more than one channel, we should create a merger with mididings ?
-	
-dans le fichiers oscmidistate.csv  
-	il faut s'assurer que le bridge sache vers quel port udp rediriger les messages, mais pour le midi normalement c'est bon
-	ben non ne fait, chaque ecasound génère un nouveau port midi ... envoyer vers les 3 ?
-	>demande envoyé à la ML ecasound pour nommer les ports
-	ben c'est pareil pour les commandes ecs....mais là on peut pas envoyer aux 3 !
 
 option to keep ecasound player opened after transport stop
 
@@ -14,8 +8,6 @@ dummy song & ecacfg , examples in astrux folder for project creation
 JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
 
 OSCMIDIbridge :
-	ajouter mot clé "mute" pour les pistes (c-muting)
-	ajouter mot clé "bypass" pour les pistes (c-bypass)
 	>par extension, pas besoin de midi si on peut utiiliser c-select,cop-select,copp-select,copp-value
 	
 dans livescreens, il est prévu de pouvoir désactiver certaines I/O du main mixer pour une chanson en particulier
@@ -25,6 +17,7 @@ dans livescreens, il est prévu de pouvoir désactiver certaines I/O du main mix
 
 create a lscp perl module
 	> get_inputs, get_outputs, is_valid...etc
+	> wait for new cli ?
 
 change getnextCC > getavailableCC with a table (in case some effect gets removed)
 
