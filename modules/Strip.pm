@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-package EcaStrip;
+package Strip;
 
 use strict;
 use warnings;
@@ -116,9 +116,9 @@ sub aux_init {
 	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 }
 
-#-------------------------------------------------------------------
-#	ecasound chain management
-sub create_chain_add_inserts {
+#------------- ecasound chain management ------------------
+
+sub get_eca_chain_add_inserts {
 	my $strip = shift;
 	my $line;
 
@@ -142,7 +142,7 @@ sub create_chain_add_inserts {
 	return $line;	
 }
 
-sub create_input_chain {
+sub get_eca_input_chain {
 	my $strip = shift;
 	my $name = shift;
 
@@ -151,43 +151,50 @@ sub create_input_chain {
 	$line .= "-f:f32_le,2,48000 -i:jack,," if $strip->is_stereo;
 	$line .= $name;
 	#add inserts if any
-	$line .= $strip->create_chain_add_inserts();
+	$line .= $strip->get_eca_chain_add_inserts();
 	return $line;
 }
-sub create_loop_output_chain {
+sub get_eca_loop_output_chain {
 	my $strip = shift;
 	my $name = shift;
 
 	return "-a:$name -f:f32_le,2,48000 -o:loop,$name";
 }
 
-sub create_bus_input_chain {
+sub get_eca_bus_input_chain {
 	my $strip = shift;
 	my $name = shift;
-	my $inserts = $strip->create_chain_add_inserts();
+	my $inserts = $strip->get_eca_chain_add_inserts();
 	return "-a:bus_$name -f:f32_le,2,48000 -i:jack,,bus_$name $inserts";
 }
-sub create_bus_output_chain {
+sub get_eca_bus_output_chain {
 	my $strip = shift;
 	my $name = shift;
 
 	return "-a:bus_$name -f:f32_le,2,48000 -o:jack,,$name";
 }
 
-sub create_player_chain {
+sub get_eca_player_chain {
 	my $strip = shift;
 	my $name = shift;
 
 	return "-a:$name -f:f32_le,2,48000 -i:null -o:jack,,$name";
 }
 
-sub create_submix_output_chain {
+sub get_eca_submix_output_chain {
 	my $strip = shift;
 	my $name = shift;
 
 	return "-a:all -f:f32_le,2,48000 -o:jack,,$name";
 }
 
+#------------- non-mixer chain management ------------------
+sub get_non_input_chain {
+	# body...
+}
+sub get_non_bus_input_chain {
+	# body...
+}
 #-------------------------------------------------------------------
 # test functions
 

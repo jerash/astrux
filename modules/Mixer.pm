@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use EcaEngine;
-use EcaStrip;
+use Strip;
 use NonEngine;
 use NonStrip;
 
@@ -79,21 +79,13 @@ sub init {
 #--------------Create functions-------------------------
 sub CreateMainMixer {
 	my $mixer = shift;
-	if ($mixer->is_ecasound) {
-		$mixer->CreateEcaMainMixer;
-	}
-	elsif ($mixer->is_nonmixer) {
-		$mixer->CreateNonMainMixer;
-	}
+	$mixer->CreateEcaMainMixer if ($mixer->is_ecasound);
+	$mixer->CreateNonMainMixer if ($mixer->is_nonmixer);
 }
 sub CreateSubmix {
 	my $mixer = shift;
-	if ($mixer->is_ecasound) {
-		$mixer->CreateEcaSubmix;
-	}
-	elsif ($mixer->is_nonmixer) {
-		$mixer->CreateNonSubmix;
-	}
+	$mixer->CreateEcaSubmix if ($mixer->is_ecasound);
+	$mixer->CreateNonSubmix if ($mixer->is_nonmixer);
 }
 sub CreatePlayers {
 	my $mixer = shift;
@@ -164,7 +156,7 @@ sub CreateEcaMainMixer {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = EcaStrip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new($mixer->{IOs}{$name});
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
@@ -172,14 +164,14 @@ sub CreateEcaMainMixer {
 		#==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
 		if ( $strip->is_main_in ) {
 			#create ecasound chain
-			push( @i_chaintab , $strip->create_input_chain($name) );
-			push( @o_chaintab , $strip->create_loop_output_chain($name) );
+			push( @i_chaintab , $strip->get_eca_input_chain($name) );
+			push( @o_chaintab , $strip->get_eca_loop_output_chain($name) );
 			push( @i_nametab , $name );
 		}
 		#==BUS OUTPUTS AND SEND==
 		elsif ( $strip->is_hardware_out ) {
-			push( @i_chaintab , $strip->create_bus_input_chain($name) );
-			push( @o_chaintab , $strip->create_bus_output_chain($name) );
+			push( @i_chaintab , $strip->get_eca_bus_input_chain($name) );
+			push( @o_chaintab , $strip->get_eca_bus_output_chain($name) );
 			push( @o_nametab , $name );			
 		}
 		else {
@@ -209,7 +201,7 @@ sub CreateEcaMainMixer {
 				$iline .= "$channel" . "_to_$bus,";
 
 				#create a channel strip
-				my $strip = EcaStrip->new;
+				my $strip = Strip->new;
 	
 				#verify if the channel is defined using midi control
 				my $km = $mixer->{channels}{$channel}{generatekm};
@@ -271,15 +263,15 @@ sub CreateEcaSubmix {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = EcaStrip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new($mixer->{IOs}{$name});
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 		
 		#==SUBMIX==
 		#create ecasound chain
-		push( @i_chaintab , $strip->create_input_chain($name) ) if ( $strip->is_submix_in );
-		push( @o_chaintab , $strip->create_submix_output_chain($name) ) if ( $strip->is_submix_out );
+		push( @i_chaintab , $strip->get_eca_input_chain($name) ) if ( $strip->is_submix_in );
+		push( @o_chaintab , $strip->get_eca_submix_output_chain($name) ) if ( $strip->is_submix_out );
 		warn "bad IO definition in submix with type \n" . $strip->{type} unless ( ( $strip->is_submix_in ) or ( $strip->is_submix_out ));
 	}
 
@@ -309,14 +301,14 @@ sub CreateEcaPlayers {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = EcaStrip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new($mixer->{IOs}{$name});
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 		
 		#==PLAYERS==
 		#create ecasound chain
-		push( @io_chaintab , $strip->create_player_chain($name) ) if ( $strip->is_file_player );
+		push( @io_chaintab , $strip->get_eca_player_chain($name) ) if ( $strip->is_file_player );
 		warn "bad IO definition in players with type \n" . $strip->{type} unless ( $strip->is_file_player );
 	}
 
@@ -327,7 +319,51 @@ sub CreateEcaPlayers {
 #-------------- NON-MIXER functions -------------------------
 
 sub CreateNonMainMixer {
-	# body...
+	my $mixer = shift;
+	
+	#----------------------------------------------------------------
+	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
+
+	#----------------------------------------------------------------
+	#==CHANNELS ROUTING TO BUSES AND SENDS==
+	#----------------------------------------------------------------
+
+	# get number of aux buses
+
+	#----------------------------------------------------------------
+	# === I/O Channels, Buses, Sends ===
+	#----------------------------------------------------------------
+	my @ios;
+
+	#check each channel defined in the IO
+	foreach my $name (keys %{$mixer->{IOs}} ) {		
+
+		#ignore inactive channels
+		next unless $mixer->{IOs}{$name}{status} eq "active";
+
+		#create the channel strip
+		my $strip = Strip->new($mixer->{IOs}{$name});
+
+		#add strip to mixer
+		$mixer->{channels}{$name} = $strip;
+		
+		#==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
+		if ( $strip->is_main_in ) {
+			#create ecasound chain
+			push( @ios , $strip->get_non_input_chain($name) );
+		}
+		#==BUS OUTPUTS AND SEND==
+		elsif ( $strip->is_hardware_out ) {
+			push( @ios , $strip->get_non_bus_input_chain($name) );
+		}
+		else {
+			warn "bad IO definition in main mixer with type \n" . $strip->{type};
+		}
+	}
+
+	#add ios to engine info
+	@{$mixer->{ios}} = @ios;
+
 }
 sub CreateNonSubmix {
 	# body...

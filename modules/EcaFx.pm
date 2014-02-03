@@ -2,17 +2,11 @@
 
 package EcaFx;
 
-use base qw(EcaStrip EcaEngine);
-
 use strict;
 use warnings;
 use feature 'state';
 
 use Data::Dumper;
-
-use lib '/home/seijitsu/astrux/modules';
-#use Bridge;
-use Project qw($baseurl);
 
 my $debug = 0;
 
