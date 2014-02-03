@@ -8,12 +8,19 @@ This is an ongoing project by Raphaël Mouneyres, usable though.
 
 To correctly build a project, you have to follow some rules :
 - the build wants correctly formatted INI files
-- the build want a correct folder structure
 - you have a project.ini file on the project root folder
+- the build wants a correct folder structure (defined in project.ini)
 - you define mixers, with at least a 'main' mixer
 - in each mixer, you define channels
 - for each song folder you have a song.ini file
-some error checks are done so the script will die.
+
+many error checks are done so the script will die or bad structure.
+
+To generate files, cd into the project base folder and do : 
+perl /pathto/generate.pl
+
+To start the project, cd into the project base folder and do : 
+perl /pathto/modules/Live.pl myproject.cfg
 
 here's a project.ini example
 ```
