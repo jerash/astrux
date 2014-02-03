@@ -138,14 +138,14 @@ sub Start {
 
 	# load song chainsetups + dummy
 	#--------------------------------
-	my $playersport = $project->{mixers}{players}{ecasound}{port};
+	my $playersport = $project->{mixers}{players}{engine}{port};
 	foreach my $song (@songkeys) {
 		#load song chainsetup
 		print "Loading song $song\n"; 
-		print $project->{mixers}{players}{ecasound}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
+		print $project->{mixers}{players}{engine}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
 	}
 	#load dummy song chainsetup
-	$project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup("players");
+	$project->{mixers}{players}{engine}->SelectAndConnectChainsetup("players");
 
 	#send previous state to ecasound engines
 	#--------------------------------------

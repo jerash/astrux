@@ -279,17 +279,17 @@ sub StartEngines {
 	#$engine->StartMixer
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		print " - mixer $mixername\n";
-		my $mixerfile = $project->{mixers}{$mixername}{ecasound}{ecsfile};
+		my $mixerfile = $project->{mixers}{$mixername}{engine}{ecsfile};
 		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
-		my $port = $project->{mixers}{$mixername}{ecasound}{port};
+		my $port = $project->{mixers}{$mixername}{engine}{port};
 		
 		#if mixer is already running on same port, then reconfigure it
-		if  ($project->{mixers}{$mixername}{ecasound}->is_running) {
+		if  ($project->{mixers}{$mixername}{engine}->is_running) {
 			print "    Found existing Ecasound engine on port $port, reconfiguring engine\n";
 			#create socket for communication
-			$project->{mixers}{$mixername}{ecasound}->init_socket($port);
+			$project->{mixers}{$mixername}{engine}->init_socket($port);
 			#reconfigure ecasound engine with ecs file
-			$project->{mixers}{$mixername}{ecasound}->LoadAndStart;
+			$project->{mixers}{$mixername}{engine}->LoadAndStart;
 			next;	
 		}
 
@@ -297,10 +297,10 @@ sub StartEngines {
 		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
 		system ( $command );
 		#wait for ecasound engines to be ready
-		sleep(1) until $project->{mixers}{$mixername}{ecasound}->is_ready;
+		sleep(1) until $project->{mixers}{$mixername}{engine}->is_ready;
 		print "   Ecasound $mixername is ready\n";
 		#create socket for communication
-		$project->{mixers}{$mixername}{ecasound}->init_socket($port);
+		$project->{mixers}{$mixername}{engine}->init_socket($port);
 	}
 }
 
@@ -316,7 +316,7 @@ sub execute_command {
 	}
 	elsif ($command =~ /^status$/) { 
 		foreach my $mixer (keys %{$project->{mixers}}) {
-			$reply = $project->{mixers}{$mixer}{ecasound}->Status . "\n";
+			$reply = $project->{mixers}{$mixer}{engine}->Status . "\n";
 		}
 	}
 	elsif ($command =~ /^song /) { 
@@ -324,24 +324,24 @@ sub execute_command {
 		return unless exists $project->{songs}{$songname};
 		$reply = "Starting song $songname";
 		#loading players
-		$reply .= $project->{mixers}{players}{ecasound}->SelectAndConnectChainsetup($songname);
+		$reply .= $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($songname);
 		#loading midifile
 		#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
 		#autostart ?
-		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start") 
+		$reply .= $project->{mixers}{players}{engine}->SendCmdGetReply("start") 
 			if $project->{songs}{$songname}{song_globals}{autostart};
 	}
 	elsif ($command =~ /^play|start$/) { 
 		$reply = "Starting play";
-		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("start");
+		$reply .= $project->{mixers}{players}{engine}->SendCmdGetReply("start");
 	}
 	elsif ($command =~ /^stop$/) { 
 		$reply = "Stopping";
-		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("stop");
+		$reply .= $project->{mixers}{players}{engine}->SendCmdGetReply("stop");
 	}
 	elsif ($command =~ /^zero$/) { 
 		$reply = "back to the beginning";
-		$reply .= $project->{mixers}{players}{ecasound}->SendCmdGetReply("setpos 0");
+		$reply .= $project->{mixers}{players}{engine}->SendCmdGetReply("setpos 0");
 	}
 	elsif ($command =~ /^send/) { 
 		my $mixer = grep (/main/,$command); #TODO replace the false grep
@@ -351,7 +351,7 @@ sub execute_command {
 		my ($mixer, $cmd) =
 		$command =~ /eca\s(\S+)\s(.+)$/;
 		#TODO check that $cmd is valid
-		$reply .= $project->{mixers}{$mixer}{ecasound}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
+		$reply .= $project->{mixers}{$mixer}{engine}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
 		# $reply = "to ecasound $command\n"; 
 	}
 	#default { $reply = "Other"; }
