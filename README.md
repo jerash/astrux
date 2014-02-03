@@ -16,6 +16,7 @@ To correctly build a project, you have to follow some rules :
 some error checks are done so the script will die.
 
 here's a project.ini example
+```
   [project]
   name = MyProject
   version = 1.0
@@ -53,8 +54,9 @@ here's a project.ini example
   enable = 0
   presetfolder=sampler
   port = 8888
-
+```
 here's a one channel mixer ini file example
+```
   [mixer_globals]
   type = main
   engine = ecasound
@@ -77,8 +79,9 @@ here's a one channel mixer ini file example
   insert = 
   can_be_backed = no
   generatekm = 1
-  
+```  
 here's a song.ini example 
+```
   [song_globals]
   name = mysong
   #this name here is the same as containing folder name
@@ -89,4 +92,4 @@ here's a song.ini example
   [players_slot_1]
   type = player
   filename = myfile.wav
-  
+```
