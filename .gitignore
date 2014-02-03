@@ -2,7 +2,7 @@
 *.mid
 
 dust/
-old_source/
+trash/
 tests/
 
 # OS generated files #
