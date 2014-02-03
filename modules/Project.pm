@@ -63,7 +63,7 @@ sub AddMixers {
 		#create mixer
 	 	print "Project: Creating mixer from $mixerfile\n";
 	 	my $mixer = Mixer->new($mixerfile);
-		$project->{mixers}{$mixer->{ecasound}{name}} = $mixer;
+		$project->{mixers}{$mixer->{engine}{name}} = $mixer;
 	}
 
 	#verify if there is one "main" mixer
@@ -120,27 +120,22 @@ sub AddPlumbing {
 sub GenerateFiles {
 	my $project = shift;
 
-	#----------------ECASOUND FILES------------------------
-	#for each mixer, create the ecasound mixer file
+	#----------------MIXERS FILES------------------------
+	#for each mixer, create the mixer file/folder
 	foreach my $mixername (keys %{$project->{mixers}}) {
-		#shorcut name
+		#shortcut name
 		my $mixer = $project->{mixers}{$mixername};
-		#create path to ecs file
-		my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/".$mixer->{ecasound}{name} . ".ecs";
-		#add path to ecasound info
-		$mixer->{ecasound}{ecsfile} = $ecsfilepath;
-		#bless structure to access data with module functions
-		bless $mixer->{ecasound} , EcaEngine::;
-		#create the file
-		$mixer->{ecasound}->create;
-		#add ecasound header to file
-		$mixer->{ecasound}->build_header;
-		#get chains from structure
-		$mixer->get_ecasoundchains;
-		#add chains to file
-		$mixer->{ecasound}->add_chains;
-		#TODO verify is the generated file can be opened by ecasound
-		#$mixer->{ecasound}->verify;
+
+		#check which type of mixer it is
+		if ($mixer->is_ecasound) {
+			#create path to ecs file
+			my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/".$mixer->{engine}{name} . ".ecs";
+			#create the mixer file
+			$mixer->{engine}->CreateEcsFile($ecsfilepath);
+		}
+		elsif ($mixer->is_nonmixer) {
+			#TODO
+		}
 	}
 
 	#for each song, create the ecasound player file		
@@ -156,8 +151,8 @@ sub GenerateFiles {
 		#create the file
 		$song->{ecasound}->create;
 		#copy header from player mixer
-		if (defined $project->{mixers}{players}{ecasound}{header}) {
-			$song->{ecasound}{header} = $project->{mixers}{players}{ecasound}{header};
+		if (defined $project->{mixers}{players}{engine}{header}) {
+			$song->{ecasound}{header} = $project->{mixers}{players}{engine}{header};
 			#replace -n:"players" with song name to have unique chainsetup name
 			$song->{ecasound}{header} =~ s/-n:\"players\"/-n:\"$songname\"/;
 		}
@@ -226,7 +221,7 @@ sub SaveTofile {
 		$hash{OSC}{events} = delete $project->{OSC}{events};
 	}
 	foreach my $mixer (keys $project->{mixers}) {
-		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{ecasound}{socket}; 
+		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{engine}{socket}; 
 	}
 
 	#Storable : create a project file, not working with opened sockets
@@ -246,7 +241,7 @@ sub SaveTofile {
 		$project->{OSC}{events} = delete $hash{OSC}{events};
 	}
 	foreach my $mixer (keys $hash{mixers}) {
-		$project->{mixers}{$mixer}{ecasound}{socket} = delete $hash{mixers}{$mixer}; 
+		$project->{mixers}{$mixer}{engine}{socket} = delete $hash{mixers}{$mixer}; 
 	}
 	undef %hash;
 
