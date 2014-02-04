@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use EcaFx;
+use Fx;
 
 ###########################################################
 #
@@ -89,14 +89,14 @@ sub init {
 		if ( $effect eq "panvol" ) {
 			#add pan and volume controls
 			if ($strip->is_mono) {
-					$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$midi_km);
+					$strip->{inserts}{panvol} = Fx->new("mono_panvol",$midi_km);
 			}
 			elsif ($strip->is_stereo) {
-				$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$midi_km);
+				$strip->{inserts}{panvol} = Fx->new("st_panvol",$midi_km);
 			}
 		}
 		else{
-			$strip->{inserts}{$effect} = EcaFx->new($effect,$midi_km);
+			$strip->{inserts}{$effect} = Fx->new($effect,$midi_km);
 		}
 		#TODO elsif ladspa number ID for non mixer
 
@@ -125,7 +125,7 @@ sub eca_aux_init {
 	delete $strip->{can_be_backed};
 
 	#add pan and volume
-	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$midi_km);
+	$strip->{inserts}{panvol} = Fx->new("st_panvol",$midi_km);
 }
 
 sub get_eca_chain_add_inserts {

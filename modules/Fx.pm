@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-package EcaFx;
+package Fx;
 
 use strict;
 use warnings;
