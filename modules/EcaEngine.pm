@@ -47,6 +47,7 @@ sub CreateEcsFile {
 	#TODO verify is the generated file can be opened by ecasound
 	#$ecaengine->verify;
 }
+
 sub ecs_create {
 	#create the file (overwrite)
 	my $ecaengine = shift;

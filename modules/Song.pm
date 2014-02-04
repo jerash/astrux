@@ -101,35 +101,25 @@ sub init {
 #
 ###########################################################
 
-sub build_song_header {
+sub build_songfile_chain {
 	my $song = shift;
-	#print "--song:build_header\n header = $header\n";
-	die "ecs file has not been created" if ($song->{ecasound}{status} eq "notcreated");
-	#open file handle
-	open my $handle, ">>$song->{ecasound}{ecsfile}" or die $!;
-	#append to file
-	print $handle $song->{ecasound}{header} or die $!;
-	#close file
-	close $handle or die $!;
-	#update status
-	$song->{ecasound}{status} = "header";
-}
-sub add_songfile_chain {
-	my $song = shift;
-	#open file in add mode
-	open my $handle, ">>$song->{ecasound}{ecsfile}" or die $!;
-	print $handle "\n";
-	foreach my $section (sort keys %{$song}) {
+
+	my @chains;
+	foreach my $section (sort keys %{$song->{audio_files}}) {
+
 		#only match audio players, and catch payer slot number
-		next unless (($section =~ /^players_slot_/) and ($song->{$section}{type} eq "player"));
-		#append to file
-		print $handle $song->{$section}{ecsline};
-		print $handle "\n";
-	}	
-	#close file
-	close $handle or die $!;
-	#update status
-	$song->{ecasound}{status} = "created";
+		next unless (($section =~ /^players_slot_(\d+)/) and ($song->{audio_files}{$section}{type} eq "audio_player"));
+		my $slotnumber = $1;
+		#create path to file
+		my $filename = $song->{path} . "/" . $song->{audio_files}{$section}{filename};
+		#create ecs line for mono file
+		push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 1;
+		#create ecs line for stereo file
+		push @chains , "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 2;
+
+	}
+	#add chains to song
+	$song->{ecasound}{io_chains} = \@chains;
 }
 
 1;

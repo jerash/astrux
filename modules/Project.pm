@@ -139,20 +139,14 @@ sub GenerateFiles {
 	#----------------MIXERS FILES------------------------
 	#for each mixer, create the mixer file/folder
 	foreach my $mixername (keys %{$project->{mixers}}) {
+		
 		#shortcut name
 		my $mixer = $project->{mixers}{$mixername};
-		#check which type of mixer it is
-		if ($mixer->is_ecasound) {
-# 			#create path to ecs file
-# 			my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/"."$mixername.ecs";
-# use Data::Dumper;
-# print Dumper $mixer;
-# 			#add ecasound engine
-# 			$mixer->{engine} = EcaEngine->new($ecsfilepath,$mixername);
-			#create the mixer file
-			$mixer->{engine}->CreateEcsFile;
-		}
-		elsif ($mixer->is_nonmixer) {
+
+		#if ecasound
+		$mixer->{engine}->CreateEcsFile if ($mixer->is_ecasound);
+
+		if ($mixer->is_nonmixer) {
 			#TODO
 		}
 	}
@@ -162,19 +156,23 @@ sub GenerateFiles {
 	foreach my $songname (keys %{$project->{songs}}) {
 		#shorcut name
 		my $song = $project->{songs}{$songname};
-		#create path to ecs file
+
+		#copy ecasound parameters from players mixer
+		my %engine = %{$project->{mixers}{players}{engine}};
+		$song->{ecasound} = \%engine;
+		bless $song->{ecasound} , EcaEngine::;
+		#update name
+		$song->{ecasound}{name} = $songname;
+		#update ecsfile path
 		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
-		#add ecasound engine
-		$song->{ecasound} = EcaEngine->new($ecsfilepath,$songname);
+		$song->{ecasound}{ecsfile} = $ecsfilepath;
+
+		#add io_chains
+		$song->build_songfile_chain;
 		#create the file
 		$song->{ecasound}->CreateEcsFile;
-#TODOING
-		#add ecasound header to file
-		$song->build_song_header;
-		#add chains to file
-		$song->add_songfile_chain;
-		#TODO verify is the generated file can be opened by ecasound
-		#$song->{ecasound}->verify;
+		#remove io_chains
+		delete $song->{ecasound}{io_chains} if defined $song->{ecasound}{io_chains};
 	}
 
 	#----------------PLUMBING FILE------------------------

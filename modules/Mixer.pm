@@ -76,9 +76,9 @@ sub init {
 	$mixer->{IOs} = $mixer_io_ref;
 
 	#add channel strips to mixer
-	$mixer->CreateMainMixer if $mixer->is_main;
-	$mixer->CreateSubmix if $mixer->is_submix;
-	$mixer->CreatePlayers if $mixer->is_player;
+	$mixer->BuildMainMixer if $mixer->is_main;
+	$mixer->BuildSubmix if $mixer->is_submix;
+	$mixer->BuildPlayers if $mixer->is_player;
 
 	#remove IO info not necessary anymore
 	delete $mixer->{IOs};
@@ -90,17 +90,17 @@ sub init {
 #
 ###########################################################
 
-sub CreateMainMixer {
+sub BuildMainMixer {
 	my $mixer = shift;
-	$mixer->CreateEcaMainMixer if ($mixer->is_ecasound);
-	$mixer->CreateNonMainMixer if ($mixer->is_nonmixer);
+	$mixer->BuildEcaMainMixer if ($mixer->is_ecasound);
+	$mixer->BuildNonMainMixer if ($mixer->is_nonmixer);
 }
-sub CreateSubmix {
+sub BuildSubmix {
 	my $mixer = shift;
-	$mixer->CreateEcaSubmix if ($mixer->is_ecasound);
-	$mixer->CreateNonSubmix if ($mixer->is_nonmixer);
+	$mixer->BuildEcaSubmix if ($mixer->is_ecasound);
+	$mixer->BuildNonSubmix if ($mixer->is_nonmixer);
 }
-sub CreatePlayers {
+sub BuildPlayers {
 	my $mixer = shift;
 	die "Players mixer must be ecasound !!\n" if !$mixer->is_ecasound;
 	$mixer->CreateEcaPlayers;
@@ -171,11 +171,11 @@ sub is_tcp_controllable {
 #
 ###########################################################
 
-sub CreateEcaMainMixer {
+sub BuildEcaMainMixer {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
-	print " |_Mixer:CreateMainMixer name : " . $mixer->get_name . "\n";
+	print " |_Mixer:BuildEcaMainMixer name : " . $mixer->get_name . "\n";
 	#----------------------------------------------------------------
 	# === I/O Channels, Buses, Sends ===
 	#----------------------------------------------------------------
@@ -278,7 +278,7 @@ sub CreateEcaMainMixer {
 
 }
 
-sub CreateEcaSubmix {
+sub BuildEcaSubmix {
 	my $mixer = shift;
 	
 	#----------------------------------------------------------------
@@ -358,7 +358,7 @@ sub CreateEcaPlayers {
 #
 ###########################################################
 
-sub CreateNonMainMixer {
+sub BuildNonMainMixer {
 	my $mixer = shift;
 	
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
@@ -396,7 +396,7 @@ sub CreateNonMainMixer {
 	@{$mixer->{ios}} = @ios;
 
 }
-sub CreateNonSubmix {
+sub BuildNonSubmix {
 	# body...
 }
 

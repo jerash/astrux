@@ -132,7 +132,7 @@ sub Start {
 	#---------------
 	my @songkeys = sort keys %{$project->{songs}};
 	my @songlist;
-	push (@songlist,$project->{songs}{$_}{song_globals}{friendly_name}) foreach @songkeys;
+	push (@songlist,$project->{songs}{$_}{friendly_name}) foreach @songkeys;
 	print "SONGS :\n";
 	print " - $_\n" foreach @songlist;
 
