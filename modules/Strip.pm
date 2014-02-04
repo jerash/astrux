@@ -8,12 +8,18 @@ use Data::Dumper;
 
 use EcaFx;
 
+###########################################################
+#
+#		 STRIP OBJECT functions
+#
+###########################################################
+
 sub new {
 	my $class = shift;
 	my $IOsection = shift;
 
 	#init structure
-	my $ecastrip = {
+	my $strip = {
 		'friendly_name' => "",
 		'status' => "new",
 		'can_be_backed' => "",
@@ -23,37 +29,37 @@ sub new {
 		'connect' => "",
 		'group' => ""
 	};
-	bless $ecastrip, $class;
+	bless $strip, $class;
 	
 	#if parameter exist, fill hash
-	$ecastrip->init($IOsection) if defined $IOsection;
+	$strip->init($IOsection) if defined $IOsection;
 	
-	return $ecastrip;
+	return $strip;
 }
 
 sub init {
 	#fill the strip object with the passed hash info
-	my $ecastrip = shift;
+	my $strip = shift;
 	my $IOsection = shift;
 	return unless defined $IOsection;
 	#don't insert channel if inactive
 	return unless $IOsection->{status} eq "active";
 
 	#update channel strip info from ini
-	$ecastrip->{friendly_name} = $IOsection->{friendly_name} if $IOsection->{friendly_name};
-	$ecastrip->{status} = $IOsection->{status} if $IOsection->{status};
-	$ecastrip->{can_be_backed} = $IOsection->{can_be_backed} if $IOsection->{can_be_backed};
-	$ecastrip->{group} = $IOsection->{group} if $IOsection->{group};
-	$ecastrip->{type} = $IOsection->{type} if $IOsection->{type};
-	$ecastrip->{generatekm} = $IOsection->{generatekm} if $IOsection->{generatekm};
-	$ecastrip->{return} = $IOsection->{return} if $IOsection->{return};
-	$ecastrip->{channels} = $IOsection->{channels} if $IOsection->{channels};
+	$strip->{friendly_name} = $IOsection->{friendly_name} if $IOsection->{friendly_name};
+	$strip->{status} = $IOsection->{status} if $IOsection->{status};
+	$strip->{can_be_backed} = $IOsection->{can_be_backed} if $IOsection->{can_be_backed};
+	$strip->{group} = $IOsection->{group} if $IOsection->{group};
+	$strip->{type} = $IOsection->{type} if $IOsection->{type};
+	$strip->{generatekm} = $IOsection->{generatekm} if $IOsection->{generatekm};
+	$strip->{return} = $IOsection->{return} if $IOsection->{return};
+	$strip->{channels} = $IOsection->{channels} if $IOsection->{channels};
+	$strip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
 	
-	print "   |_adding channel ".$ecastrip->{friendly_name}."\n";
+	print "   |_adding channel ".$strip->{friendly_name}."\n";
 	
 	#en fonction du nombre de channels on crée une liste des inputs
 	my @tab;
-	$ecastrip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
 
 	#mono channel >> to be used on output buses to save hardware channels if needed
 	if (defined $IOsection->{mode} and $IOsection->{mode} eq "mono") {
@@ -67,10 +73,10 @@ sub init {
 	}
 
 	#add the connect channel to structure
-	$ecastrip->{connect} = \@tab;
+	$strip->{connect} = \@tab;
 	
 	#verify if we generate km controllers (midi)
-	my $km = $ecastrip->{generatekm};
+	my $km = $strip->{generatekm};
 
 	#get list of inserts
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
@@ -79,44 +85,47 @@ sub init {
 	my $order = 1;
 	foreach my $effect (@effects) {
 		die "Can't have more than 20 inserts on a track\n" if ($order eq 21);
-		$ecastrip->{inserts}{$effect} = EcaFx->new($effect,$km);
-		$ecastrip->{inserts}{$effect}{nb} = $order;
+		$strip->{inserts}{$effect} = EcaFx->new($effect,$km);
+		$strip->{inserts}{$effect}{nb} = $order;
 		$order++;
 	}	
 
 	#verify to which channel to add pan and volume
-	if ( !$ecastrip->is_submix_out ) {
+	if ( !$strip->is_submix_out ) {
 		#add pan and volume controls
-		if ($ecastrip->is_mono) {
-				$ecastrip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
+		if ($strip->is_mono) {
+				$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
 		}
-		elsif ($ecastrip->is_stereo) {
-			$ecastrip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+		elsif ($strip->is_stereo) {
+			$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 		}
 		#give panvol the last nb to place it at the end of insert chains
-		$ecastrip->{inserts}{panvol}{nb} = $order;
+		$strip->{inserts}{panvol}{nb} = $order;
 	}
 
 }
 
-sub aux_init {
+###########################################################
+#
+#			ECASOUND functions
+#
+###########################################################
+sub eca_aux_init {
 	my $strip = shift;
 	my $km = shift;
 
 	#init values
 	$strip->{type} = "route";
-	$strip->{channels} = "2"; 
-	delete $strip->{group}; 
-	delete $strip->{status}; 
-	delete $strip->{connect}; 
-	delete $strip->{friendly_name}; 
-	delete $strip->{can_be_backed}; 
+	$strip->{channels} = "2";
+	delete $strip->{group};
+	delete $strip->{status};
+	delete $strip->{connect};
+	delete $strip->{friendly_name};
+	delete $strip->{can_be_backed};
 
 	#add pan and volume
 	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
 }
-
-#------------- ecasound chain management ------------------
 
 sub get_eca_chain_add_inserts {
 	my $strip = shift;
@@ -188,15 +197,23 @@ sub get_eca_submix_output_chain {
 	return "-a:all -f:f32_le,2,48000 -o:jack,,$name";
 }
 
-#------------- non-mixer chain management ------------------
+###########################################################
+#
+#		 NON-MIXER functions
+#
+###########################################################
 sub get_non_input_chain {
 	# body...
 }
 sub get_non_bus_input_chain {
 	# body...
 }
-#-------------------------------------------------------------------
-# test functions
+
+###########################################################
+#
+#		 GLOBAL TEST functions
+#
+###########################################################
 
 sub is_active{
 	my $io = shift;
@@ -216,6 +233,7 @@ sub is_main_in {
 sub is_hardware_out {
 	my $io = shift;
 	return 1 if (($io->{type} eq "bus_hardware_out") or
+				 ($io->{type} eq "main_hardware_out") or
 				 ($io->{type} eq "send_hardware_out"));
 	return 0;	
 }
@@ -234,6 +252,11 @@ sub is_bus_in {
 sub is_bus_out {
 	my $io = shift;
 	return 1 if ($io->{type} eq "bus_hardware_out");
+	return 0;
+}
+sub is_main_out {
+	my $io = shift;
+	return 1 if ($io->{type} eq "main_hardware_out");
 	return 0;
 }
 
@@ -296,4 +319,5 @@ sub is_summed_mono {
 	return 1 if (($io->{channels} eq "2")and($io->{mode} eq "mono"));
 	return 0;	
 }
+
 1;

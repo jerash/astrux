@@ -134,7 +134,12 @@ sub is_midi_controllable {
 	return $mixer->{engine}{generatekm};
 }
 
-#--------------ECASOUND functions-------------------------
+###########################################################
+#
+#			ECASOUND functions
+#
+###########################################################
+
 sub CreateEcaMainMixer {
 	my $mixer = shift;
 	
@@ -207,7 +212,7 @@ sub CreateEcaMainMixer {
 				my $km = $mixer->{channels}{$channel}{generatekm};
 	
 				#init the aux strip
-				$strip->aux_init($km);
+				$strip->eca_aux_init($km);
 	
 				#add aux route strip to mixer
 				$mixer->{channels}{$channel}{aux_route}{$bus} = $strip;
@@ -316,26 +321,20 @@ sub CreateEcaPlayers {
 	$mixer->{engine}{io_chains} = \@io_chaintab if @io_chaintab;
 }
 
-#-------------- NON-MIXER functions -------------------------
+###########################################################
+#
+#		 NON-MIXER functions
+#
+###########################################################
 
 sub CreateNonMainMixer {
 	my $mixer = shift;
 	
-	#----------------------------------------------------------------
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
 
-	#----------------------------------------------------------------
-	#==CHANNELS ROUTING TO BUSES AND SENDS==
-	#----------------------------------------------------------------
-
-	# get number of aux buses
-
-	#----------------------------------------------------------------
-	# === I/O Channels, Buses, Sends ===
-	#----------------------------------------------------------------
 	my @ios;
 
-	#check each channel defined in the IO
+	#add channels defined in the IO to mixer
 	foreach my $name (keys %{$mixer->{IOs}} ) {		
 
 		#ignore inactive channels
@@ -346,20 +345,20 @@ sub CreateNonMainMixer {
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
-		
-		#==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
-		if ( $strip->is_main_in ) {
-			#create ecasound chain
-			push( @ios , $strip->get_non_input_chain($name) );
-		}
-		#==BUS OUTPUTS AND SEND==
-		elsif ( $strip->is_hardware_out ) {
-			push( @ios , $strip->get_non_bus_input_chain($name) );
-		}
-		else {
-			warn "bad IO definition in main mixer with type \n" . $strip->{type};
-		}
 	}
+
+		# #==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
+		# if ( $strip->is_main_in ) {
+		# 	#create ecasound chain
+		# 	push( @ios , $strip->get_non_input_chain($name) );
+		# }
+		# #==BUS OUTPUTS AND SEND==
+		# elsif ( $strip->is_hardware_out ) {
+		# 	push( @ios , $strip->get_non_bus_input_chain($name) );
+		# }
+		# else {
+		# 	warn "bad IO definition in main mixer with type \n" . $strip->{type};
+		# }
 
 	#add ios to engine info
 	@{$mixer->{ios}} = @ios;
