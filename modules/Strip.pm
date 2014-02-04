@@ -82,27 +82,29 @@ sub init {
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
 	
 	#add inserts
-	my $order = 1;
+	my $sequence_nb = 1;
 	foreach my $effect (@effects) {
-		die "Can't have more than 20 inserts on a track\n" if ($order eq 21);
-		$strip->{inserts}{$effect} = EcaFx->new($effect,$km);
-		$strip->{inserts}{$effect}{nb} = $order;
-		$order++;
+		die "Can't have more than 20 inserts on a track\n" if ($sequence_nb eq 21);
+
+		#verify if we want to add pan and volume
+		if ( $effect eq "panvol" ) {
+			#add pan and volume controls
+			if ($strip->is_mono) {
+					$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
+			}
+			elsif ($strip->is_stereo) {
+				$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+			}
+		}
+		else{
+			$strip->{inserts}{$effect} = EcaFx->new($effect,$km);
+		}
+		#TODO elsif ladspa number ID for non mixer
+
+		#give an sequence number to the plugin
+		$strip->{inserts}{$effect}{nb} = $sequence_nb;
+		$sequence_nb++;
 	}	
-
-	#verify to which channel to add pan and volume
-	if ( !$strip->is_submix_out ) {
-		#add pan and volume controls
-		if ($strip->is_mono) {
-				$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
-		}
-		elsif ($strip->is_stereo) {
-			$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
-		}
-		#give panvol the last nb to place it at the end of insert chains
-		$strip->{inserts}{panvol}{nb} = $order;
-	}
-
 }
 
 ###########################################################
