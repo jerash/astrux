@@ -7,81 +7,90 @@ use warnings;
 
 my $debug = 0;
 
-#--------------------OBJECT---------------------------------------
-sub create {
-	#create the file (overwrite)
-	my $ecaengine = shift;
+###########################################################
+#
+#		 ECAENGINE OBJECT functions
+#
+###########################################################
 
-	#get path to file
-	my $path = $ecaengine->{ecsfile};
-	#print "---EcaEngine:create\n path = $path\n";
-	die "no path to create ecs file\n" unless (defined $path);
-	#create an empty file (overwrite existing)
-	open my $handle, ">$path" or die $!;
-	#update mixer status
-	$ecaengine->{status} = "new";
-	#close file
-	close $handle;
-}
-sub add_header {
-	my $ecaengine = shift;
+sub new {
+	my $class = shift;
+	my $ecsfilepath = shift;
+	my $enginename = shift;
+	die "EcaEngine Error: can't create ecs engine without a path\n" unless $ecsfilepath;
+	die "EcaEngine Error: can't create ecs engine without a name\n" unless $enginename;
+	
+	my $ecaengine = {
+		"ecsfile" => $ecsfilepath,
+		"name" => $enginename
+	};
+	bless $ecaengine, $class;
 
-	my $name = $ecaengine->{name};
-	my $header = "#GENERAL\n";
-	$header .= "-b:".$ecaengine->{buffersize} if $ecaengine->{buffersize};
-	$header .= " -r:".$ecaengine->{realtime} if $ecaengine->{realtime};
-	my @zoptions = split(",",$ecaengine->{z});
-	foreach (@zoptions) {
-		$header .= " -z:".$_;
-	}
-	$header .= " -n:\"$name\"";
-	$header .= " -z:mixmode,".$ecaengine->{mixmode} if $ecaengine->{mixmode};
-	$header .= " -G:jack,$name,notransport" if ($ecaengine->{jack_sync} == 0);
-	$header .= " -G:jack,$name,sendrecv" if ($ecaengine->{jack_sync});
-	$header .= " -Md:".$ecaengine->{midi_port} if $ecaengine->{midi_port};
-	#add to tructure
-	$ecaengine->{header} = $header;
-	#update status
-	$ecaengine->{status} = "header";
+	return $ecaengine;
 }
 
-#--------------------ENGINE FILE---------------------------------------
+###########################################################
+#
+#		 ECAENGINE FILE functions
+#
+###########################################################
+
 sub CreateEcsFile {
 	my $ecaengine = shift;
-	my $ecsfilepath = shift;
 
-	#add path to ecasound info
-	$ecaengine->{ecsfile} = $ecsfilepath;
 	#create the file
-	$ecaengine->create;
+	$ecaengine->ecs_create;
 	#add ecasound header to file
-	$ecaengine->build_header;
-	#get chains from structure
-	$ecaengine->get_ecasoundchains;
+	$ecaengine->ecs_add_header;
 	#add chains to file
 	$ecaengine->add_chains;
 	#TODO verify is the generated file can be opened by ecasound
 	#$ecaengine->verify;
 }
-sub build_header {
+sub ecs_create {
+	#create the file (overwrite)
 	my $ecaengine = shift;
 
-	#print "--EcaEngine:build_header\n header = $header\n";
-	die "ecs file has not been created" if ($ecaengine->{status} eq "notcreated");
+	#create an empty file (overwrite existing)
+	open my $handle, ">$ecaengine->{ecsfile}" or die $!;
+	#update mixer status
+	$ecaengine->{status} = "new";
+	#close file
+	close $handle;
+}
+sub ecs_add_header {
+	my $ecaengine = shift;
+	
+	#build header
+	my $header = "#GENERAL\n";
+	$header .= "-b:".$ecaengine->{buffersize} if $ecaengine->{buffersize};
+	$header .= " -r:".$ecaengine->{realtime} if $ecaengine->{realtime};
+	my @zoptions = split(",",$ecaengine->{z}) if $ecaengine->{z};
+	foreach (@zoptions) {
+		$header .= " -z:".$_;
+	}
+	$header .= " -n:\"$ecaengine->{name}\"";
+	$header .= " -z:mixmode,".$ecaengine->{mixmode} if $ecaengine->{mixmode};
+	$header .= " -G:jack,$ecaengine->{name},notransport" if (!$ecaengine->{jack_sync});
+	$header .= " -G:jack,$ecaengine->{name},sendrecv" if ($ecaengine->{jack_sync});
+	$header .= " -Md:".$ecaengine->{midi_port} if $ecaengine->{midi_port};
+	$header .= "\n";
+
 	#open file handle
 	open my $handle, ">>$ecaengine->{ecsfile}" or die $!;
 	#append to file
-	print $handle $ecaengine->{header} or die $!;
+	print $handle $header or die $!;
 	#close file
 	close $handle or die $!;
 	#update status
 	$ecaengine->{status} = "header";
 }
-sub get_ecasoundchains {
+sub add_chains {
 	my $ecaengine = shift;
+	die "EcaEngine Error: can't add chains to a file without header\n" unless $ecaengine->{status} eq "header";
 
+	#get all chains from structure
 	my @table;
-
 	if (defined $ecaengine->{i_chains}) {
 		push @table , "\n#INPUTS\n";
 		push @table , @{$ecaengine->{i_chains}};
@@ -103,16 +112,10 @@ sub get_ecasoundchains {
 		delete $ecaengine->{io_chains};
 	}
 
-	#update structure
-	@{$ecaengine->{all_chains}} = @table;
-}
-sub add_chains {
-	my $ecaengine = shift;
-
 	#open file in add mode
 	open my $handle, ">>$ecaengine->{ecsfile}" or die $!;
 	#append to file
-	print $handle "$_\n" for @{$ecaengine->{all_chains}};
+	print $handle "$_\n" for @table;
 	#close file
 	close $handle or die $!;
 	#update status
@@ -123,7 +126,7 @@ sub verify {
 	#check if chainsetup file is valid
 	my $ecaengine = shift;
 	unless ($ecaengine->{status} eq "created") {
-		warn "cannot verify an ecs file not containing chains\n";
+		warn "EcaEngine Error: cannot verify an ecs file not containing chains\n";
 		return;
 	}
 	#TODO if possible open it with ecasound and check return code
@@ -131,7 +134,12 @@ sub verify {
 	$ecaengine->{status} = "verified";
 }
 
-#--------------------STATUS---------------------------------------
+###########################################################
+#
+#		 ECAENGINE STATUS functions
+#
+###########################################################
+
 sub is_ready {
 	#check if chainsetup is connected and engine launched
 	my $ecaengine = shift;
@@ -152,6 +160,12 @@ sub is_running {
 	# print "***\n $ps \n***\n";
 	($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) ? return 1 : return 0;
 }
+
+###########################################################
+#
+#		 ECAENGINE COMMUNICATION functions
+#
+###########################################################
 
 sub tcp_send {
 	#send a tcp message to the engine
@@ -179,7 +193,6 @@ sub reply_is_ok { #verify if there is an error mentioned, drop the first line, r
 	return 1;
 }
 
-#--------------------COMMUNICATION---------------------------------------
 sub init_socket {
 	my $ecaengine = shift;	
 	my $port = shift;
@@ -242,7 +255,12 @@ sub SendCmdGetReply {
 	
 }
 
-#--------------------FUNCTIONS---------------------------------------
+###########################################################
+#
+#		 ECAENGINE CHAINS functions
+#
+###########################################################
+
 
 sub LoadFromFile {
 	my $ecaengine = shift;
@@ -296,7 +314,12 @@ sub get_selected_effect {
 	return $ecaengine->SendCmdGetReply("cop-selected");
 }
 
-#--------------Live functions-------------------------
+###########################################################
+#
+#		 ECAENGINE LIVE functions
+#
+###########################################################
+
 sub mute_channel {
 	my $ecaengine = shift;
 	my $trackname = shift;

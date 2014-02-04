@@ -20,7 +20,7 @@ use Config::IniFiles;
 #project ini file is in the current folder
 my %ini_project;
 tie %ini_project, 'Config::IniFiles', ( -file => "project.ini" );
-die "reading project ini file failed\n" until %ini_project;
+die "reading project ini file failed\n" unless %ini_project;
 my $ini_project_ref = \%ini_project;
 
 #------------Create project structure----------------------------

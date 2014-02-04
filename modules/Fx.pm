@@ -10,6 +10,12 @@ use Data::Dumper;
 
 my $debug = 0;
 
+###########################################################
+#
+#		 FX OBJECT functions
+#
+###########################################################
+
 sub new {
 	my $class = shift;
 	my $effect = shift;

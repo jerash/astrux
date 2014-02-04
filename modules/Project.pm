@@ -10,7 +10,11 @@ use Song;
 use Plumbing;
 use Bridge;
 
-#-------------------------------------GENERATION-----------------------------------------------------
+###########################################################
+#
+#		 PROJECT OBJECT functions
+#
+###########################################################
 
 sub new {
 	my $class = shift;
@@ -50,19 +54,25 @@ sub init {
 	$project->AddOscMidiBridge;
 }
 
+###########################################################
+#
+#		 PROJECT ADD functions
+#
+###########################################################
+
 sub AddMixers {
 	my $project = shift;
 
 	#build path to mixers files
 	my $mixers_path = $project->{project}{base_path} . "/" . $project->{project}{mixers_path};
+	my $output_path = $project->{project}{base_path} . "/" . $project->{project}{output_path};
 	
 	#iterate through each mixer file
 	my @files = <$mixers_path/*.ini>;
 	foreach my $mixerfile (@files) {
-
 		#create mixer
 	 	print "Project: Creating mixer from $mixerfile\n";
-	 	my $mixer = Mixer->new($mixerfile);
+	 	my $mixer = Mixer->new($mixerfile,$output_path);
 		$project->{mixers}{$mixer->{engine}{name}} = $mixer;
 	}
 
@@ -92,7 +102,7 @@ sub AddSongs {
 		my $song = Song->new($folder);
 
 		#update the project with song info
-		$project->{songs}{$song->{song_globals}{name}} = $song;
+		$project->{songs}{$song->{name}} = $song;
 	}
 }
 
@@ -117,6 +127,12 @@ sub AddPlumbing {
 	$project->{connections}{rules} = \@plumbing_rules;
 }
 
+###########################################################
+#
+#		 PROJECT FILE functions
+#
+###########################################################
+
 sub GenerateFiles {
 	my $project = shift;
 
@@ -125,40 +141,34 @@ sub GenerateFiles {
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		#shortcut name
 		my $mixer = $project->{mixers}{$mixername};
-
 		#check which type of mixer it is
 		if ($mixer->is_ecasound) {
-			#create path to ecs file
-			my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/".$mixer->{engine}{name} . ".ecs";
+# 			#create path to ecs file
+# 			my $ecsfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/"."$mixername.ecs";
+# use Data::Dumper;
+# print Dumper $mixer;
+# 			#add ecasound engine
+# 			$mixer->{engine} = EcaEngine->new($ecsfilepath,$mixername);
 			#create the mixer file
-			$mixer->{engine}->CreateEcsFile($ecsfilepath);
+			$mixer->{engine}->CreateEcsFile;
 		}
 		elsif ($mixer->is_nonmixer) {
 			#TODO
 		}
 	}
 
+	#----------------SONGS FILES------------------------
 	#for each song, create the ecasound player file		
 	foreach my $songname (keys %{$project->{songs}}) {
 		#shorcut name
 		my $song = $project->{songs}{$songname};
 		#create path to ecs file
 		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
-		#add path to song info
-		$song->{ecasound}{ecsfile} = $ecsfilepath;
-		#bless structure to access data with module functions
-		bless $song->{ecasound} , EcaEngine::;
+		#add ecasound engine
+		$song->{ecasound} = EcaEngine->new($ecsfilepath,$songname);
 		#create the file
-		$song->{ecasound}->create;
-		#copy header from player mixer
-		if (defined $project->{mixers}{players}{engine}{header}) {
-			$song->{ecasound}{header} = $project->{mixers}{players}{engine}{header};
-			#replace -n:"players" with song name to have unique chainsetup name
-			$song->{ecasound}{header} =~ s/-n:\"players\"/-n:\"$songname\"/;
-		}
-		else {
-			die "Error : can't find a player mixer header\n";
-		}
+		$song->{ecasound}->CreateEcsFile;
+#TODOING
 		#add ecasound header to file
 		$song->build_song_header;
 		#add chains to file
@@ -272,7 +282,12 @@ sub LoadFromFile {
 
 }
 
-#-------------------------------------LIVE COMMANDS-----------------------------------------------------
+###########################################################
+#
+#		 PROJECT LIVE functions
+#
+###########################################################
+
 sub StartEngines {
 	my $project = shift;
 	#reload if $engine->is_running

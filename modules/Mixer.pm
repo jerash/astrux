@@ -12,18 +12,28 @@ use NonStrip;
 
 my $debug = 0;
 
+###########################################################
+#
+#		 MIXER OBJECT functions
+#
+###########################################################
+
 sub new {
 	my $class = shift;
 	my $ini_mixer_file = shift;
+	my $output_path = shift;
+	die "Mixer Error: can't create mixer without ini file\n" unless $ini_mixer_file;
+	die "Mixer Error: can't create mixer without output path\n" unless $output_path;
 	
 	my $mixer = {
-		"engine" => {},
-		"IOs" => {}
+		"output_path" => $output_path
+		# "engine" => {},
+		# "IOs" => {}
 	};
 	bless $mixer, $class;
 
-	#if parameter exist, fill from ini file and create the mixer file
-	$mixer->init($ini_mixer_file) if defined $ini_mixer_file;
+	#fill from ini file and create the mixer file
+	$mixer->init($ini_mixer_file);
 
 	return $mixer;
 }
@@ -35,35 +45,32 @@ sub init {
 	use Config::IniFiles;
 	#ouverture du fichier ini de configuration des channels
 	tie my %mixer_io, 'Config::IniFiles', ( -file => $ini_mixer_file );
-	die "reading I/O ini file failed\n" until %mixer_io;
+	die "Mixer Error: reading I/O ini file failed\n" unless %mixer_io;
 	my $mixer_io_ref = \%mixer_io;
 
-	#verify in [mixer_globals] section exists
+	#verify if [mixer_globals] section exists
 	if (!$mixer_io_ref->{mixer_globals}) {
-		die "missing [mixer_globals] section in $ini_mixer_file mixer file\n";
+		die "Mixer Error: missing [mixer_globals] section in $ini_mixer_file mixer file\n";
 	}
-
-	#update mixer structure with globals
 	my %globals = %{$mixer_io_ref->{mixer_globals}};
-	#add global info info to mixer
-	$mixer->{engine} =\%globals;
-	$mixer->{engine}{status} = "notcreated";
-	#remove mixer globals from IO hash to prevent further ignore
-	delete $mixer_io_ref->{mixer_globals};
 
 	#test wich engine we use
 	if ($globals{engine} eq "ecasound") {
-		#bless structure to access data with module functions
-		bless $mixer->{engine} , EcaEngine::;
-		#add ecasound header info
-		$mixer->{engine}->add_header;
+		#create ecsfile path
+		my $ecsfile = $mixer->{output_path} . "/" . $globals{name} . ".ecs";
+		$mixer->{engine} = EcaEngine->new($ecsfile,$globals{name});
 	}
 	elsif ($globals{engine} eq "non-mixer") {
 		#bless structure to access data with module functions
-		bless $mixer->{engine} , NonEngine::;
-
+		$mixer->{engine} = NonEngine->new($mixer->{output_path},$globals{name});
 		#TODO nonmixer globals
 	}
+
+	#merge global info info to created engine
+	$mixer->{engine}{$_} = $globals{$_} for (keys %globals);
+
+	#remove mixer globals from IO hash to prevent further ignore
+	delete $mixer_io_ref->{mixer_globals};
 
 	#add IO info to mixer
 	$mixer->{IOs} = $mixer_io_ref;
@@ -76,7 +83,13 @@ sub init {
 	#remove IO info not necessary anymore
 	delete $mixer->{IOs};
 }
-#--------------Create functions-------------------------
+
+###########################################################
+#
+#		 MIXER CREATE functions
+#
+###########################################################
+
 sub CreateMainMixer {
 	my $mixer = shift;
 	$mixer->CreateEcaMainMixer if ($mixer->is_ecasound);
@@ -93,7 +106,12 @@ sub CreatePlayers {
 	$mixer->CreateEcaPlayers;
 }
 
-#--------------Test functions-------------------------
+###########################################################
+#
+#		 MIXER TEST functions
+#
+###########################################################
+
 sub is_main {
 	my $mixer = shift;
 	return 1 if $mixer->{engine}{type} eq "main";
@@ -120,7 +138,12 @@ sub is_nonmixer {
 	return 0;
 }
 
-#--------------Utility functions-------------------------
+###########################################################
+#
+#		 MIXER UTILITY functions
+#
+###########################################################
+
 sub get_name {
 	my $mixer = shift;
 	return $mixer->{engine}{name};

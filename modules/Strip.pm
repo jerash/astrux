@@ -283,9 +283,9 @@ sub is_submix_out {
 	return 0;
 }
 
-sub is_player_track {
+sub is_audio_player_track {
 	my $io = shift;
-	return 1 if ($io->{type} eq "player");
+	return 1 if ($io->{type} eq "audio_player");
 	return 0;
 }
 sub is_file_player {

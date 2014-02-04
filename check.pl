@@ -28,7 +28,7 @@ my $numberofsongs = @songlist;
 print $numberofsongs . " songs have been found\n";
 
 #verify if there is something to be done
-die "No songs have been found, exiting\n" until ($numberofsongs > 0);
+die "No songs have been found, exiting\n" unless ($numberofsongs > 0);
 
 #verify songs integrity
 my $index=0;

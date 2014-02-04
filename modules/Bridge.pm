@@ -11,6 +11,18 @@ use POSIX qw(ceil floor); #for floor/ceil function
 
 my $debug = 0;
 
+###########################################################
+#
+#		 BRIDGE OBJECT functions
+#
+###########################################################
+
+###########################################################
+#
+#		 BRIDGE FILE functions
+#
+###########################################################
+
 sub create  {
 	my $bridge = shift;
 
@@ -221,7 +233,7 @@ sub Refresh {
 			my @outCC = ($channel-1, '','','',$CC,$outval);
 			warn "could not send midi data\n" unless &SendCC(\@outCC);
 		}
-		#TBD check for non midi type !
+		#TODO check for non midi type !
 	}
 }
 

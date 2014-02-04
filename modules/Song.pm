@@ -10,12 +10,21 @@ use Audio::SndFile;
 
 use Data::Dumper;
 
+###########################################################
+#
+#		 SONG OBJECT functions
+#
+###########################################################
+
 sub new {
 	my $class = shift;
 	my $folder = shift;
+	die "Song Error: can't create song without a folder path\n" unless $folder;
 
 	#init structure
-	my $song = {};
+	my $song = {
+		"path" => $folder
+	};
 	
 	bless $song,$class;
 
@@ -43,45 +52,54 @@ sub init {
 
 	#ouverture du fichier ini de configuration des channels
 	tie my %songinfo, 'Config::IniFiles', ( -file => $ini_file );
-	die "reading I/O ini file failed\n" until %songinfo;
+	die "Song Error: reading I/O ini file failed\n" unless %songinfo;
 	my $songinfo_ref = \%songinfo;
 
 	#verify in [song_globals] section exists
 	if (!$songinfo_ref->{song_globals}) {
-		die "missing [song_globals] section in $ini_file song file\n";
+		die "Song Error: missing [song_globals] section in $ini_file song file\n";
 	}
 
-	#update song structure
-	%{$song} = %songinfo;
+	#update song structure with globals
+	foreach my $key (keys $songinfo_ref->{song_globals}) {
+		$song->{$key} = $songinfo_ref->{song_globals}{$key};
+	}
+	delete $songinfo_ref->{song_globals};
 
-	#TODO consider to add the channels info at ini creation !!
 	#for each player slot, check file parameters for mono/stereo
-	foreach my $section (keys %{$song}) {
+	foreach my $section (keys %{$songinfo_ref}) {
 
-		#only match audio players, and catch payer slot number
-		next unless (($section =~ /^players_slot_(\d+)/) and ($song->{$section}{type} eq "player"));
-		my $slotnumber = $1;
-		#print "matched:$section with number $slotnumber\n";
+		# match audio players, and catch player slot number
+		if ($songinfo_ref->{$section}{type} eq "audio_player") {
+			die "Song Error: Bad format on section name : $section\n" unless $section =~ /^players_slot_(\d+)/;
+			my $slotnumber = $1;
+			$song->{audio_files}{$section} = $songinfo_ref->{$section};
+			$song->{audio_files}{$section}{slot} = $slotnumber; 
+		}
+		# match midi players, and catch player slot number
+		if ($songinfo_ref->{$section}{type} eq "midi_player") {
+			die "Song Error: Bad format on section name : $section\n" unless $section =~ /^MIDI_(\d+)/;
+			my $slotnumber = $1;
+			$song->{midi_files}{$section} = $songinfo_ref->{$section};
+			$song->{midi_files}{$section}{slot} = $slotnumber; 
+		}
+		# match sampler
+		if ($songinfo_ref->{$section}{type} eq "sampler") {
+			$song->{sampler_files}{$section} = $songinfo_ref->{$section};
+		}
 
-		#create path to file
-		my $filename = $folder."/".$song->{$section}{filename};
-		
-		#open file
-		my $wavfile = Audio::SndFile->open("<","$filename");
-		
-		#TODO check samplerate and bit definition, but ecasound can deal with it correctly for now
-		
-		#add number of channels to structure
-		$song->{$section}{channels} = $wavfile->channels;
-		print "   |_found ".$song->{$section}{channels}." channel(s) in wav file $filename\n";
-
-		#create ecs line for mono file
-		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 1;
-		#create ecs line for stereo file
-		$song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 2;
-		#TODO evaluate beter integration
+		# #create ecs line for mono file
+		# $song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 1;
+		# #create ecs line for stereo file
+		# $song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 2;
 	}
 }
+
+###########################################################
+#
+#			ECASOUND functions
+#
+###########################################################
 
 sub build_song_header {
 	my $song = shift;
