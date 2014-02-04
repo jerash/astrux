@@ -13,11 +13,11 @@ my $debug = 0;
 sub new {
 	my $class = shift;
 	my $effect = shift;
-	my $km = shift;
+	my $midi_km = shift;
 	
 	my $ecafx = {
 		"fxname" => $effect,
-		"generatekm" => $km,
+		"generate_midi_km" => $midi_km,
 		"ecsline" => "",
 		"CCs" => ""
 	};
@@ -45,7 +45,7 @@ sub init {
 		$ecafx->{ecsline} = " -pn:$effect," . $defaults;
 
 		#ajouter les contrôleurs midi ?
-		$ecafx->Generate_km if ($ecafx->{generatekm});
+		$ecafx->Generate_midi_km if ($ecafx->{generate_midi_km});
 	}
 	
 }
@@ -158,7 +158,7 @@ sub getnextCC {
 	return($CC,$channel);
 }
 
-sub Generate_km {
+sub Generate_midi_km {
 	#grab plugin name in parameter
 	my $ecafx = shift;
 	my $plugin = shift;

@@ -36,9 +36,9 @@ sub add_header {
 	}
 	$header .= " -n:\"$name\"";
 	$header .= " -z:mixmode,".$ecaengine->{mixmode} if $ecaengine->{mixmode};
-	$header .= " -G:jack,$name,notransport" if ($ecaengine->{sync} == 0);
-	$header .= " -G:jack,$name,sendrecv" if ($ecaengine->{sync});
-	$header .= " -Md:".$ecaengine->{midi} if $ecaengine->{midi};
+	$header .= " -G:jack,$name,notransport" if ($ecaengine->{jack_sync} == 0);
+	$header .= " -G:jack,$name,sendrecv" if ($ecaengine->{jack_sync});
+	$header .= " -Md:".$ecaengine->{midi_port} if $ecaengine->{midi_port};
 	#add to tructure
 	$ecaengine->{header} = $header;
 	#update status
@@ -147,7 +147,7 @@ sub is_ready {
 sub is_running {
 	#check if an ecasound engine is running on the engine's defined port
 	my $ecaengine = shift;
-	my $port = $ecaengine->{port};
+	my $port = $ecaengine->{tcp_port};
 	my $ps = qx(ps ax);
 	# print "***\n $ps \n***\n";
 	($ps =~ /ecasound/ and $ps =~ /--server/ and $ps =~ /tcp-port=$port/) ? return 1 : return 0;
@@ -158,7 +158,7 @@ sub tcp_send {
 	my $ecaengine = shift;
 	my $command = shift;
 	#get answer
-	my $reply = qx(echo $command | nc localhost $ecaengine->{port} -C);
+	my $reply = qx(echo $command | nc localhost $ecaengine->{tcp_port} -C);
 	return reply_is_ok($reply);
 }
 sub reply_is_ok { #verify if there is an error mentioned, drop the first line, returns an array of lines

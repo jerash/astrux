@@ -281,7 +281,7 @@ sub StartEngines {
 		print " - mixer $mixername\n";
 		my $mixerfile = $project->{mixers}{$mixername}{engine}{ecsfile};
 		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
-		my $port = $project->{mixers}{$mixername}{engine}{port};
+		my $port = $project->{mixers}{$mixername}{engine}{tcp_port};
 		
 		#if mixer is already running on same port, then reconfigure it
 		if  ($project->{mixers}{$mixername}{engine}->is_running) {

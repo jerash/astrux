@@ -127,11 +127,19 @@ sub get_name {
 }
 sub get_port {
 	my $mixer = shift;
-	return $mixer->{engine}{port};
+	return $mixer->{engine}{tcp_port};
 }
 sub is_midi_controllable {
 	my $mixer = shift;
-	return $mixer->{engine}{generatekm};
+	return 1 if ($mixer->{engine}{control} =~ /midi/);
+}
+sub is_osc_controllable {
+	my $mixer = shift;
+	return 1 if ($mixer->{engine}{control} =~ /osc/);
+}
+sub is_tcp_controllable {
+	my $mixer = shift;
+	return 1 if ($mixer->{engine}{control} =~ /tcp/);
 }
 
 ###########################################################
@@ -161,7 +169,8 @@ sub CreateEcaMainMixer {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = Strip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new;
+		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
@@ -208,11 +217,8 @@ sub CreateEcaMainMixer {
 				#create a channel strip
 				my $strip = Strip->new;
 	
-				#verify if the channel is defined using midi control
-				my $km = $mixer->{channels}{$channel}{generatekm};
-	
-				#init the aux strip
-				$strip->eca_aux_init($km);
+				#init the aux strip, & verify if the mixer is defined using midi control
+				$strip->eca_aux_init($mixer->is_midi_controllable);
 	
 				#add aux route strip to mixer
 				$mixer->{channels}{$channel}{aux_route}{$bus} = $strip;
@@ -268,7 +274,8 @@ sub CreateEcaSubmix {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = Strip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new;
+		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
@@ -306,7 +313,8 @@ sub CreateEcaPlayers {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = Strip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new;
+		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
@@ -341,7 +349,8 @@ sub CreateNonMainMixer {
 		next unless $mixer->{IOs}{$name}{status} eq "active";
 
 		#create the channel strip
-		my $strip = Strip->new($mixer->{IOs}{$name});
+		my $strip = Strip->new;
+		$strip->($mixer->{IOs}{$name},$mixer->is_midi_controllable);
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;

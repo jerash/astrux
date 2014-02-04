@@ -41,7 +41,10 @@ sub init {
 	#fill the strip object with the passed hash info
 	my $strip = shift;
 	my $IOsection = shift;
-	return unless defined $IOsection;
+	my $midi_km = shift;
+	
+	die "Error: can't init a strip without info\n" unless defined $IOsection;
+	
 	#don't insert channel if inactive
 	return unless $IOsection->{status} eq "active";
 
@@ -51,7 +54,6 @@ sub init {
 	$strip->{can_be_backed} = $IOsection->{can_be_backed} if $IOsection->{can_be_backed};
 	$strip->{group} = $IOsection->{group} if $IOsection->{group};
 	$strip->{type} = $IOsection->{type} if $IOsection->{type};
-	$strip->{generatekm} = $IOsection->{generatekm} if $IOsection->{generatekm};
 	$strip->{return} = $IOsection->{return} if $IOsection->{return};
 	$strip->{channels} = $IOsection->{channels} if $IOsection->{channels};
 	$strip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
@@ -75,9 +77,6 @@ sub init {
 	#add the connect channel to structure
 	$strip->{connect} = \@tab;
 	
-	#verify if we generate km controllers (midi)
-	my $km = $strip->{generatekm};
-
 	#get list of inserts
 	my @effects = split ',',$IOsection->{insert} if $IOsection->{insert};	
 	
@@ -90,14 +89,14 @@ sub init {
 		if ( $effect eq "panvol" ) {
 			#add pan and volume controls
 			if ($strip->is_mono) {
-					$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$km);
+					$strip->{inserts}{panvol} = EcaFx->new("mono_panvol",$midi_km);
 			}
 			elsif ($strip->is_stereo) {
-				$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+				$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$midi_km);
 			}
 		}
 		else{
-			$strip->{inserts}{$effect} = EcaFx->new($effect,$km);
+			$strip->{inserts}{$effect} = EcaFx->new($effect,$midi_km);
 		}
 		#TODO elsif ladspa number ID for non mixer
 
@@ -114,7 +113,7 @@ sub init {
 ###########################################################
 sub eca_aux_init {
 	my $strip = shift;
-	my $km = shift;
+	my $midi_km = shift;
 
 	#init values
 	$strip->{type} = "route";
@@ -126,7 +125,7 @@ sub eca_aux_init {
 	delete $strip->{can_be_backed};
 
 	#add pan and volume
-	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$km);
+	$strip->{inserts}{panvol} = EcaFx->new("st_panvol",$midi_km);
 }
 
 sub get_eca_chain_add_inserts {

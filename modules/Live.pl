@@ -138,7 +138,7 @@ sub Start {
 
 	# load song chainsetups + dummy
 	#--------------------------------
-	my $playersport = $project->{mixers}{players}{engine}{port};
+	my $playersport = $project->{mixers}{players}{engine}{tcp_port};
 	foreach my $song (@songkeys) {
 		#load song chainsetup
 		print "Loading song $song\n"; 
