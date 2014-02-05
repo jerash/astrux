@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use lib '/home/seijitsu/astrux/modules';
+# use lib '/home/seijitsu/astrux/modules';
 use Project;
 
 use Data::Dumper;
@@ -27,7 +27,8 @@ elsif ($#ARGV+1 eq 1) {
 	print "Opening : $infile\n";
 }
 die "could not load project file\n" if $infile eq "";
-#creating the project hash from the file
+
+#create the ini hash from the file
 my %ini_project;
 tie %ini_project, 'Config::IniFiles', ( -file => $infile );
 die "reading project ini file failed\n" unless %ini_project;
@@ -48,9 +49,6 @@ $Live->SaveTofile("$Live->{project}{name}");
 print " 
 ---------------------------
 -- Live Project Saved :) --
----------------------------\n
-";
+---------------------------\n";
 
 #print Dumper $Live;
-
-print "\n";
