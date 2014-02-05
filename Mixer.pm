@@ -426,7 +426,8 @@ sub CreateNonFiles {
 	# first have an id counter
 	my $id;
 	# then check for number of aux outputs
-	my @auxes = ();
+	my %auxes;
+	my $auxletter = 'A';
 	# then check for groups
 	my %groups;
 	#then have a strip id reminder
@@ -436,7 +437,10 @@ sub CreateNonFiles {
 
 	foreach my $channel (sort (keys $mixer->{channels})) {
 		# add to auxes if it should be
-		push @auxes, $channel if $mixer->{channels}{$channel}->is_aux;
+		if ($mixer->{channels}{$channel}->is_aux) {
+			$auxes{$channel} = "aux-$auxletter";
+			$auxletter++;
+		}
 		# add new group if doesn't exist
 		my $group = $mixer->{channels}{$channel}{group};
 		$groups{$group} = &get_next_non_id unless (exists $groups{$group});
@@ -465,13 +469,13 @@ sub CreateNonFiles {
 		$line .= ":width \"narrow\" :tab \"signal\" :color 878712457 ";
 		$line .= ":gain_mode 0 :mute_mode 0 ";
 		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} ";
-	#TODO deal with autoinput if we're a mainout
+		#autoconnect mains out
 		if ($mixer->{channels}{$channel}->is_main_out) {
 			$line .= ":auto_input \"inputs/mains\" ";
 		}
-	#TODO deal with autoinput if we're a monitor
+		#autoconnect auxes
 		elsif ($mixer->{channels}{$channel}->is_hardware_out) {
-			$line .= ":auto_input \"inputs/aux-A\" ";
+			$line .= ":auto_input \"inputs/$auxes{$channel}\" ";
 		}
 		else {
 			$line .= ":auto_input \"\" ";
@@ -513,16 +517,17 @@ sub CreateNonFiles {
 			push @snapshot,$line;		
 		}
 		
-		#AUX
-		foreach my $aux (@auxes) {
+		#AUX module
+		my $auxnumber = 0;
+		foreach my $aux (keys %auxes) {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
-			unless ($aux eq $channel) {
-				$line = "\tAUX_Module $id create :number 0 :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+			if ($mixer->{channels}{$channel}->is_hardware_in) {
+				$line = "\tAUX_Module $id create :number $auxnumber :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
 				push @snapshot,$line;
 			}	
-
+			$auxnumber++;
 		}
 
 		#Meter module

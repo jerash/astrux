@@ -3,7 +3,8 @@ build the complete project base path on generate
 
 can we get non-mixer channel meter info from osc ?
 
-bug non-mixer with autoroute from aux
+bug non-mixer with autoroute from multiple auxes, not coherent routes even if snapshot file says it correctly
+bug non-mixer when adding a new aux before an existing aux, will also autoconnect to same ports
 
 on personal submix remotes, add "save global preset" & "save song preset"
 
