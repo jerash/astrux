@@ -257,7 +257,12 @@ sub is_main_out {
 	return 1 if ($io->{type} eq "main_hardware_out");
 	return 0;
 }
-
+sub is_aux {
+	my $io = shift;
+	return 1 if ($io->{type} eq "send_hardware_out");
+	return 1 if ($io->{type} eq "bus_hardware_out");
+	return 0;
+}
 sub is_send {
 	my $io = shift;
 	return 1 if ($io->{type} eq "send_hardware_out");

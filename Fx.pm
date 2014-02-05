@@ -8,7 +8,7 @@ use feature 'state';
 
 use Data::Dumper;
 #http://search.cpan.org/~jdiepen/Audio-LADSPA-0.018/UserGuide/UserGuide.pod
-use Audio::LADSPA;
+# use Audio::LADSPA;
 
 my $debug = 0;
 

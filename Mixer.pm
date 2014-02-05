@@ -8,6 +8,7 @@ use warnings;
 use EcaEngine;
 use Strip;
 use NonEngine;
+use feature 'state';
 
 my $debug = 0;
 
@@ -361,7 +362,6 @@ sub BuildNonMainMixer {
 	my $mixer = shift;
 	
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
-	my @ios;
 
 	#add channels defined in the IO to mixer
 	foreach my $name (keys %{$mixer->{IOs}} ) {		
@@ -376,29 +376,12 @@ sub BuildNonMainMixer {
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 	}
-
-		# #==INPUTS,RETURNS,SUBMIX_IN,PLAYERS_IN==
-		# if ( $strip->is_main_in ) {
-		# 	#create ecasound chain
-		# 	push( @ios , $strip->get_non_input_chain($name) );
-		# }
-		# #==BUS OUTPUTS AND SEND==
-		# elsif ( $strip->is_hardware_out ) {
-		# 	push( @ios , $strip->get_non_bus_input_chain($name) );
-		# }
-		# else {
-		# 	warn "bad IO definition in main mixer with type \n" . $strip->{type};
-		# }
-
-	#add ios to engine info
-	@{$mixer->{ios}} = @ios;
-
 }
+
 sub BuildNonSubmix {
 	my $mixer = shift;
 	
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
-	my @ios;
 
 	#add channels defined in the IO to mixer
 	foreach my $name (keys %{$mixer->{IOs}} ) {		
@@ -413,10 +396,154 @@ sub BuildNonSubmix {
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 	}
+}
 
-	#add ios to engine info
-	@{$mixer->{ios}} = @ios;
+sub CreateNonFiles {
+	my $mixer = shift;
 
+	#path where to store the nonmixer files
+	my $mixerpath = $mixer->{output_path} . "/" . $mixer->{engine}{name};
+	print "mixer path is : $mixerpath\n";
+	
+	#check if the folder already exists
+	if (! -d $mixerpath) {
+		print "nonmixer folder does not exists, creating\n";
+		mkdir $mixerpath;
+		die "Error: directry creation failed!\n" if (! -d $mixerpath);	
+	}
+
+	#create the non info files
+	foreach my $file (keys $mixer->{engine}{files}) {
+		my $filepath = $mixerpath . "/" . $file;
+		open FILE, ">$filepath" or die $!;
+		my $content = $mixer->{engine}{files}{$file};
+		print FILE $content if $content;
+		close FILE;
+	}
+	delete $mixer->{engine}{files};
+
+	# to build the snapshot file
+	# first have an id counter
+	my $id;
+	# then check for number of aux outputs
+	my @auxes = ();
+	# then check for groups
+	my %groups;
+	#then have a strip id reminder
+	my %stripid;
+	#then have a chain id reminder
+	my %chainid;
+
+	foreach my $channel (keys $mixer->{channels}) {
+		# add to auxes if it should be
+		push @auxes, $channel if $mixer->{channels}{$channel}->is_aux;
+		# add new groups if doesn't exist
+		my $group = $mixer->{channels}{$channel}{group};
+		$groups{$group} = &get_next_non_id unless (exists $groups{$group});
+	}
+
+	# then build the snapshot lines
+	my @snapshot;
+	#add {
+	push @snapshot, "{";
+	
+	#add groups
+	foreach my $group (keys %groups) {
+		push @snapshot, "\tGroup $groups{$group} create :name \"$group\"" ;
+	}
+
+	#add channels
+	foreach my $channel (keys $mixer->{channels}) {
+		my $line = "";
+
+		#Mixer Strip
+		#generate a 0x id
+		$id = &get_next_non_id;
+		$stripid{$channel} = $id;
+		$line = "\tMixer_Strip $id create :name \"$channel\" ";
+		$line .= ":width \"narrow\" :tab \"signal\" :color 878712457 ";
+		$line .= ":gain_mode 0 :mute_mode 0 ";
+		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} ";
+		$line .= ":auto_input \"\" ";
+		$line .= ":manual_connection 0";
+		push @snapshot,$line;
+
+		#Chain
+		#generate a 0x id
+		$id = &get_next_non_id;
+		$chainid{$channel} = $id;
+		$line = "\tChain $id create :strip $stripid{$channel} :tab \"chain\"";
+		push @snapshot,$line;
+		
+		#JACK module
+		#generate a 0x id
+		$id = &get_next_non_id;
+		#JACK_Module 0x3 create :parameter_values "0.000000:1.000000" :is_default 1 :chain 0x2 :active 1
+		$line = "\tJACK_Module $id create :parameter_values \"0.000000:1.000000\" :is_default 1 :chain $chainid{$channel} :active 1"
+			if ($mixer->{channels}{$channel}->is_mono);
+		#JACK_Module 0xF create :parameter_values "0.000000:2.000000" :is_default 1 :chain 0xE :active 1
+		$line = "\tJACK_Module $id create :parameter_values \"0.000000:2.000000\" :is_default 1 :chain $chainid{$channel} :active 1"
+			if ($mixer->{channels}{$channel}->is_stereo);
+		push @snapshot,$line;
+		
+		#Gain module
+		#generate a 0x id
+		$id = &get_next_non_id;
+		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
+		$line = "\tGain_Module $id create :parameter_values \"0.500000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
+		push @snapshot,$line;
+		
+		#Mono pan module
+		if ($mixer->{channels}{$channel}->is_mono) {
+			#generate a 0x id
+			$id = &get_next_non_id;
+			#Mono_Pan_Module 0x2B create :parameter_values "-1.000000" :is_default 0 :chain 0x2 :active 1
+			$line = "\tMono_Pan_Module $id create :parameter_values \"-1.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+			push @snapshot,$line;		
+		}
+		
+		#AUX
+		foreach (@auxes) {
+			#generate a 0x id
+			$id = &get_next_non_id;
+			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
+			$line = "\tAUX_Module $id create :number 0 :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+			push @snapshot,$line;		
+
+		}
+
+		#Meter module
+		#generate a 0x id
+		$id = &get_next_non_id;
+		#Meter_Module 0x5 create :is_default 1 :chain 0x2 :active 1
+		$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channel} :active 1";
+		push @snapshot,$line;
+		
+		#JACK module
+		#generate a 0x id
+		$id = &get_next_non_id;
+		#JACK_Module 0x6 create :parameter_values "2.000000:0.000000" :is_default 1 :chain 0x2 :active 1
+		$line = "\tJACK_Module $id create :parameter_values \"2.000000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
+		push @snapshot,$line;
+		
+	}
+	#add }
+	push @snapshot, "}";
+use Data::Dumper;
+print Dumper @snapshot;
+
+	#save the snapshot file
+	my $filepath = $mixerpath . "/snapshot";
+	open FILE, ">$filepath" or die $!;
+	print FILE "$_\n" for @snapshot;
+	close FILE;
+
+}
+
+sub get_next_non_id {
+	state $id = 0;
+	$id++;
+	return sprintf ("0x%x",$id);
 }
 
 1;

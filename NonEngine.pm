@@ -5,7 +5,7 @@ package NonEngine;
 use strict;
 use warnings;
 
-my $debug = 0;
+my $debug = 1;
 
 ###########################################################
 #
@@ -46,8 +46,6 @@ sub init {
 #
 ###########################################################
 
-sub CreateNonFiles {
-	# body...
-}
+
 
 1;

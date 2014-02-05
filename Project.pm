@@ -146,9 +146,7 @@ sub GenerateFiles {
 		#if ecasound
 		$mixer->{engine}->CreateEcsFile if ($mixer->is_ecasound);
 
-		if ($mixer->is_nonmixer) {
-			#TODO
-		}
+		$mixer->CreateNonFiles if ($mixer->is_nonmixer);
 	}
 
 	#----------------SONGS FILES------------------------
