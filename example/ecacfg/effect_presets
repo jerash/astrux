@@ -1,0 +1,130 @@
+#
+#    - voldb -
+#
+# simple volume control (dB)
+# --------------------------------------------------------------------------------
+voldb = -eadb:%1,0 \
+-pd:volume_control_db \
+-ppn:volume_db \
+-ppd:0 \
+-ppl:-60 \
+-ppu:6
+
+#
+#    - hpf -
+#
+# Highpass filter. Only frequencies above 'cutoff_freq' are passed through.
+# --------------------------------------------------------------------------------
+hpf = -efh:%1 \
+-pd:highpass_filter \
+-ppn:frequency \
+-ppd:60 \
+-ppl:20 \
+-ppu:200
+
+#
+#    - lpf -
+#
+# Lowpass filter. Only frequencies below 'cutoff_freq' are passed through.
+# --------------------------------------------------------------------------------
+lpf = -efl:%1 \
+-pd:lowpass_filter \
+-ppn:frequency \
+-ppd:23999 \
+-ppl:8000 \
+-ppu:23999
+
+#
+#    - mono_panvol -
+#
+# mono to stereo converter (1 channel to 2 channels) with pan and volume
+# --------------------------------------------------------------------------------
+mono_panvol = -chcopy:1.00,2.00 -epp:%1 -eadb:%2,0 \
+-pd:mono_to_stereo_with_pan_and_volume \
+-ppn:pan,volume_db \
+-ppd:50,-6 \
+-ppl:0,-60 \
+-ppu:100,6
+
+#
+#    - st_panvol -
+#
+# pan and volume for stereo track (init volume -6dB, pan center)
+# --------------------------------------------------------------------------------
+st_panvol = -epp:%1 -eadb:%2,0 \
+-pd:stereo_pan_and_volume \
+-ppn:pan,volume_db \
+-ppd:50,-6 \
+-ppl:0,-60 \
+-ppu:100,6
+
+#
+#    - st_panvol_silent -
+#
+# pan and volume for stereo track (init volume -60dB, pan center)
+# --------------------------------------------------------------------------------
+st_panvol_silent = -epp:%1 -eadb:%2,0 \
+-pd:stereo_pan_and_volume \
+-ppn:pan,volume_db \
+-ppd:50,-60 \
+-ppl:0,-60 \
+-ppu:100,6
+
+#
+#    - eqq - >> crash ecasound !!!
+#
+# three band eq with fixed crossover frequencies and gain controls
+# --------------------------------------------------------------------------------
+# %1 : low gain = 10<>600
+# %2 : mid gain = 10<>600
+# %3 : high gain = 10<>600
+eqq = -efl:400 -ea:%1 | -efh:400 -efb:1500,2200 -ea:%2 -efl:3500 | -efh:3500 -ea:%3
+
+#
+#    - eq3a -
+#
+# three band eq with lowpass and highpass, 
+# gain control (volume)
+# --------------------------------------------------------------------------------
+# %1 : low gain = -30<>12
+# %2 : mid gain = -30<>12
+# %3 : high gain = -30<>12
+eq3a = -el:triplePara,%1,110,0.5,0,300,1,%2,1500,3,0,2000,1,%3,3000,0.5 \
+-pd:3_band_eq \
+-ppn:low_gain,mid_gain,high_gain \
+-ppd:0,0,0 \
+-ppl:-30,-30,-30 \
+-ppu:12,12,12
+
+
+#
+#    - eq4b -
+#
+# four bands parametric eq (LADSPA)
+# --------------------------------------------------------------------------------
+# %1 "Filter" input, control, toggled, default 0
+# %2 "Gain" input, control, -20 to 20, default 0
+# %3 "Section 1" input, control, toggled, default 0
+# %4 "Frequency 1" input, control, 20 to 2000, default 200, logarithmic
+# %5 "Bandwidth 1" input, control, 0.125 to 8, default 1, logarithmic
+# %6 "Gain 1" input, control, -20 to 20, default 0
+# %7 "Section 2" input, control, toggled, default 0
+# %8 "Frequency 2" input, control, 40 to 4000, default 400, logarithmic
+# %9 "Bandwidth 2" input, control, 0.125 to 8, default 1, logarithmic
+# %10 "Gain 2" input, control, -20 to 20, default 0
+# %11 "Section 3" input, control, toggled, default 0
+# %12 "Frequency 3" input, control, 100 to 10000, default 1000, logarithmic
+# %13 "Bandwidth 3" input, control, 0.125 to 8, default 1, logarithmic
+# %14 "Gain 3" input, control, -20 to 20, default 0
+# %15 "Section 4" input, control, toggled, default 0
+# %16 "Frequency 4" input, control, 200 to 20000, default 2000, logarithmic
+# %17 "Bandwidth 4" input, control, 0.125 to 8, default 1, logarithmic
+# %18 "Gain 4" input, control, -20 to 20, default 0
+eq4b = -el:Parametric1,%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15,%16,%17,%18 \
+-pd:4_band_parametric_eq \
+-ppn:Eq_on,Eq_Gain,Band1_on,Band1_freq,Band1_width,Band1_gain,Band2_on,Band2_freq,Band2_width,Band2_gain,Band3_on,Band3_freq,Band3_width,Band3_gain,Band4_on,Band4_freq,Band4_width,Band4_gain \
+-ppd:0,0,0,200,1,0,0,400,1,0,0,1000,1,0,0,2000,1,0 \
+-ppl:0,-20,0,20,0.125,-20,0,40,0.125,-20,0,100,0.125,-20,0,200,0.125,-20 \
+-ppu:1,20,1,2000,8,20,1,4000,8,20,1,10000,8,20,1,20000,8,20
+
+

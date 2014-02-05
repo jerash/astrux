@@ -1,0 +1,7 @@
+#GENERAL
+-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"song2" -z:mixmode,avg -G:jack,song2,sendrecv -Md:alsaseq,astrux:0
+
+#PLAYERS
+
+-a:1 -i:/home/seijitsu/astrux/example/songs/song2/audiofile1.wav -chcopy:1,2 -o:jack,,slot_1
+-a:2 -i:/home/seijitsu/astrux/example/songs/song2/audiofile2.wav -o:jack,,slot_2

@@ -1,3 +1,5 @@
+verify that the project name doesn't have spaces, replace with _
+
 can we get non-mixer channel meter info from osc ?
 
 bug non-mixer with autoroute from aux

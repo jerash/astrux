@@ -1,0 +1,19 @@
+ecasound-version = 2.9.0
+resource-directory = /usr/share/ecasound
+resource-file-genosc-envelopes = generic_oscillators
+
+default-audio-format f32_le,2,48000
+resource-file-effect-presets /home/seijitsu/2.TestProject/ecacfg/effect_presets
+
+# settings decided at build time
+ladspa-plugin-directory = /usr/lib/ladspa
+
+# settings that affect creation of chainsetups (examples)
+#midi-device = rawmidi,/dev/midi
+#default-output = autodetect
+#default-audio-format = s16_le,2,44100,i
+#default-to-precise-sample-rates = false
+default-mix-mode = avg
+#bmode-defaults-nonrt = 1024,false,50,false,100000,true
+#bmode-defaults-rt = 1024,true,50,true,100000,true
+#bmode-defaults-rtlowlatency = 256,true,50,true,100000,false

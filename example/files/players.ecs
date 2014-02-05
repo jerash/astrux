@@ -1,0 +1,7 @@
+#GENERAL
+-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"players" -z:mixmode,avg -G:jack,players,sendrecv -Md:alsaseq,astrux:0
+
+#PLAYERS
+
+-a:slot_1 -f:f32_le,2,48000 -i:null -o:jack,,slot_1
+-a:slot_2 -f:f32_le,2,48000 -i:null -o:jack,,slot_2

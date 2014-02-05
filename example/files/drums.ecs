@@ -1,0 +1,14 @@
+#GENERAL
+-b:128 -r:50 -z:nodb -z:nointbuf -z:noxruns -n:"drums" -z:mixmode,avg -G:jack,drums,notransport -Md:alsaseq,astrux:0
+
+#INPUTS
+
+-a:kick -f:f32_le,2,48000 -i:jack,,kick
+-a:snare -f:f32_le,2,48000 -i:jack,,snare
+-a:hihat -f:f32_le,2,48000 -i:jack,,hihat
+-a:toms -f:f32_le,2,48000 -i:jack,,toms
+-a:cymbals -f:f32_le,2,48000 -i:jack,,cymbals
+
+#OUTPUTS
+
+-a:all -f:f32_le,2,48000 -o:jack,,drums_out
