@@ -434,10 +434,10 @@ sub CreateNonFiles {
 	#then have a chain id reminder
 	my %chainid;
 
-	foreach my $channel (keys $mixer->{channels}) {
+	foreach my $channel (sort (keys $mixer->{channels})) {
 		# add to auxes if it should be
 		push @auxes, $channel if $mixer->{channels}{$channel}->is_aux;
-		# add new groups if doesn't exist
+		# add new group if doesn't exist
 		my $group = $mixer->{channels}{$channel}{group};
 		$groups{$group} = &get_next_non_id unless (exists $groups{$group});
 	}
@@ -453,18 +453,29 @@ sub CreateNonFiles {
 	}
 
 	#add channels
-	foreach my $channel (keys $mixer->{channels}) {
+	foreach my $channel (sort (keys $mixer->{channels})) {
 		my $line = "";
 
 		#Mixer Strip
 		#generate a 0x id
 		$id = &get_next_non_id;
 		$stripid{$channel} = $id;
+		#Mixer_Strip 0xB create :name "non_out" :width "narrow" :tab "signal" :color 878712457 :gain_mode 0 :mute_mode 0 :group 0x2 :auto_input "*/mains" :manual_connection 0
 		$line = "\tMixer_Strip $id create :name \"$channel\" ";
 		$line .= ":width \"narrow\" :tab \"signal\" :color 878712457 ";
 		$line .= ":gain_mode 0 :mute_mode 0 ";
 		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} ";
-		$line .= ":auto_input \"\" ";
+	#TODO deal with autoinput if we're a mainout
+		if ($mixer->{channels}{$channel}->is_main_out) {
+			$line .= ":auto_input \"inputs/mains\" ";
+		}
+	#TODO deal with autoinput if we're a monitor
+		elsif ($mixer->{channels}{$channel}->is_hardware_out) {
+			$line .= ":auto_input \"inputs/aux-A\" ";
+		}
+		else {
+			$line .= ":auto_input \"\" ";
+		}
 		$line .= ":manual_connection 0";
 		push @snapshot,$line;
 
@@ -490,7 +501,7 @@ sub CreateNonFiles {
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tGain_Module $id create :parameter_values \"0.500000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
+		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
 		push @snapshot,$line;
 		
 		#Mono pan module
@@ -498,17 +509,19 @@ sub CreateNonFiles {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#Mono_Pan_Module 0x2B create :parameter_values "-1.000000" :is_default 0 :chain 0x2 :active 1
-			$line = "\tMono_Pan_Module $id create :parameter_values \"-1.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+			$line = "\tMono_Pan_Module $id create :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
 			push @snapshot,$line;		
 		}
 		
 		#AUX
-		foreach (@auxes) {
+		foreach my $aux (@auxes) {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
-			$line = "\tAUX_Module $id create :number 0 :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
-			push @snapshot,$line;		
+			unless ($aux eq $channel) {
+				$line = "\tAUX_Module $id create :number 0 :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+				push @snapshot,$line;
+			}	
 
 		}
 
