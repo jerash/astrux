@@ -85,7 +85,7 @@ sub init {
 
 		#verify if we want to add pan and volume
 		if ( $effect eq "panvol" ) {
-			#add pan and volume controls
+			#add pan and volume controls, applicable to ecasound engine only
 			if ($strip->is_mono) {
 					$strip->{inserts}{panvol} = Fx->new("mono_panvol",$midi_km);
 			}
@@ -96,8 +96,7 @@ sub init {
 		else{
 			$strip->{inserts}{$effect} = Fx->new($effect,$midi_km);
 		}
-		#TODO elsif ladspa number ID for non mixer
-
+		
 		#give an sequence number to the plugin
 		$strip->{inserts}{$effect}{nb} = $sequence_nb;
 		$sequence_nb++;

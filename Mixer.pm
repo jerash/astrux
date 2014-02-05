@@ -361,7 +361,6 @@ sub BuildNonMainMixer {
 	my $mixer = shift;
 	
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
-
 	my @ios;
 
 	#add channels defined in the IO to mixer
@@ -372,7 +371,7 @@ sub BuildNonMainMixer {
 
 		#create the channel strip
 		my $strip = Strip->new;
-		$strip->($mixer->{IOs}{$name},$mixer->is_midi_controllable);
+		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
 
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
@@ -396,7 +395,28 @@ sub BuildNonMainMixer {
 
 }
 sub BuildNonSubmix {
-	# body...
+	my $mixer = shift;
+	
+	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
+	my @ios;
+
+	#add channels defined in the IO to mixer
+	foreach my $name (keys %{$mixer->{IOs}} ) {		
+
+		#ignore inactive channels
+		next unless $mixer->{IOs}{$name}{status} eq "active";
+
+		#create the channel strip
+		my $strip = Strip->new;
+		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
+
+		#add strip to mixer
+		$mixer->{channels}{$name} = $strip;
+	}
+
+	#add ios to engine info
+	@{$mixer->{ios}} = @ios;
+
 }
 
 1;

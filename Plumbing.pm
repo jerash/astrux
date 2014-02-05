@@ -42,9 +42,10 @@ sub create_rules {
 		my $mixer = $project->{mixers}{$mixername}{channels};
 		# --- LOOP THROUGH CHANNELS ---
 		foreach my $channelname (keys %{$mixer}) {
-				for my $i (1..2) {
-				#get the table of connections
-				my @table = @{$mixer->{$channelname}{connect}};
+			#get the table of connections
+			my @table = @{$mixer->{$channelname}{connect}};
+			#for each channel (assumed max 2 channels)
+			for my $i (1..2) {
 				#take the Nth one, will be undef if connect is empty or undef
 				my $plumbin = $table[$i-1]; 
 				my $plumbout = $project->{mixers}{$mixername}{engine}{name}.":$channelname"."_$i";
