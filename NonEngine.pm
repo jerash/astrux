@@ -31,7 +31,7 @@ sub new {
 sub init {
 	my $nonengine = shift;
 
-	die "Error: Mixer must exist before init\n" unless $nonengine->{status} eq "new";
+	die "Error: Mixer must exist before init\n" unless $nonengine->{status} eq "new"||"init";
 
 	$nonengine->{files}{options} = "Settings\n\tRows\n\t\tOne\n\tLearn\n\t\tBy Strip Name";
 	$nonengine->{files}{mappings} = "";

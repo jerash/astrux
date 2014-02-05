@@ -2,12 +2,15 @@
 use strict;
 use warnings;
 
-# use lib '/home/seijitsu/astrux/modules';
+use FindBin;
+use lib $FindBin::Bin;
+
 use Project;
 
 use Data::Dumper;
 use Config::IniFiles;
 #http://search.cpan.org/~shlomif/Config-IniFiles-2.82/lib/Config/IniFiles.pm
+
 
 #----------------------------------------------------------------
 # This is the main tool for Astrux Live
