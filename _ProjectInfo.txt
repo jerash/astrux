@@ -1,24 +1,9 @@
-user admin en ssh pour relancer les processus plantés, lance auto un menu script.
-Interface d'administration html pour compatibilité maximale
+ASTRUX
 
-sauvegarder systématiquement les réglages de tranches individuelles dans des fichiers ecasound_fx. (nommer l'effet courant en trackn_current.efx par exemple) Ainsi on peut avoir une option pour activer/désactiver totalement les effets, sans perdre les réglages. Il convient de vérifier que ce processus ne nécessite pas de désactiver la chain actuellement connectée pour éviter les plop/drop sur les autres tranches. Ca permet aussi de gérer des presets d'effets sélectionnables.
-
-consistency check : script qui va venir vérifier que les fichiers de définitions sont cohérent de haut en bas.
-
-Debug alarms : alarmes audio sur un piste à définir pour annoncer des problèmes internes
-
-idée farfelue : si une piste peut être backed, ca veut dire que la piste de backing vient remplacer la piste liveinput en amont, et donc dans toutes les sorties qui en dépendent. On peut implémenter cà soit en modifiant le chain input dans ecasound (ca va couper toute les pistes d'input momentanément) ou en mutant la liveinput en amont, et en branchant un player sur les mêmes outputs.
-A partir de là on peut inventer  un mode "guide" qui voudrait dire que c'est juste un aide pour le chanteur, et que donc cette piste n'est envoyée que dans l'output correspondant au retour du musicien. C'est simple et ca peut être utile, en répet notament.
-
-modifier jack.plumbing pour qu'il prenne par défaut une définition dans le dossier courant. Ainsi je peux créer une définition par projet.
-	> pour l'instant il faut copier le fichier généré dans le projet vers le dossier home
-	>attention il a tendance à planter aux lancement des chains ecasound, il faut le surveiller !
-
-l'idée de nama d'avoir GIT pour le suivi des fichiers est bonne.
-
-SUIVE D'ENVELOPPE AUDIO
-------------------------------------------
-pour le suivi d'enveloppe (charley ouvert/fermé) il y a un objet [env~] dans pure data qui amrche bien !
+the user defines audio/midi inputs and outputs
+astrux will take care of generating the mixers configuration
+and offer standardized control over TCP/OSC/MIDI
+each output will have independant volume control 
 
 DEFINITION DU PROJET / CAHIER DES CHARGES
 ------------------------------------------
@@ -33,18 +18,11 @@ DEFINITION DU PROJET / CAHIER DES CHARGES
  - des sorties pistes individuelles pour mixage externe (option)
  - prise en compte de pistes de remplacement pour les musiciens absents
  
-Ca ressemble à une DAW, car on définit des tranches d'une table de mixage, pouvant être de type audio ou midi.
-
-Pour l'instant, les entrées type ana/num et les sorties sont globales à tout le projet. Comme quand on utilise une table de mix réelle en fait, toutes les tranches sont câcblées, après on le mute si on en a pas besoin, encore que le numérique n'envoie tellement rien que le mute n'est normalement pas nécessaire.
-
 Ca doit pouvoir fonctionner totalement en ligne de commande, sans gui. (cette gui peut par contre très bien être en externe via le frontend, et multiple...)
 
-Un frontend (en perl, permet de ne pas avoir à compiler, facilite les retouches) gère toutes les demandes utilisateurs, soit en config, soit en direct, et contrôles les fichiers de config et la commande des processus nécessaires.
+Un frontend(bridge) gère toutes les demandes utilisateurs, soit en config, soit en direct, et contrôles les fichiers de config et la commande des processus nécessaires.
 
-pour les players avec ecasound, on peut précharger tous les morceaux (chainsetups), mais le chainsetup n'est connecté qu'a la demande.
-
-repenser à puredata. il sait faire, audio/midi/osc/plugins/video/dmx/... mais il n'est pas vraiment flexible en temps réel pour créer des tranches à la volée.
-
+pour les players avec ecasound, on précharge tous les morceaux (chainsetups), mais le chainsetup n'est connecté qu'a la demande.
 
 OPTIONS
 --------
@@ -56,7 +34,6 @@ OPTIONS
 	les players sont arrêtés en fin de morceau
 	bascule possible sur un mode inter chanson
 	preload possible du morceau suivant
- - autostart play on song load
  - preload all sampler instruments on startup
 
 V0.1
@@ -65,8 +42,8 @@ V0.1
 	strips with volume,eq,auxsends
 *PLAYERS 
 	with ecasound
-*GROUPS
-	with ecasound
+*MIXERS
+	with ecasound/non-mixer
 *SAMPLER
 	clic
 	drums
@@ -75,17 +52,16 @@ V0.1
 
 V0.2
 -----
-jpmidi avec mode master jack control (tempo)
-MIDI/OSC bridge (inputs redirect)
-hdspmixer-init (init card, no controls, no gui) >> ok avec script !!
+MIDI/OSC/TCP bridge live control
+optionally generated touchosc presets
 
 V0.3
 -----
+jpmidi avec mode master jack control (tempo)
 lecteur vidéo (synchro jack)
 fx rack / plugin host
 vérification de la cpu/mémoire
 piste audio d'alarmes système
-hdspmixer-nogui (complete OSC control)
 
 V0.4
 ------
