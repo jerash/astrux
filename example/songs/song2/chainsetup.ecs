@@ -3,5 +3,5 @@
 
 #PLAYERS
 
--a:1 -i:/home/seijitsu/astrux/example/songs/song2/audiofile1.wav -chcopy:1,2 -o:jack,,slot_1
--a:2 -i:/home/seijitsu/astrux/example/songs/song2/audiofile2.wav -o:jack,,slot_2
+-a:1 -i:/home/seijitsu/astrux/example/songs/song2/monofile.wav -chcopy:1,2 -o:jack,,slot_1
+-a:2 -i:/home/seijitsu/astrux/example/songs/song2/stereofile.wav -o:jack,,slot_2

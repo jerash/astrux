@@ -1,11 +1,13 @@
 verify that the project name doesn't have spaces, replace with _
+build the complete project base path on generate
 
 can we get non-mixer channel meter info from osc ?
 
 bug non-mixer with autoroute from aux
 
-in mixer ini file
-	if midi strip has more than one channel, we should create a merger with mididings ?
+on personal submix remotes, add "save global preset" & "save song preset"
+
+if midi strip has more than one channel, we should create a merger with mididings ?
 
 option to keep ecasound player opened after transport stop
 

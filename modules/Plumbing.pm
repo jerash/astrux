@@ -5,6 +5,12 @@ package Plumbing;
 use strict;
 use warnings;
 
+###########################################################
+#
+#		 PLUMBING OBJECT functions
+#
+###########################################################
+
 sub create {
 	#create the file (overwrite)
 	my $connections = shift;
@@ -19,18 +25,6 @@ sub create {
 	$connections->{status} = "new";
 	#close file
 	close $handle;
-}
-
-sub save {
-	my $connections = shift;
-
-	if (defined $connections->{status}) {
-		open my $handle, ">>$connections->{file}" or die $!;
-		print $handle "$_\n" for @{$connections->{rules}};
-		close $handle;
-	} else {
-		warn "Plumbing file has not been initialized!!\n";
-	}
 }
 
 sub create_rules {
@@ -72,6 +66,24 @@ sub create_rules {
 		}
 	}
 	return @rules;
+}
+
+###########################################################
+#
+#		 PLUMBING FILE functions
+#
+###########################################################
+
+sub save {
+	my $connections = shift;
+
+	if (defined $connections->{status}) {
+		open my $handle, ">>$connections->{file}" or die $!;
+		print $handle "$_\n" for @{$connections->{rules}};
+		close $handle;
+	} else {
+		warn "Plumbing file has not been initialized!!\n";
+	}
 }
 
 1;

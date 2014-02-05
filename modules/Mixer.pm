@@ -8,7 +8,6 @@ use warnings;
 use EcaEngine;
 use Strip;
 use NonEngine;
-use NonStrip;
 
 my $debug = 0;
 

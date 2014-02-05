@@ -56,6 +56,12 @@ sub init {
 	
 }
 
+###########################################################
+#
+#		 FX functions
+#
+###########################################################
+
 sub GetControls() {
 	my $ecafx = shift;
 	my $plugin = shift;
@@ -188,6 +194,22 @@ sub Generate_midi_km {
 	return 1;
 }
 
+sub update_current_value {
+	my $ecafx = shift;
+	my $index = shift;
+	my $value = shift;
+
+	#TODO verify if value is within range, return adequately for next actions
+	#update value
+	print "EcaFx : updating at index $index with value $value\n" if $debug;
+	$ecafx->{currentvalues}[$index-1] = $value;
+}
+
+###########################################################
+#
+#		 FX TEST functions
+#
+###########################################################
 
 sub is_param_ok {
 	#grab parameter name in parameter
@@ -204,15 +226,5 @@ sub is_param_ok {
 	return 0;
 }
 
-sub update_current_value {
-	my $ecafx = shift;
-	my $index = shift;
-	my $value = shift;
-
-	#TODO verify if value is within range, return adequately for next actions
-	#update value
-	print "EcaFx : updating at index $index with value $value\n" if $debug;
-	$ecafx->{currentvalues}[$index-1] = $value;
-}
 
 1;

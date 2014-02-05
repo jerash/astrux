@@ -238,6 +238,8 @@ sub SaveTofile {
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $project, $outfile;
 
+	print "Project: saved to $outfile\n";
+
 	# store values back
 	if (defined $hash{TCP}{socket}) {
 		$project->{TCP}{socket} = delete $hash{TCP}{socket};

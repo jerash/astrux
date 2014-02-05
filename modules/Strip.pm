@@ -31,9 +31,6 @@ sub new {
 	};
 	bless $strip, $class;
 	
-	#if parameter exist, fill hash
-	$strip->init($IOsection) if defined $IOsection;
-	
 	return $strip;
 }
 
@@ -44,7 +41,8 @@ sub init {
 	my $midi_km = shift;
 	
 	die "Error: can't init a strip without info\n" unless defined $IOsection;
-	
+	warn "Warning: undefined value on midi option\n" unless defined $midi_km;
+
 	#don't insert channel if inactive
 	return unless $IOsection->{status} eq "active";
 
