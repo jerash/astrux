@@ -44,7 +44,7 @@ sub StartEcasound {
 	
 	#if mixer is already running on same port, then reconfigure it
 	if  ($ecaengine->is_running) {
-		print "    Found existing Ecasound engine on port $port, reconfiguring engine\n";
+		print "    Found existing Ecasound engine on TCP port $port, reconfiguring engine\n";
 		#create socket for communication
 		$ecaengine->init_socket($port);
 		#reconfigure ecasound engine with ecs file

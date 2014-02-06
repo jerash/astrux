@@ -15,8 +15,15 @@ my $debug = 1;
 
 sub new {
 	my $class = shift;
+	my $output_path = shift;
+	my $enginename = shift;
+	die "EcaEngine Error: can't create ecs engine without a path\n" unless $output_path;
+	die "EcaEngine Error: can't create ecs engine without a name\n" unless $enginename;
 
-	my $nonengine = {};
+	my $nonengine = {
+		"path" => $output_path,
+		"name" => $enginename
+	};
 	bless $nonengine, $class;
 
 	#update engine status
@@ -47,7 +54,27 @@ sub init {
 ###########################################################
 
 sub StartNonmixer {
-	print "Wohoho soon we'll start non mixer!!\n";
+	my $nonengine = shift;
+
+	my $path = $nonengine->{path} . "/" . $nonengine->{name};
+	my $port = $nonengine->{osc_port};
+	my $name = $nonengine->{name};
+	
+	#if mixer is already running on same port, then reconfigure it
+	if  ($nonengine->is_running) {
+		print "    Found existing Nonmixer engine on osc port $port, reconfiguring engine\n";
+		#TODO how to say nomixer to load a new project ? osc...nsm...
+		print "\n ...well one day we willl do it, not ready \n";
+	}
+	#if mixer is not existing, launch mixer with needed file
+	else {
+		my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
+		#my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n"; #TODO use the real start
+		system ( $command );
+		#wait for ecasound engines to be ready
+		sleep(1) until $nonengine->is_ready;
+		print "   Nonmixer $nonengine->{name} is ready\n";
+	}
 }
 
 ###########################################################
@@ -59,7 +86,7 @@ sub StartNonmixer {
 sub is_ready {
 	my $nonengine = shift;
 
-	return 1 if 1; #TODO send osc ping and read pong
+	sleep(4); #return 1 if 1; #TODO send osc ping and read pong
 	return 0;
 }
 sub is_running {

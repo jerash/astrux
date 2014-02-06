@@ -66,7 +66,7 @@ sub init {
 		#TODO nonmixer globals
 	}
 
-	#merge global info info to created engine
+	#merge global info info to created engine #TODO optimize which info is really needed
 	$mixer->{engine}{$_} = $globals{$_} for (keys %globals);
 
 	#remove mixer globals from IO hash to prevent further ignore
@@ -475,11 +475,11 @@ sub CreateNonFiles {
 		$line .= ":gain_mode 0 :mute_mode 0 ";
 		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} ";
 		#autoconnect mains out
-		if ($mixer->{channels}{$channel}->is_main_out) {
+		if (($mixer->{channels}{$channel}->is_main_out) and ($mixer->{engine}{autoconnect} eq 1)){
 			$line .= ":auto_input \"inputs/mains\" ";
 		}
 		#autoconnect auxes
-		elsif ($mixer->{channels}{$channel}->is_hardware_out) {
+		elsif (($mixer->{channels}{$channel}->is_hardware_out) and ($mixer->{engine}{autoconnect} eq 1)) {
 			$line .= ":auto_input \"inputs/$auxes{$channel}\" ";
 		}
 		else {
