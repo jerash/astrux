@@ -31,6 +31,39 @@ sub new {
 
 ###########################################################
 #
+#		 ECAENGINE functions
+#
+###########################################################
+
+sub StartEcasound {
+	my $ecaengine = shift;
+
+	my $mixerfile = $ecaengine->{ecsfile};
+	my $path = $ecaengine->{eca_cfg_path};
+	my $port = $ecaengine->{tcp_port};
+	
+	#if mixer is already running on same port, then reconfigure it
+	if  ($ecaengine->is_running) {
+		print "    Found existing Ecasound engine on port $port, reconfiguring engine\n";
+		#create socket for communication
+		$ecaengine->init_socket($port);
+		#reconfigure ecasound engine with ecs file
+		$ecaengine->LoadAndStart;
+	}
+	#if mixer is not existing, launch mixer with needed file
+	else {
+		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
+		system ( $command );
+		#wait for ecasound engines to be ready
+		sleep(1) until $ecaengine->is_ready;
+		print "   Ecasound $ecaengine->{name} is ready\n";
+		#create socket for communication
+		$ecaengine->init_socket($port);
+	}
+}
+
+###########################################################
+#
 #		 ECAENGINE FILE functions
 #
 ###########################################################

@@ -108,8 +108,8 @@ sub BuildPlayers {
 
 sub Start {
 	my $mixer = shift;
-	$mixer->StartEcasound if ($mixer->is_ecasound);
-	$mixer->StartNonmixer if ($mixer->is_nonmixer);	
+	$mixer->{engine}->StartEcasound if ($mixer->is_ecasound);
+	$mixer->{engine}->StartNonmixer if ($mixer->is_nonmixer);	
 }
 
 ###########################################################
@@ -358,33 +358,6 @@ sub CreateEcaPlayers {
 	$mixer->{engine}{io_chains} = \@io_chaintab if @io_chaintab;
 }
 
-sub StartEcasound {
-	my $mixer = shift;
-
-	my $mixerfile = $mixer->{engine}{ecsfile};
-	my $path = $mixer->{engine}{eca_cfg_path};
-	my $port = $mixer->{engine}{tcp_port};
-	
-	#if mixer is already running on same port, then reconfigure it
-	if  ($mixer->{engine}->is_running) {
-		print "    Found existing Ecasound engine on port $port, reconfiguring engine\n";
-		#create socket for communication
-		$mixer->{engine}->init_socket($port);
-		#reconfigure ecasound engine with ecs file
-		$mixer->{engine}->LoadAndStart;
-	}
-	#if mixer is not existing, launch mixer with needed file
-	else {
-		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
-		system ( $command );
-		#wait for ecasound engines to be ready
-		sleep(1) until $mixer->{engine}->is_ready;
-		print "   Ecasound $mixer->{engine}{name} is ready\n";
-		#create socket for communication
-		$mixer->{engine}->init_socket($port);
-	}
-}
-
 ###########################################################
 #
 #		 NON-MIXER functions
@@ -591,10 +564,6 @@ sub get_next_non_id {
 	state $id = 0;
 	$id++;
 	return sprintf ("0x%x",$id);
-}
-
-sub StartNonmixer {
-	print "Wohoho soon we'll start non mixer!!\n";
 }
 
 1;

@@ -42,6 +42,39 @@ sub init {
 
 ###########################################################
 #
+#		 NONMIXER functions
+#
+###########################################################
+
+sub StartNonmixer {
+	print "Wohoho soon we'll start non mixer!!\n";
+}
+
+###########################################################
+#
+#		 NONMIXER STATUS functions
+#
+###########################################################
+
+sub is_ready {
+	my $nonengine = shift;
+
+	return 1 if 1; #TODO send osc ping and read pong
+	return 0;
+}
+sub is_running {
+	my $nonengine = shift;
+
+	my $port = $nonengine->{osc_port};
+	my $name = $nonengine->{name};
+
+	my $ps = qx(ps ax);
+	# print "***\n $ps \n***\n";
+	($ps =~ /non-mixer/ and $ps =~ /--instance $name/ and $ps =~ /osc-port=$port/) ? return 1 : return 0;
+}
+
+###########################################################
+#
 #		 NONMIXER FILE functions
 #
 ###########################################################
