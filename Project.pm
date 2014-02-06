@@ -63,6 +63,8 @@ sub init {
 sub AddMixers {
 	my $project = shift;
 
+	my $foundmain = 0;
+
 	#build path to mixers files
 	my $mixers_path = $project->{project}{base_path} . "/" . $project->{project}{mixers_path};
 	my $output_path = $project->{project}{base_path} . "/" . $project->{project}{output_path};
@@ -70,16 +72,30 @@ sub AddMixers {
 	#iterate through each mixer file
 	my @files = <$mixers_path/*.ini>;
 	foreach my $mixerfile (@files) {
-		#create mixer
 	 	print "Project: Creating mixer from $mixerfile\n";
+
+		#create mixer
 	 	my $mixer = Mixer->new($mixerfile,$output_path);
+
+	 	#insert into project
 		$project->{mixers}{$mixer->{engine}{name}} = $mixer;
+
+		#ecasound mixer need project info
+		if ($project->{mixers}{$mixer->{engine}{name}}->is_ecasound) {
+			#add the ecaconfig path to mixer
+			my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
+			$project->{mixers}{$mixer->{engine}{name}}{engine}{eca_cfg_path} = $path;
+		}
+
+		#check if we have a main mixer
+		if ($project->{mixers}{$mixer->{engine}{name}}->is_main) {
+			die "Error ...hum we already have a main mixer, can't have two !\n" if $foundmain eq 1;
+			$foundmain = 1;
+		}
 	}
 
 	#verify if there is one "main" mixer
-	if (!exists $project->{mixers}{"main"} ) {
-		die "!!!! main mixer must exist !!!!!\n";
-	}
+	die "!!!! main mixer must exist !!!!!\n" unless $foundmain;
 }
 
 sub AddSongs {
@@ -288,32 +304,10 @@ sub LoadFromFile {
 
 sub StartEngines {
 	my $project = shift;
-	#reload if $engine->is_running
-	#$engine->StartMixer
+
 	foreach my $mixername (keys %{$project->{mixers}}) {
 		print " - mixer $mixername\n";
-		my $mixerfile = $project->{mixers}{$mixername}{engine}{ecsfile};
-		my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
-		my $port = $project->{mixers}{$mixername}{engine}{tcp_port};
-		
-		#if mixer is already running on same port, then reconfigure it
-		if  ($project->{mixers}{$mixername}{engine}->is_running) {
-			print "    Found existing Ecasound engine on port $port, reconfiguring engine\n";
-			#create socket for communication
-			$project->{mixers}{$mixername}{engine}->init_socket($port);
-			#reconfigure ecasound engine with ecs file
-			$project->{mixers}{$mixername}{engine}->LoadAndStart;
-			next;	
-		}
-
-		#if mixer is not existing, launch mixer with needed file
-		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
-		system ( $command );
-		#wait for ecasound engines to be ready
-		sleep(1) until $project->{mixers}{$mixername}{engine}->is_ready;
-		print "   Ecasound $mixername is ready\n";
-		#create socket for communication
-		$project->{mixers}{$mixername}{engine}->init_socket($port);
+		$project->{mixers}{$mixername}->Start;
 	}
 }
 

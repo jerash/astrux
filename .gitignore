@@ -5,6 +5,7 @@ dust/
 trash/
 tests/
 example/
+dependencies/
 
 # OS generated files #
 ######################

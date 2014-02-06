@@ -13,7 +13,9 @@ use AnyEvent;
 use AnyEvent::Socket;
 use AnyEvent::ReadLine::Gnu;
 
-use lib '/home/seijitsu/astrux/modules';
+use FindBin;
+use lib $FindBin::Bin;
+
 use Project;
 use Mixer;
 use Song;
