@@ -443,7 +443,8 @@ sub CreateNonFiles {
 	foreach my $channel (sort (keys $mixer->{channels})) {
 		# add to auxes if it should be
 		if ($mixer->{channels}{$channel}->is_aux) {
-			$auxes{$channel} = "aux-$auxletter";
+			#update local list, and project structure with aux reference
+			$mixer->{channels}{$channel}{is_aux} = $auxes{$channel} = "aux-$auxletter";
 			$auxletter++;
 		}
 		# add new group if doesn't exist
