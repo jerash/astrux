@@ -448,8 +448,10 @@ sub CreateNonFiles {
 			$auxletter++;
 		}
 		# add new group if doesn't exist
-		my $group = $mixer->{channels}{$channel}{group};
-		$groups{$group} = &get_next_non_id unless (exists $groups{$group});
+		my $group = $mixer->{channels}{$channel}{group} if ($mixer->{channels}{$channel}{group} ne '');
+		if (defined $group) {
+			$groups{$group} = &get_next_non_id unless (exists $groups{$group});
+		}
 	}
 
 	# then build the snapshot lines
@@ -459,7 +461,7 @@ sub CreateNonFiles {
 	
 	#add groups
 	foreach my $group (keys %groups) {
-		push @snapshot, "\tGroup $groups{$group} create :name \"$group\"" ;
+		push @snapshot, "\tGroup $groups{$group} create :name \"$group\"" if ($group ne '');
 	}
 
 	#add channels
@@ -474,7 +476,8 @@ sub CreateNonFiles {
 		$line = "\tMixer_Strip $id create :name \"$channel\" ";
 		$line .= ":width \"narrow\" :tab \"signal\" :color 878712457 ";
 		$line .= ":gain_mode 0 :mute_mode 0 ";
-		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} ";
+		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} " if ($mixer->{channels}{$channel}{group} ne '');
+		$line .= ":group \"\" " if ($mixer->{channels}{$channel}{group} eq '');
 		#autoconnect mains out
 		if (($mixer->{channels}{$channel}->is_main_out) and ($mixer->{engine}{autoconnect} eq 1)){
 			$line .= ":auto_input \"inputs/mains\" ";
