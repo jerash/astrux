@@ -48,7 +48,7 @@ sub init {
 	$project->AddSongs;	
 
 	#----------------Add plumbing-----------------------------
-	$project->AddPlumbing;
+	# MOVED to generates files, after we know the nonmixer auxes
 
 	#----------------Add bridge-----------------------------
 	$project->AddOscMidiBridge;
@@ -190,6 +190,10 @@ sub GenerateFiles {
 	}
 
 	#----------------PLUMBING FILE------------------------
+	#add the pumbing rules to the project 
+	#TOFIX we do it now after nonmixer files are generetad, so we know the auxes assignations
+	$project->AddPlumbing;
+	#now generate the file
 	if ($project->{connections}{"jack.plumbing"} == 1) {
 		#we're asked to generate the plumbing file
 		my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
