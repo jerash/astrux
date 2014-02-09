@@ -42,7 +42,9 @@ sub init {
 	%$project = ( %{$ini_project} , %$project );
 
 	#------------------Add mixers-----------------------------
-	$project->AddMixers;	
+	$project->AddMixers;
+
+	#TODO sanitize effects values, need SAMPLERATE !!
 
 	#------------------Add songs------------------------------
 	$project->AddSongs;	

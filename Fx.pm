@@ -46,18 +46,20 @@ sub init {
 	
 	my $effect = $fx->{fxname};
 
-	#TODO check if ecasound or LADSPA effect
-
-	#get effect controls
-	if ($fx->EcafxGetControls($effect)) {
-		#construit la ligne d'effet ecs
-		my $defaults = join ',', @{$fx->{defaultvalues}};
-		$fx->{ecsline} = " -pn:$effect," . $defaults;
-
-		#ajouter les contrôleurs midi ?
-		$fx->Generate_eca_midi_CC if $fx->{generate_midi_CC};
+	# check if ecasound or LADSPA effect
+	if ( $fx->is_LADSPA ) {
+		print "   | |_adding LADSPA plugin $effect\n";
 	}
-	
+	else {
+		if ($fx->EcafxGetControls($effect)) {
+			#construit la ligne d'effet ecs
+			my $defaults = join ',', @{$fx->{defaultvalues}};
+			$fx->{ecsline} = " -pn:$effect," . $defaults;
+		
+		}
+	}
+	# add midi controllers ? #TODO adapt to nonmixer
+	$fx->Generate_eca_midi_CC if $fx->{generate_midi_CC};
 }
 
 ###########################################################
@@ -103,6 +105,164 @@ sub is_param_ok {
 #		 LADSPA effect functions
 #
 ###########################################################
+sub is_LADSPA {
+	my $fxhash = shift;
+	my $fx = $fxhash->{fxname};
+
+	state $LADSPA_PluginsList;
+
+	#build the plugin list if it doesn't exist
+	if (!defined $LADSPA_PluginsList) {
+		$LADSPA_PluginsList = &get_LADSPA_PluginsList;
+	}
+	#look for the plugin ID
+	if (defined $LADSPA_PluginsList) {
+		if (exists $LADSPA_PluginsList->{$fx}) {
+			#fill arrays
+			my (@names, @defaults,@lowvals,@highvals);
+			foreach my $control (keys $LADSPA_PluginsList->{$fx}{controls}) {
+				push @names, $control if $control;
+				push @lowvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{min} if $LADSPA_PluginsList->{$fx}{controls}{$control}{min};
+				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
+				push @defaults, $LADSPA_PluginsList->{$fx}{controls}{$control}{default} if $LADSPA_PluginsList->{$fx}{controls}{$control}{default};
+				#TODO do something with the control {type}
+				#TODO deal with specific info like '...' '2*samplerate' ...Etc
+			}
+		
+			#verify equal quantites of parameters
+			if ( grep {$_ != $#defaults} ($#lowvals, $#highvals, $#names) ) {
+					warn "Error : incoherent number of parameters";
+					return 0;
+			}
+			if ( grep {$_ == -1} ($#defaults, $#lowvals, $#highvals, $#names) ) {
+					warn "Error : empty parameters";
+					return 0;
+			}
+
+			#insert values
+			push( @{$fxhash->{paramnames}} ,@names);
+			push( @{$fxhash->{defaultvalues}} ,@defaults);
+			push( @{$fxhash->{currentvalues}} ,@defaults);
+			push( @{$fxhash->{lowvalues}} ,@lowvals);
+			push( @{$fxhash->{highvalues}} ,@highvals);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+sub get_LADSPA_PluginsList {
+	#look for the plugins in installed dirs
+	my @stdout = `listplugins`;
+	my %PluginsFileList;
+
+	#check if a plugin was found
+	if (@stdout) {
+		foreach my $line (@stdout) {
+			chomp $line; #remove \n
+			next unless ($line =~ /^\//g);
+			#new plugin file
+			chop($line); #remove trailing :
+			print "---PluginFile: $line\n" if $debug;
+
+			#query the plugin file for its plugins
+			my $stdout = `analyseplugin $line`;
+
+			my @pl = split(/\n{2,}/, $stdout); # note the new pattern
+
+			# print "pluginfile $file has $#pl plugins\n";
+			foreach my $plugininfo (@pl) {
+				chomp($plugininfo);
+
+				# print "-----------\n";
+				# print $plugininfo,"\n";
+
+				next unless $plugininfo; #return on empty line
+
+			# Plugin Name: "C* Eq2x2 - Stereo 10-band equalizer"
+			# Plugin Label: "Eq2x2"
+			# Plugin Unique ID: 2594
+			# Maker: "Tim Goetze <tim@quitte.de>"
+			# Copyright: "2004-7"
+			# Must Run Real-Time: No
+			# Has activate() Function: Yes
+			# Has deactivate() Function: No
+			# Has run_adding() Function: Yes
+			# Environment: Normal or Hard Real-Time
+			# Ports:	"in.l" input, audio, -1 to 1
+			# 	"in.r" input, audio, -1 to 1
+			# 	"31 Hz" input, control, -48 to 24, default 0
+			# 	"63 Hz" input, control, -48 to 24, default 0
+			# 	"125 Hz" input, control, -48 to 24, default 0
+			# 	"250 Hz" input, control, -48 to 24, default 0
+			# 	"500 Hz" input, control, -48 to 24, default 0
+			# 	"1 kHz" input, control, -48 to 24, default 0
+			# 	"2 kHz" input, control, -48 to 24, default 0
+			# 	"4 kHz" input, control, -48 to 24, default 0
+			# 	"8 kHz" input, control, -48 to 24, default 0
+			# 	"16 kHz" input, control, -48 to 24, default 0
+			# 	"out.l" output, audio
+			# 	"out.r" output, audio
+
+				#get plugin info
+				my ($Name) = $plugininfo =~ /Plugin Name: "(.*)"/;
+				my ($Label) = $plugininfo =~ /Plugin Label: "(.*)"/;
+				my ($ID) = $plugininfo =~ /Plugin Unique ID: (\d+)/;
+				my ($Ports) = $plugininfo =~ /Ports: (.+)/sx;
+
+				#get plugin controls
+				my @controls = split /\n/ , $Ports;
+				my $controls_hash = parse_controls(\@controls);
+
+				#update structure
+				$PluginsFileList{$ID}{name} = $Name;
+				$PluginsFileList{$ID}{label} = $Label;
+				$PluginsFileList{$ID}{controls} = $controls_hash;
+				$PluginsFileList{$ID}{file} = $line;
+			}
+		}
+	}
+	else { die "Error : no plugin found, or comamnd error \n"; }
+	
+	print Dumper \%PluginsFileList if $debug;
+
+	return \%PluginsFileList;
+}
+
+sub parse_controls {
+	my $rawcontrols = shift;
+	# %controls => (name,min,max,default)
+	my %controls;
+
+	foreach my $line (@{$rawcontrols}) {
+
+		#ignore audio control definition
+		next if (( $line =~ /input, audio/ ) or ( $line =~ /output, audio/ ));
+
+		$line =~ s/\t//; #remove tab
+
+		my ($name , $min, $max , $default ) = $line =~ /"(.*)" input, control, (.*) to (.*), default (.*)/;
+
+		#some plugins may have bad formatting or missing info, return empty if we don't have every info
+		next unless defined $name;
+
+		#may contain specific info like '...' '2*samplerate' ...Etc
+		#update hash
+		$controls{$name}{min} = $min;
+		$controls{$name}{max} = $max;
+
+		#default may contain more info (format like integer, or logaritmic)
+		if ($default =~ /,/) {
+			my ($def,$plus) = $default =~ /(.*), (.*)/;
+			$controls{$name}{default} = $def;
+			$controls{$name}{type} = $plus;
+		}
+		else {
+			$controls{$name}{default} = $default;
+		}
+	}
+	return \%controls;
+}
 
 ###########################################################
 #
