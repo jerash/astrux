@@ -479,26 +479,27 @@ sub CreateNonFiles {
 	}
 
 	#add channels
-	foreach my $channel (sort (keys $mixer->{channels})) {
+	foreach my $channelname (sort (keys $mixer->{channels})) {
 		my $line = "";
+		my $channel = $mixer->{channels}{$channelname};
 
 		#Mixer Strip
 		#generate a 0x id
 		$id = &get_next_non_id;
-		$stripid{$channel} = $id;
+		$stripid{$channelname} = $id;
 		#Mixer_Strip 0xB create :name "non_out" :width "narrow" :tab "signal" :color 878712457 :gain_mode 0 :mute_mode 0 :group 0x2 :auto_input "*/mains" :manual_connection 0
-		$line = "\tMixer_Strip $id create :name \"$channel\" ";
+		$line = "\tMixer_Strip $id create :name \"$channelname\" ";
 		$line .= ":width \"narrow\" :tab \"signal\" :color 878712457 ";
 		$line .= ":gain_mode 0 :mute_mode 0 ";
-		$line .= ":group $groups{$mixer->{channels}{$channel}{group}} " if ($mixer->{channels}{$channel}{group} ne '');
-		$line .= ":group \"\" " if ($mixer->{channels}{$channel}{group} eq '');
+		$line .= ":group $groups{$channel->{group}} " if ($channel->{group} ne '');
+		$line .= ":group \"\" " if ($channel->{group} eq '');
 		#autoconnect mains out
-		if (($mixer->{channels}{$channel}->is_main_out) and ($mixer->{engine}{autoconnect} eq 1)){
+		if (($channel->is_main_out) and ($mixer->{engine}{autoconnect} eq 1)){
 			$line .= ":auto_input \"inputs/mains\" ";
 		}
 		#autoconnect auxes
-		elsif (($mixer->{channels}{$channel}->is_hardware_out) and ($mixer->{engine}{autoconnect} eq 1)) {
-			$line .= ":auto_input \"inputs/$auxes{$channel}\" ";
+		elsif (($channel->is_hardware_out) and ($mixer->{engine}{autoconnect} eq 1)) {
+			$line .= ":auto_input \"inputs/$auxes{$channelname}\" ";
 		}
 		else {
 			$line .= ":auto_input \"\" ";
@@ -509,45 +510,63 @@ sub CreateNonFiles {
 		#Chain
 		#generate a 0x id
 		$id = &get_next_non_id;
-		$chainid{$channel} = $id;
-		$line = "\tChain $id create :strip $stripid{$channel} :tab \"chain\"";
+		$chainid{$channelname} = $id;
+		$line = "\tChain $id create :strip $stripid{$channelname} :tab \"chain\"";
 		push @snapshot,$line;
 		
 		#JACK module
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#JACK_Module 0x3 create :parameter_values "0.000000:1.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tJACK_Module $id create :parameter_values \"0.000000:1.000000\" :is_default 1 :chain $chainid{$channel} :active 1"
-			if ($mixer->{channels}{$channel}->is_mono);
+		$line = "\tJACK_Module $id create :parameter_values \"0.000000:1.000000\" :is_default 1 :chain $chainid{$channelname} :active 1"
+			if ($channel->is_mono);
 		#JACK_Module 0xF create :parameter_values "0.000000:2.000000" :is_default 1 :chain 0xE :active 1
-		$line = "\tJACK_Module $id create :parameter_values \"0.000000:2.000000\" :is_default 1 :chain $chainid{$channel} :active 1"
-			if ($mixer->{channels}{$channel}->is_stereo);
+		$line = "\tJACK_Module $id create :parameter_values \"0.000000:2.000000\" :is_default 1 :chain $chainid{$channelname} :active 1"
+			if ($channel->is_stereo);
 		push @snapshot,$line;
 		
 		#Gain module
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
+		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 1 :chain $chainid{$channelname} :active 1";
 		push @snapshot,$line;
 		
 		#Mono pan module
-		if ($mixer->{channels}{$channel}->is_mono) {
+		if ($channel->is_mono) {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#Mono_Pan_Module 0x2B create :parameter_values "-1.000000" :is_default 0 :chain 0x2 :active 1
-			$line = "\tMono_Pan_Module $id create :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
-			push @snapshot,$line;		
+			$line = "\tMono_Pan_Module $id create :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
 		}
 		
+		#PLUGIN modules
+		foreach my $plugin (keys %{$channel->{inserts}}) {
+			#ensure it is a LADSPA plugin
+			next unless $channel->{inserts}{$plugin}->is_LADSPA;
+			#get number of audio ios
+			my $inputs = $channel->{inserts}{$plugin}{audio_io}{inputs};
+			my $outputs = $channel->{inserts}{$plugin}{audio_io}{outputs};
+			#get default paramvalues
+			my $paramvalues;
+			$paramvalues .= "$_:" for @{$channel->{inserts}{$plugin}{defaultvalues}};
+			chop($paramvalues);
+			#generate a 0x id
+			$id = &get_next_non_id;
+			#Plugin_Module 0xF1 create :plugin_id 2598 :plugin_ins 2 :plugin_outs 2 :parameter_values "0.000000:1.000000:0.000000:0.250000:0.000000:0.250000:0.000000" :is_default 0 :chain 0x24 :active 1
+			$line = "\tPlugin_Module $id create :plugin_id $plugin :plugin_ins $inputs :plugin_outs $outputs :parameter_values \"$paramvalues\" :is_default 0 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
+		}
+
 		#AUX module
 		my $auxnumber = 0;
 		foreach my $aux (keys %auxes) {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
-			if ($mixer->{channels}{$channel}->is_hardware_in) {
-				$line = "\tAUX_Module $id create :number $auxnumber :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channel} :active 1";
+			if ($channel->is_hardware_in) {
+				$line = "\tAUX_Module $id create :number $auxnumber :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channelname} :active 1";
 				push @snapshot,$line;
 			}	
 			$auxnumber++;
@@ -557,14 +576,14 @@ sub CreateNonFiles {
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#Meter_Module 0x5 create :is_default 1 :chain 0x2 :active 1
-		$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channel} :active 1";
+		$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channelname} :active 1";
 		push @snapshot,$line;
 		
 		#JACK module
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#JACK_Module 0x6 create :parameter_values "2.000000:0.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tJACK_Module $id create :parameter_values \"2.000000:0.000000\" :is_default 1 :chain $chainid{$channel} :active 1";
+		$line = "\tJACK_Module $id create :parameter_values \"2.000000:0.000000\" :is_default 1 :chain $chainid{$channelname} :active 1";
 		push @snapshot,$line;
 		
 	}

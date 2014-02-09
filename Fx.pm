@@ -24,7 +24,7 @@ state $LADSPA_PluginsList;
 if (!defined $LADSPA_PluginsList) {
 	print "FX: Loading LADSPA plugins list\n";
 	$LADSPA_PluginsList = &get_LADSPA_PluginsList;
-	print Dumper $LADSPA_PluginsList;
+	# print Dumper $LADSPA_PluginsList;
 }
 
 ###########################################################
@@ -183,11 +183,11 @@ sub LADSPAfxGetControls {
 		if (exists $LADSPA_PluginsList->{$fx}) {
 			#fill arrays
 			my (@names, @defaults,@lowvals,@highvals);
-			foreach my $control (keys $LADSPA_PluginsList->{$fx}{controls}) {
+			foreach my $control (sort keys $LADSPA_PluginsList->{$fx}{controls}) {
 				push @names, $control if $control;
-				push @lowvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{min} if $LADSPA_PluginsList->{$fx}{controls}{$control}{min};
-				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
-				push @defaults, $LADSPA_PluginsList->{$fx}{controls}{$control}{default} if $LADSPA_PluginsList->{$fx}{controls}{$control}{default};
+				push @lowvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{min} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{min};
+				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
+				push @defaults, $LADSPA_PluginsList->{$fx}{controls}{$control}{default} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{default};
 				#TODO do something with the control {type}
 				#TODO deal with specific info like '...' '2*samplerate' ...Etc
 			}
@@ -208,6 +208,7 @@ sub LADSPAfxGetControls {
 			push( @{$fxhash->{currentvalues}} ,@defaults);
 			push( @{$fxhash->{lowvalues}} ,@lowvals);
 			push( @{$fxhash->{highvalues}} ,@highvals);
+			$fxhash->{audio_io} = $LADSPA_PluginsList->{$fx}{audio_io};
 			return 1;
 		}
 	}
@@ -276,11 +277,13 @@ sub get_LADSPA_PluginsList {
 				#get plugin controls
 				my @controls = split /\n/ , $Ports;
 				my $controls_hash = parse_controls(\@controls);
+				my $audio_hash = parse_audio_io(\@controls);
 
 				#update structure
 				$PluginsFileList{$ID}{name} = $Name;
 				$PluginsFileList{$ID}{label} = $Label;
 				$PluginsFileList{$ID}{controls} = $controls_hash;
+				$PluginsFileList{$ID}{audio_io} = $audio_hash;
 				$PluginsFileList{$ID}{file} = $line;
 			}
 		}
@@ -294,9 +297,9 @@ sub get_LADSPA_PluginsList {
 
 sub parse_controls {
 	my $rawcontrols = shift;
-	# %controls => (name,min,max,default)
 	my %controls;
 
+	my $nb = 1;
 	foreach my $line (@{$rawcontrols}) {
 
 		#ignore audio control definition
@@ -309,21 +312,39 @@ sub parse_controls {
 		#some plugins may have bad formatting or missing info, return empty if we don't have every info
 		next unless defined $name;
 
-		#may contain specific info like '...' '2*samplerate' ...Etc
 		#update hash
-		$controls{$name}{min} = $min;
-		$controls{$name}{max} = $max;
+		$controls{$nb}{name} = $name;
+		$controls{$nb}{min} = $min;
+		$controls{$nb}{max} = $max;
 
 		#default may contain more info (format like integer, or logaritmic)
 		if ($default =~ /,/) {
 			my ($def,$plus) = $default =~ /(.*), (.*)/;
-			$controls{$name}{default} = $def;
-			$controls{$name}{type} = $plus;
+			$controls{$nb}{default} = $def;
+			$controls{$nb}{type} = $plus;
 		}
 		else {
-			$controls{$name}{default} = $default;
+			$controls{$nb}{default} = $default;
 		}
+		#increment number
+		$nb++;
 	}
+	return \%controls;
+}
+sub parse_audio_io {
+	my $rawcontrols = shift;
+	my %controls;
+
+	my $inputs = 0;
+	my $outputs = 0;
+
+	foreach my $line (@{$rawcontrols}) {
+		#only audio control definition
+		$inputs++ if ( $line =~ /input, audio/ ); 
+		$outputs++ if ( $line =~ /output, audio/ );
+	}
+	$controls{inputs} = $inputs;
+	$controls{outputs} = $outputs;
 	return \%controls;
 }
 
