@@ -14,6 +14,20 @@ my $debug = 0;
 
 ###########################################################
 #
+#		 FX globals
+#
+###########################################################
+
+state $LADSPA_PluginsList;
+
+#build the plugin list if it doesn't exist
+if (!defined $LADSPA_PluginsList) {
+	print "FX: Loading LADSPA plugins list\n";
+	$LADSPA_PluginsList = &get_LADSPA_PluginsList;
+}
+
+###########################################################
+#
 #		 FX OBJECT functions
 #
 ###########################################################
@@ -47,7 +61,7 @@ sub init {
 	my $effect = $fx->{fxname};
 
 	# check if ecasound or LADSPA effect
-	if ( $fx->is_LADSPA ) {
+	if ( $fx->LADSPAfxGetControls ) {
 		print "   | |_adding LADSPA plugin $effect\n";
 	}
 	else {
@@ -109,7 +123,47 @@ sub is_LADSPA {
 	my $fxhash = shift;
 	my $fx = $fxhash->{fxname};
 
-	state $LADSPA_PluginsList;
+	#build the plugin list if it doesn't exist
+	if (!defined $LADSPA_PluginsList) {
+		$LADSPA_PluginsList = &get_LADSPA_PluginsList;
+	}
+	#look for the plugin ID
+	if (defined $LADSPA_PluginsList) {
+		if (exists $LADSPA_PluginsList->{$fx}) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+sub SanitizeLADSPAFx {
+	my $fxhash = shift;
+	my $samplerate = shift;
+
+	#get number of parameter
+	my @paramnames = @{$fxhash->{paramnames}};
+	my $nb = $#paramnames;
+
+	my @totest = ("lowvalues","highvalues","defaultvalues","currentvalues");
+	foreach my $ref (@totest) {
+		my @values = @{$fxhash->{$ref}};
+		for my $i (0..$nb) {
+			if ( $values[$i] =~ /\*/ ) {
+				my $string = $values[$i];
+				print " |_transforming $string into ";
+				$string =~ s/srate/$samplerate/;
+				$string =~ s/samplerate/$samplerate/;
+				$values[$i] = eval $string; #calculate the value
+				print "$values[$i]\n";
+			}
+		}
+	}
+
+}
+
+sub LADSPAfxGetControls {
+	my $fxhash = shift;
+	my $fx = $fxhash->{fxname};
 
 	#build the plugin list if it doesn't exist
 	if (!defined $LADSPA_PluginsList) {

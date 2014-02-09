@@ -45,6 +45,7 @@ sub init {
 	$project->AddMixers;
 
 	#TODO sanitize effects values, need SAMPLERATE !!
+	$project->Sanitize;
 
 	#------------------Add songs------------------------------
 	$project->AddSongs;	
@@ -143,6 +144,23 @@ sub AddPlumbing {
 
 	my @plumbing_rules = Plumbing->create_rules($project);
 	$project->{connections}{rules} = \@plumbing_rules;
+}
+
+###########################################################
+#
+#		 PROJECT functions
+#
+###########################################################
+sub Sanitize {
+	my $project = shift;
+
+	print "Project: Sanitize\n";
+	foreach my $mixername (keys %{$project->{mixers}}) {
+		#shortcut name
+		my $mixer = $project->{mixers}{$mixername};
+		#sanitize effect
+		$mixer->Sanitize_EffectsParams($project->{AUDIO}{samplerate});
+	}	
 }
 
 ###########################################################

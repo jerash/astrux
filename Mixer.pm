@@ -112,6 +112,20 @@ sub Start {
 	$mixer->{engine}->StartNonmixer if ($mixer->is_nonmixer);	
 }
 
+sub Sanitize_EffectsParams {
+	my $mixer = shift;
+	my $samplerate = shift;
+
+	#TODO Sanitize_EffectsParams
+	foreach my $channel (keys %{$mixer->{channels}}) {
+		foreach my $insert (keys %{$mixer->{channels}{$channel}{inserts}}) {
+			if ( $mixer->{channels}{$channel}{inserts}{$insert}->is_LADSPA ) {
+				$mixer->{channels}{$channel}{inserts}{$insert}->SanitizeLADSPAFx($samplerate);
+			}
+		}
+	}
+}
+
 ###########################################################
 #
 #		 MIXER TEST functions
