@@ -24,6 +24,7 @@ state $LADSPA_PluginsList;
 if (!defined $LADSPA_PluginsList) {
 	print "FX: Loading LADSPA plugins list\n";
 	$LADSPA_PluginsList = &get_LADSPA_PluginsList;
+	print Dumper $LADSPA_PluginsList;
 }
 
 ###########################################################
@@ -153,8 +154,16 @@ sub SanitizeLADSPAFx {
 				print " |_transforming $string into ";
 				$string =~ s/srate/$samplerate/;
 				$string =~ s/samplerate/$samplerate/;
-				$values[$i] = eval $string; #calculate the value
-				print "$values[$i]\n";
+				my $result = eval $string; #calculate the value
+
+				#round to int
+				if ( (exists $fxhash->{type}) and ($fxhash->{type} eq "integer") ) {
+					use POSIX qw(ceil floor);
+					print "(rounded) ";
+					$result = floor($result);
+				}
+				print "$result\n";
+				$values[$i] = $result; #update value
 			}
 		}
 	}
@@ -185,11 +194,11 @@ sub LADSPAfxGetControls {
 		
 			#verify equal quantites of parameters
 			if ( grep {$_ != $#defaults} ($#lowvals, $#highvals, $#names) ) {
-					warn "Error : incoherent number of parameters";
+					warn "Fx Error : incoherent number of parameters for plugin $fxhash->{fxname}";
 					return 0;
 			}
 			if ( grep {$_ == -1} ($#defaults, $#lowvals, $#highvals, $#names) ) {
-					warn "Error : empty parameters";
+					warn "Fx Error : empty parameters for plugin $fxhash->{fxname}";
 					return 0;
 			}
 
