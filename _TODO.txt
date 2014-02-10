@@ -1,7 +1,6 @@
 FEATURES/BUGS
 --------------
 
-verify that the project name doesn't have spaces, replace with _
 build the complete project base path on generate
 
 add samplerate to project, useful for ladspa parameters
@@ -16,9 +15,7 @@ option to keep ecasound player opened after transport stop
 
 JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
 
-OSCMIDIbridge :
-	>par extension, pas besoin de midi si on peut utiiliser c-select,cop-select,copp-select,copp-value
-	redefine bridge globally
+redefine bridge globally
 
 vérifier les TODO
 
@@ -31,6 +28,8 @@ ENHANCEMENTS
 on personal submix remotes, add "save global preset" & "save song preset"
 if midi strip has more than one channel, we should create a merger with mididings ?
 dummy song & ecacfg , examples in astrux folder for project creation
+
+add Netjack ports to enable remote audio boxes.
 
 modifier jack_smf-player pour créer un port midi par piste avec le nom de la piste ?
 	> si je l aisse tomber jpmidi, on ne peut plus causer en tcp, ca passe par une shell... ou un fork

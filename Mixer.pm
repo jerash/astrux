@@ -63,7 +63,6 @@ sub init {
 	elsif ($globals{engine} eq "non-mixer") {
 		#bless structure to access data with module functions
 		$mixer->{engine} = NonEngine->new($mixer->{output_path},$globals{name});
-		#TODO nonmixer globals
 	}
 
 	#merge global info info to created engine #TODO optimize which info is really needed
@@ -116,7 +115,6 @@ sub Sanitize_EffectsParams {
 	my $mixer = shift;
 	my $samplerate = shift;
 
-	#TODO Sanitize_EffectsParams
 	foreach my $channel (keys %{$mixer->{channels}}) {
 		foreach my $insert (keys %{$mixer->{channels}{$channel}{inserts}}) {
 			if ( $mixer->{channels}{$channel}{inserts}{$insert}->is_LADSPA ) {

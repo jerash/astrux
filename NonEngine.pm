@@ -68,11 +68,11 @@ sub StartNonmixer {
 	}
 	#if mixer is not existing, launch mixer with needed file
 	else {
-		my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
-		#my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n"; #TODO use the real start
+		# my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
+		my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
 		system ( $command );
-		#wait for ecasound engines to be ready
-		sleep(1) until $nonengine->is_ready;
+		#wait for mixer to be ready
+		# TODO sleep(1) until $nonengine->is_ready;
 		print "   Nonmixer $nonengine->{name} is ready\n";
 	}
 }
@@ -86,7 +86,7 @@ sub StartNonmixer {
 sub is_ready {
 	my $nonengine = shift;
 
-	sleep(4); #return 1 if 1; #TODO send osc ping and read pong
+	#return 1 if 1; #TODO send osc ping and read pong
 	return 0;
 }
 sub is_running {

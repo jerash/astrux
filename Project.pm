@@ -247,6 +247,9 @@ sub SaveTofile {
 	my $project = shift;
 	my $outfile = shift;
 
+	#replace any nonalphanumeric character
+	$outfile =~ s/[^\w]/_/g;
+
 	#we create a dumper file (human readable)
 	use Data::Dumper;
 	$Data::Dumper::Purity = 1;
