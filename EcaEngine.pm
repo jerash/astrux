@@ -55,7 +55,9 @@ sub StartEcasound {
 		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
 		system ( $command );
 		#wait for ecasound engines to be ready
-		sleep(1) until $ecaengine->is_ready;
+		my $timeout = 0;
+		sleep(1) until $ecaengine->is_ready || $timeout++ eq 5;
+		die "EcaEngine Error: timeout while waiting for engine \"$ecaengine->{name}\" to be ready\n" if $timeout >= 5;
 		print "   Ecasound $ecaengine->{name} is ready\n";
 		#create socket for communication
 		$ecaengine->init_socket($port);

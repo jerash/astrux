@@ -72,7 +72,9 @@ sub StartNonmixer {
 		my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
 		system ( $command );
 		#wait for mixer to be ready
-		sleep(1) until $nonengine->is_ready;
+		my $timeout = 0;
+		sleep(1) until $nonengine->is_ready || $timeout++ eq 5;
+		die "NonEngine Error: timeout while waiting for engine \"$nonengine->{name}\" to be ready\n" if $timeout >= 5;
 		print "   Nonmixer $nonengine->{name} is ready\n";
 	}
 }
@@ -87,6 +89,7 @@ sub is_ready {
 	my $nonengine = shift;
 	
 	#TODO check for PID in case it can't start so we don't wait undefinately
+	# or send for a pecific OSC message and wait for reply
 	return 1 if $nonengine->is_running;
 	return 0;
 }
