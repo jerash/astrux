@@ -49,19 +49,30 @@ sub create_lines {
 
 	#the rule set
 	my @osclines;
+	
 	# --- LOOP THROUGH MIXERs ---
+	
 	foreach my $mixername (keys %{$project->{mixers}}) {
+		
 		#create mixer reference
 		my $mixer = $project->{mixers}{$mixername}{channels};
+		
 		# --- LOOP THROUGH CHANNELS ---
+	
 		foreach my $channelname (keys %{$mixer}) {
+			
 			#create channel reference
 			my $channel = $mixer->{$channelname};
-			#add channel options
-			push(@osclines,"/$mixername/$channelname/mute;ecs;0;0;1");
-			push(@osclines,"/$mixername/$channelname/solo;ecs;0;0;1") unless $channel->is_hardware_out;
-			push(@osclines,"/$mixername/$channelname/bypass;ecs;0;0;1");
+			
+			#add generic channel options
+			push(@osclines,"/$mixername/$channelname/mute;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
+			push(@osclines,"/$mixername/$channelname/solo;$project->{mixers}{$mixername}{engine}{engine};0;0;1") unless $channel->is_hardware_out;
+			push(@osclines,"/$mixername/$channelname/bypass;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
+			
+			#TODO add generic volume/pan controls for non-mixer
+
 			# --- LOOP THROUGH INSERTS ---
+	
 			foreach my $insertname (keys %{$channel->{inserts}}) {
 				#create insert reference
 				my $insert = $channel->{inserts}{$insertname};
@@ -69,14 +80,20 @@ sub create_lines {
 				my $i = 0;
 				foreach my $paramname (@{$insert->{paramnames}}) {
 					#construct line with
-					# /mixername/channelname/insertname/paramname;midi;value;min;max;CC;channel
+					# /mixername/channelname/insertname/paramname;midi|engine_type;value;min;max;CC;channel
 					warn "Insert ($paramname) has a system name... may not work\n" if ($paramname =~ /^(mute|solo|bypass)$/);
 					my $value = $insert->{defaultvalues}[$i];
 					my $min = $insert->{lowvalues}[$i];
 					my $max = $insert->{highvalues}[$i];
 					my ($CC,$channel) = ('','');
-					($CC,$channel) = split(',',$insert->{CCs}[$i]) if $insert->{CCs}; #ignore if CC not created					
-					my $line = "/$mixername/$channelname/$insertname/$paramname;midi;$value;$min;$max";
+					($CC,$channel) = split(',',$insert->{CCs}[$i]) if $insert->{CCs}; #ignore if CC not created
+
+					my $line;
+					$line = "/$mixername/$channelname/$insertname/$paramname;midi;$value;$min;$max"
+						if $project->{mixers}{$mixername}->is_ecasound;
+					$line = "/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i];non-mixer;$value;$min;$max"
+						if $project->{mixers}{$mixername}->is_nonmixer;
+
 					$line .= ";$CC" if $CC;
 					$line .= ";$channel" if $channel;
 					push(@osclines,$line);
@@ -84,7 +101,9 @@ sub create_lines {
 					$i++;
 				}
 			}
-			# --- LOOP THROUGH AUX ROUTES ---
+			
+			# --- LOOP THROUGH AUX ROUTES (ecasound only) ---
+			
 			foreach my $auxroute (keys %{$channel->{aux_route}}) {
 				#create route reference
 				my $route = $channel->{aux_route}{$auxroute}{inserts}{panvol};
@@ -121,6 +140,12 @@ sub create_lines {
 
 	return @osclines;
 }
+
+###########################################################
+#
+#		 BRIDGE MIDI functions
+#
+###########################################################
 
 sub create_midi_out_port {
 	my $bridge = shift;
@@ -173,7 +198,7 @@ sub send_osc2midi {
 		# $rules{$path}[1] = $inval;
 		
 		#scale value to midirange
-		my $outval = &ScaleValue($inval,$min,$max);
+		my $outval = &ScaleToMidiValue($inval,$min,$max);
 		print "value scaled to $outval\n" if $debug;
 
 		#prepare midi data
@@ -187,7 +212,7 @@ sub send_osc2midi {
 	}
 }
 
-sub ScaleValue {
+sub ScaleToMidiValue {
 	my $inval = shift;
 	my $min = shift;
 	my $max = shift;
@@ -203,13 +228,24 @@ sub ScaleValue {
 	return $out;
 }
 
+sub SendMidiCC {
+	my $outCC = shift;
+	return MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,$outCC);
+}
+
+###########################################################
+#
+#		 BRIDGE functions
+#
+###########################################################
+
 
 sub Refresh {
 	my $bridge = shift;
 
 	my %rules = %{$bridge->{rules}};
 
-	print "Sending all midi data!!\n";
+	print "Sending all data!!\n";
 	foreach my $path (keys %rules) {
 		#get elements
 		my $type = $rules{$path}[0];
@@ -219,24 +255,23 @@ sub Refresh {
 		my $CC = $rules{$path}[4];
 		my $channel = $rules{$path}[5];
 
-		next if (
-			!defined $type or
-			!defined $inval or
-			!defined $min or
-			!defined $max or
-			!defined $CC or
-			!defined $channel
-			);
-		#print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
+		#check for needed info
+		next unless ( defined $type and defined $inval and defined $min and defined $max );
 
 		if ($type eq "midi"){
-			my $outval = &ScaleValue($inval,$min,$max);
+
+			#check for needed info
+			next unless ( defined $CC and defined $channel );
+			print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n" if $debug;
+
+			my $outval = &ScaleToMidiValue($inval,$min,$max);
 			#send midi data
 			my @outCC = ($channel-1, '','','',$CC,$outval);
-			warn "could not send midi data\n" unless &SendCC(\@outCC);
+			warn "could not send midi data\n" unless &SendMidiCC(\@outCC);
 		}
 		#TODO check for non midi type !
 	}
 }
+
 
 1;

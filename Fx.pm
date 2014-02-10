@@ -184,7 +184,7 @@ sub LADSPAfxGetControls {
 			#fill arrays
 			my (@names, @defaults,@lowvals,@highvals);
 			foreach my $control (sort keys $LADSPA_PluginsList->{$fx}{controls}) {
-				push @names, $control if $control;
+				push @names, $LADSPA_PluginsList->{$fx}{controls}{$control}{name} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{name};
 				push @lowvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{min} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{min};
 				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
 				push @defaults, $LADSPA_PluginsList->{$fx}{controls}{$control}{default} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{default};
@@ -203,6 +203,7 @@ sub LADSPAfxGetControls {
 			}
 
 			#insert values
+			$fxhash->{name} = $LADSPA_PluginsList->{$fx}{name};
 			push( @{$fxhash->{paramnames}} ,@names);
 			push( @{$fxhash->{defaultvalues}} ,@defaults);
 			push( @{$fxhash->{currentvalues}} ,@defaults);
