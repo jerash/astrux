@@ -76,7 +76,9 @@ sub create_lines {
 					my $max = $insert->{highvalues}[$i];
 					my ($CC,$channel) = ('','');
 					($CC,$channel) = split(',',$insert->{CCs}[$i]) if $insert->{CCs}; #ignore if CC not created					
-					my $line = "/$mixername/$channelname/$insertname/$paramname;midi;$value;$min;$max;$CC;$channel";
+					my $line = "/$mixername/$channelname/$insertname/$paramname;midi;$value;$min;$max";
+					$line .= ";$CC" if $CC;
+					$line .= ";$channel" if $channel;
 					push(@osclines,$line);
 					# print "**$line \n";
 					$i++;
