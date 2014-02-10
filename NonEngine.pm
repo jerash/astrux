@@ -87,6 +87,9 @@ sub is_ready {
 	my $nonengine = shift;
 
 	#return 1 if 1; #TODO send osc ping and read pong
+	
+	#check for PID in case it can't start so we don't wait undefinately
+
 	return 0;
 }
 sub is_running {

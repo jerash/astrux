@@ -563,7 +563,7 @@ sub CreateNonFiles {
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
-			if ($channel->is_hardware_in) {
+			if ($channel->is_main_in) {
 				$line = "\tAUX_Module $id create :number $auxnumber :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channelname} :active 1";
 				push @snapshot,$line;
 			}	

@@ -89,7 +89,7 @@ sub create_rules {
 			# --- LOOP THROUGH CHANNELS ---
 			foreach my $channelname (keys %{$mixer}) {
 				# --- INPUTS ---
-				if ($mixer->{$channelname}->is_hardware_in) {
+				if ($mixer->{$channelname}->is_main_in) {
 					#get the table of hardware input connections
 					my @table = @{$mixer->{$channelname}{connect}};
 					#for each channel (assumed max 2 channels)
@@ -137,8 +137,8 @@ sub create_rules {
 						}
 					}
 				}
-				# --- AUXES ---
-				elsif ($mixer->{$channelname}->is_aux) {
+				# --- SEND AUXES ---
+				elsif ($mixer->{$channelname}->is_send) {
 				#add the route to master
 					for my $i (1..2) {
 						my $plumbout;
@@ -155,7 +155,23 @@ sub create_rules {
 						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
 					}
 				}
-				# --- OUTPUT ---
+				# --- BUS OUTPUT ---
+				elsif ($mixer->{$channelname}->is_bus_out) {
+					#get the table of hardware output connections
+					my @table = @{$mixer->{$channelname}{connect}};
+					#add the route to master
+					for my $i (1..2) {
+						my $plumbout;
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
+							if ($mixer->{$channelname}{group} eq '');
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+							if ($mixer->{$channelname}{group} ne '');
+						my $plumbin = $table[$i-1];
+						#add rule
+						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
+					}
+				}
+				# --- MAIN OUTPUT ---
 				elsif ($mixer->{$channelname}->is_main_out) {
 					#get the table of hardware output connections
 					my @table = @{$mixer->{$channelname}{connect}};

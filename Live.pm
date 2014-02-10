@@ -107,8 +107,14 @@ sub Start {
 
 	#jack.plumbing
 	my $pid_jackplumbing = qx(pgrep jack.plumbing);
-	if ($project->{connections}{"jack.plumbing"} eq 1) {
-		die "jack.plumbing is not running" unless $pid_jackplumbing;
+	if (!$pid_jackplumbing) {
+		print "jack.plumbing is not running. Starting it\n";
+		my $command = "jack.plumbing > /dev/null 2>&1 &";
+		# system ($command);
+		sleep 1;
+		$pid_jackplumbing = qx(pgrep jackd);
+	}
+	else {
 		print "jack.plumbing running with PID $pid_jackplumbing";
 	}
 	$project->{backends}{JACKPLUMBING}{PID} = $pid_jackplumbing;
