@@ -72,7 +72,7 @@ sub StartNonmixer {
 		my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
 		system ( $command );
 		#wait for mixer to be ready
-		# TODO sleep(1) until $nonengine->is_ready;
+		sleep(1) until $nonengine->is_ready;
 		print "   Nonmixer $nonengine->{name} is ready\n";
 	}
 }
@@ -85,11 +85,9 @@ sub StartNonmixer {
 
 sub is_ready {
 	my $nonengine = shift;
-
-	#return 1 if 1; #TODO send osc ping and read pong
 	
-	#check for PID in case it can't start so we don't wait undefinately
-
+	#TODO check for PID in case it can't start so we don't wait undefinately
+	return 1 if $nonengine->is_running;
 	return 0;
 }
 sub is_running {
@@ -100,7 +98,7 @@ sub is_running {
 
 	my $ps = qx(ps ax);
 	# print "***\n $ps \n***\n";
-	($ps =~ /non-mixer/ and $ps =~ /--instance $name/ and $ps =~ /osc-port=$port/) ? return 1 : return 0;
+	($ps =~ /non-mixer-noui/ and $ps =~ /--instance $name/ and $ps =~ /--osc-port $port/) ? return 1 : return 0;
 }
 
 ###########################################################
