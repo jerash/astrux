@@ -249,6 +249,7 @@ sub SaveTofile {
 
 	#replace any nonalphanumeric character
 	$outfile =~ s/[^\w]/_/g;
+	$outfile = $project->{project}{base_path}."/".$outfile;
 
 	#we create a dumper file (human readable)
 	use Data::Dumper;
