@@ -1,6 +1,8 @@
 FEATURES/BUGS
 --------------
 
+ensure project .cfg is save is project base folder even if called from somewhere else
+
 build the complete project base path on generate
 
 don't create some plumbing rules if nonmixer has autoconnect on

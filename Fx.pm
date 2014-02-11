@@ -7,9 +7,6 @@ use warnings;
 use feature 'state';
 
 use Data::Dumper;
-#http://search.cpan.org/~jdiepen/Audio-LADSPA-0.018/UserGuide/UserGuide.pod
-# use Audio::LADSPA;
-
 my $debug = 0;
 
 ###########################################################
@@ -24,7 +21,7 @@ state $LADSPA_PluginsList;
 if (!defined $LADSPA_PluginsList) {
 	print "FX: Loading LADSPA plugins list\n";
 	$LADSPA_PluginsList = &get_LADSPA_PluginsList;
-	# print Dumper $LADSPA_PluginsList;
+	print Dumper $LADSPA_PluginsList if $debug;
 }
 
 ###########################################################
@@ -67,7 +64,7 @@ sub init {
 	}
 	else {
 		if ($fx->EcafxGetControls($effect)) {
-			#construit la ligne d'effet ecs
+			#build default ecs effect line
 			my $defaults = join ',', @{$fx->{defaultvalues}};
 			$fx->{ecsline} = " -pn:$effect," . $defaults;
 		
@@ -129,11 +126,7 @@ sub is_LADSPA {
 		$LADSPA_PluginsList = &get_LADSPA_PluginsList;
 	}
 	#look for the plugin ID
-	if (defined $LADSPA_PluginsList) {
-		if (exists $LADSPA_PluginsList->{$fx}) {
-			return 1;
-		}
-	}
+	return 1 if ((defined $LADSPA_PluginsList) and (exists $LADSPA_PluginsList->{$fx}));
 	return 0;
 }
 
@@ -167,7 +160,6 @@ sub SanitizeLADSPAFx {
 			}
 		}
 	}
-
 }
 
 sub LADSPAfxGetControls {
@@ -189,7 +181,6 @@ sub LADSPAfxGetControls {
 				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
 				push @defaults, $LADSPA_PluginsList->{$fx}{controls}{$control}{default} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{default};
 				#TODO do something with the control {type}
-				#TODO deal with specific info like '...' '2*samplerate' ...Etc
 			}
 		
 			#verify equal quantites of parameters
@@ -233,7 +224,7 @@ sub get_LADSPA_PluginsList {
 			#query the plugin file for its plugins
 			my $stdout = `analyseplugin $line`;
 
-			my @pl = split(/\n{2,}/, $stdout); # note the new pattern
+			my @pl = split(/\n{2,}/, $stdout);
 
 			# print "pluginfile $file has $#pl plugins\n";
 			foreach my $plugininfo (@pl) {
@@ -363,7 +354,7 @@ sub EcafxGetControls() {
 	
 	#open effect file
 	my $file;
-	#TODO : path is not generic !!!!!!!!!!!!
+						#TODO : path is not generic !!!!!!!!!!!!
 	my $string = '';
 	if (open($file, "<", "/home/seijitsu/2.TestProject/ecacfg/effect_presets")) {
 		#get the effect parameters string
@@ -387,6 +378,7 @@ sub EcafxGetControls() {
 			return 0;
 		}
 	}
+	else { die "Fx Error: can't open ecasound effect preset files.... to fix in Fx.pm\n";}
 	# TODO : fallback from project file to global file
 	# "$ENV{HOME}/.ecasound/effect_presets";
 	# warn "cannot open effect_presets file : $!";
