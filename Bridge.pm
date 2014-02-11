@@ -147,11 +147,11 @@ sub create_lines {
 #
 ###########################################################
 
+#create alsa midi port with only 1 output
+my @alsa_output = ("astrux",0);
+
 sub create_midi_out_port {
 	my $bridge = shift;
-
-	#create alsa midi port with only 1 output
-	my @alsa_output = ("astrux",0);
 
 	#update bridge structure
 	$bridge->{midiout} = @alsa_output;

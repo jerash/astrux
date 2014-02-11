@@ -3,9 +3,12 @@ FEATURES/BUGS
 
 build the complete project base path on generate
 
-add samplerate to project, useful for ladspa parameters
+don't create some plumbing rules if nonmixer has autoconnect on
+
+regularly ping mixers in Live mode
 
 can we get non-mixer channel meter info from osc ?
+	> doable but not implemented
 bug non-mixer with autoroute from multiple auxes, not coherent routes even if snapshot file says it correctly
 bug non-mixer when adding a new aux before an existing aux, will also autoconnect to same ports
 bug non-mixer if a controller exist on a track, can't start in -noui mode, error "Can't open display"
