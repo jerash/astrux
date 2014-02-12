@@ -52,7 +52,7 @@ sub StartEcasound {
 	}
 	#if mixer is not existing, launch mixer with needed file
 	else {
-		my $command = "ecasound -q -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
+		my $command = "ecasound -q -K -s $mixerfile -R $path/ecasoundrc --server --server-tcp-port=$port > /dev/null 2>&1 &\n";
 		system ( $command );
 		#wait for ecasound engines to be ready
 		my $timeout = 0;

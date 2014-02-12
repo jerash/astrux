@@ -68,8 +68,8 @@ sub StartNonmixer {
 	}
 	#if mixer is not existing, launch mixer with needed file
 	else {
-		# my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
-		my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
+		my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
+		# my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
 		system ( $command );
 		#wait for mixer to be ready
 		my $timeout = 0;
