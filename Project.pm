@@ -190,7 +190,8 @@ sub GenerateFiles {
 		$song->{ecasound} = \%engine;
 		bless $song->{ecasound} , EcaEngine::;
 		#update name
-		$song->{ecasound}{name} = $songname;
+		# $song->{ecasound}{name} = $songname;
+		$song->{ecasound}{name} = "players";
 		#update ecsfile path
 		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
 		$song->{ecasound}{ecsfile} = $ecsfilepath;
