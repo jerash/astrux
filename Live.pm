@@ -123,7 +123,7 @@ sub Start {
 	my $pid_a2jmidid = qx(pgrep -f a2jmidid);
 	#die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
 	if (!$pid_a2jmidid) {
-		system('a2jmidid > /dev/null 2>&1 &');
+		system('a2jmidid -e > /dev/null 2>&1 &');
 		sleep 1;
 		$pid_a2jmidid = qx(pgrep -f a2jmidid);
 	}
