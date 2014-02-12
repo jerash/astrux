@@ -44,7 +44,7 @@ sub init {
 	#------------------Add mixers-----------------------------
 	$project->AddMixers;
 
-	#TODO sanitize effects values, need SAMPLERATE !!
+	# sanitize effects values, need SAMPLERATE
 	$project->Sanitize;
 
 	#------------------Add songs------------------------------
@@ -172,17 +172,11 @@ sub Sanitize {
 sub GenerateFiles {
 	my $project = shift;
 
+	print "Project: generating files\n";
 	#----------------MIXERS FILES------------------------
 	#for each mixer, create the mixer file/folder
 	foreach my $mixername (keys %{$project->{mixers}}) {
-		
-		#shortcut name
-		my $mixer = $project->{mixers}{$mixername};
-
-		#if ecasound
-		$mixer->{engine}->CreateEcsFile if ($mixer->is_ecasound);
-
-		$mixer->CreateNonFiles if ($mixer->is_nonmixer);
+		my $mixer = $project->{mixers}{$mixername}->Create_File;
 	}
 
 	#----------------SONGS FILES------------------------
@@ -211,20 +205,19 @@ sub GenerateFiles {
 
 	#----------------PLUMBING FILE------------------------
 	#add the pumbing rules to the project 
-	#TOFIX we do it now after nonmixer files are generetad, so we know the auxes assignations
+	#TODO we do it now after nonmixer files are generetad, so we know the auxes assignations
 	$project->AddPlumbing;
 	#now generate the file
 	if ($project->{connections}{"jack.plumbing"} == 1) {
 		#we're asked to generate the plumbing file
 		my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
 		$project->{connections}{file} = $plumbingfilepath;
-		# bless $project->{connections} , Plumbing::;
-		print "Project: creating plumbing file $plumbingfilepath\n";
+		print " |_Project: creating plumbing file $plumbingfilepath\n";
 		$project->{connections}->create;
 		$project->{connections}->save;
 	}
 	else {
-		print "Project: jack.plumbing isn't defined as active. Not creating file.";
+		print " |_Project: jack.plumbing isn't defined as active. Not creating file.\n";
 	}
 
 	#----------------OSC2MIDI BRIDGE FILE------------------------
@@ -233,20 +226,20 @@ sub GenerateFiles {
 		#we're asked to generate the bridge file
 		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
 		$project->{osc2midi}{file} = $filepath;
-		print "Project: creating osc2midi file $filepath\n";
+		print " |_Project: creating osc2midi file $filepath\n";
 		$project->{osc2midi}->create;
 		$project->{osc2midi}->save;
 	}
 	else {
-		print "Project: midi2osc bridge isn't defined as active. Not creating file.";
+		print " |_Project: midi2osc bridge isn't defined as active. Not creating file.";
 	}
-
 }
 
 sub SaveTofile {
 	my $project = shift;
 	my $outfile = shift;
 
+	print "Project: saving project\n";
 	#replace any nonalphanumeric character
 	$outfile =~ s/[^\w]/_/g;
 	$outfile = $project->{project}{base_path}."/".$outfile;
@@ -280,7 +273,7 @@ sub SaveTofile {
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $project, $outfile;
 
-	print "Project: saved to $outfile\n";
+	print " |_Project: saved to $outfile\n";
 
 	# store values back
 	if (defined $hash{TCP}{socket}) {
@@ -305,23 +298,6 @@ sub LoadFromFile {
 
 	use Storable;
 	$project = retrieve($infile);
-
-	# my $in = open "<$infile";
- #    local($/) = "";
- #    my $str = <$in>;
- #    close $in;
-
- #    print "Input: $str";
-
- #    my $hashref;
- #    eval $str;
- #    my(%hash) = %$hashref;
-
- #    foreach my $key (sort keys %hash)
- #    {
- #        print "$key: @{$hash{$key}}\n";
- #    }
-
 }
 
 ###########################################################

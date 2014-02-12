@@ -111,6 +111,16 @@ sub Start {
 	$mixer->{engine}->StartNonmixer if ($mixer->is_nonmixer);	
 }
 
+sub Create_File {
+	my $mixer = shift;
+
+	#if ecasound
+	$mixer->{engine}->CreateEcsFile if ($mixer->is_ecasound);
+	
+	#if nonmixer
+	$mixer->CreateNonFiles if ($mixer->is_nonmixer);
+}
+
 sub Sanitize_EffectsParams {
 	my $mixer = shift;
 	my $samplerate = shift;
@@ -424,10 +434,12 @@ sub CreateNonFiles {
 	
 	#check if the folder already exists
 	if (! -d $mixerpath) {
-		print "nonmixer folder does not exists, creating\n";
+		print "Mixer: nonmixer folder does not exists, creating\n";
 		mkdir $mixerpath;
 		die "Error: directry creation failed!\n" if (! -d $mixerpath);	
 	}
+
+	print" |_Mixer: saving non mixer to $mixerpath\n";
 
 	#create the non info files
 	foreach my $file (keys $mixer->{engine}{files}) {

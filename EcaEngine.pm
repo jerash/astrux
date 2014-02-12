@@ -73,6 +73,8 @@ sub StartEcasound {
 sub CreateEcsFile {
 	my $ecaengine = shift;
 
+	print" |_EcaEngine: saving file $ecaengine->{ecsfile}\n";
+
 	#create the file
 	$ecaengine->ecs_create;
 	#add ecasound header to file

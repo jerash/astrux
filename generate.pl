@@ -16,8 +16,11 @@ use Config::IniFiles;
 # This is the main tool for Astrux Live
 #----------------------------------------------------------------
 
-#TODO : if no arguments check for project.ini in current folder
-#		else, parse command line arguments
+print "\n\n\n
+--------------------------------
+ ASTRUX Live Project Generation
+--------------------------------\n\n";
+
 my $infile = "";
 if ($#ARGV+1 eq 0) {
 	#project ini file is in the current folder
@@ -41,17 +44,18 @@ my $ini_project_ref = \%ini_project;
 #TODO build the base_path here
 my $Live = Project->new($ini_project_ref);
 die "Failed to create Project!!!\n" unless defined $Live;
-print "\nLive Project Generation OK\n";
+print "
+---------------------------
+Live Project Generation OK
+---------------------------\n\n";
 
 #------------Create project files------------------------
-print "...now generating files\n";
 $Live->GenerateFiles;
-print "...saving project\n";
 $Live->SaveTofile("$Live->{project}{name}");
 
 print " 
 ---------------------------
 -- Live Project Saved :) --
----------------------------\n";
+---------------------------\n\n";
 
 #print Dumper $Live;
