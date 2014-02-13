@@ -4,6 +4,8 @@ use warnings;
 
 use FindBin;
 use lib $FindBin::Bin;
+use Cwd;
+use Cwd 'abs_path';
 
 use Project;
 
@@ -21,27 +23,38 @@ print "\n\n\n
  ASTRUX Live Project Generation
 --------------------------------\n\n";
 
-my $infile = "";
+my $pathtoproject = "";
+my $base_path = "";
+
 if ($#ARGV+1 eq 0) {
-	#project ini file is in the current folder
-	print "No argument, trying to find a project file in current folder\n";
-	$infile = "project.ini" if (-e "./project.ini");
+	#we should be in the project base folder, are we ?
+	print "No argument, trying to find a project file\n";
+	$pathtoproject .= "project/project.ini";
+	#update the base path with the current directory
+	$base_path = getcwd;
 }
 elsif ($#ARGV+1 eq 1) {
-	#argument passed, assume it to be the project file
-	$infile = $ARGV[0];
-	print "Opening : $infile\n";
+    #argument passed, assume it to be the project base folder
+	$pathtoproject .= $ARGV[0] . "project/project.ini";
+	#update the base path with the absolute directory
+	$base_path = abs_path($ARGV[0]);
 }
-die "could not load project file\n" if $infile eq "";
 
-#create the ini hash from the file
+#transforming project file to an absolute path
+$pathtoproject = abs_path($pathtoproject);
+die "could not find project file $pathtoproject\n" unless (-e $pathtoproject);
+
+print "Project base path is set to : $base_path\n";
+
+#trying to create the ini hash from the file
 my %ini_project;
-tie %ini_project, 'Config::IniFiles', ( -file => $infile );
+tie %ini_project, 'Config::IniFiles', ( -file => $pathtoproject );
 die "reading project ini file failed\n" unless %ini_project;
+
+print "Project init from file : $pathtoproject\n";
 my $ini_project_ref = \%ini_project;
 
 #------------Create project structure----------------------------
-#TODO build the base_path here
 my $Live = Project->new($ini_project_ref);
 die "Failed to create Project!!!\n" unless defined $Live;
 print "

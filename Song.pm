@@ -107,7 +107,7 @@ sub build_songfile_chain {
 	my @chains;
 	foreach my $section (sort keys %{$song->{audio_files}}) {
 
-		#only match audio players, and catch payer slot number
+		#only match audio players, and catch player slot number
 		next unless (($section =~ /^players_slot_(\d+)/) and ($song->{audio_files}{$section}{type} eq "audio_player"));
 		my $slotnumber = $1;
 		#create path to file

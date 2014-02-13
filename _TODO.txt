@@ -27,6 +27,8 @@ write a list of perl dependencies
 
 change grep (wav;mid..etc) in song check to a global definition list
 
+unrelated : record an OSC flow into midi file meta events, so we can keep jack sync.
+
 ENHANCEMENTS
 -------------
 on personal submix remotes, add "save global preset" & "save song preset"
