@@ -1,70 +1,81 @@
 ASTRUX
+-------
+A live-oriented setup creation tool, for a complete show control
+Linux based, using FLOSS only
 
-the user defines audio/midi inputs and outputs
-astrux will take care of generating the mixers configuration
-and offer standardized control over TCP/OSC/MIDI
-each output will have independant volume control 
+Setup :
+1)astrux scans the computer for audio/midi capabilities
+2)the user builds a project
+	- analog/digital audio inputs/outputs based on computer capabilities
+	- audio and midi players (synchronized backing tracks)
+	- configurable metronome track
+	- sampler instruments
+3)astrux is generating the audio/midi configurations and offers unified/standardized control over TCP/OSC/MIDI
 
-DEFINITION DU PROJET / CAHIER DES CHARGES
-------------------------------------------
- Un pc autonome, qui une fois configuré, permet de gérer la live du groupe en prenant en compte :
- - des entrées analogiques/numérique sur des tranches type table de mixage analogique
- - la lecture d'instrumentaux
- - la lecture de fichiers midi (en synchro)
- - une piste de clic
- - la possibilité de contrôller tous les paramètres en midi ou OSC
- - un sampler pour batterie électronique/synthés
- - des sorties pour des retours avec mixages personnels
- - des sorties pistes individuelles pour mixage externe (option)
- - prise en compte de pistes de remplacement pour les musiciens absents
+Use:
+1) start saved project
+2) now play !
+
+
+All audio/midi parameters are accessible trough OSC (standard) and MIDI (if needed). A generated file is available as a reference.
+
+Each audio output bus has independant controls, allowing personal monitoring mixes, and in-the-box foh mixing (individual inputs can also be routed to single hardware outputs for out-the-box mixing)
  
-Ca doit pouvoir fonctionner totalement en ligne de commande, sans gui. (cette gui peut par contre très bien être en externe via le frontend, et multiple...)
+The whole astrux tool can be configured from the command-line without any GUI. It is based on standard INI files and a few scripts. A setup mode GUI exists as a frontend, generating the same necessary configuration files.
 
-Un frontend(bridge) gère toutes les demandes utilisateurs, soit en config, soit en direct, et contrôles les fichiers de config et la commande des processus nécessaires.
+Also a live GUI exists for a user-friendly experience, but any OSC/MIDI/TCP remote can be used if the correct messages are passed/handled to/from astrux.
 
-pour les players avec ecasound, on précharge tous les morceaux (chainsetups), mais le chainsetup n'est connecté qu'a la demande.
+Audio players are based on ecasound. When a project containing multiple players on songs is started, ecasound will load all songs chainsetups in the background, but connect only one will be connected at a time. this allow for fast context switching from one song to another.
+
+You can define replacement tracks to feed a strip with pre-recorded material. Just in case some real human is not here to do the job.
 
 OPTIONS
 --------
- - MIDI/OSC input table 
- - mode répet/config
-	édition possible des tranches
-	les players testent actifs à la fin du morceau pour pouvoir rembobiner
- - mode live
-	les players sont arrêtés en fin de morceau
-	bascule possible sur un mode inter chanson
-	preload possible du morceau suivant
+ - rehersal mode
+	audio channel strips are editable (will restart mixers)
+	midi filters/patch are editable (will restart midi bridge)
+	players remain active after the end, so you can rewind to any position
+ - live mode
+ 	players are stopped once reaching the end
+	fallback to a defined inter-song state possible
  - preload all sampler instruments on startup
 
-V0.1
+V0.1 (12/02/2014)
 -----
 *INPUTS mixer 
 	strips with volume,eq,auxsends
 *PLAYERS 
 	with ecasound
 *MIXERS
-	with ecasound/non-mixer
+	with ecasound or non-mixer
+
+V0.2
+-----
+MIDI/OSC/TCP bridge live control
+optionally generated touchosc presets
 *SAMPLER
 	clic
 	drums
 *MIDIPLAY
 	jpmidi v0.3
 
-V0.2
------
-MIDI/OSC/TCP bridge live control
-optionally generated touchosc presets
-
 V0.3
 -----
-jpmidi avec mode master jack control (tempo)
-lecteur vidéo (synchro jack)
-fx rack / plugin host
-vérification de la cpu/mémoire
-piste audio d'alarmes système
+jpmidi with master mode (jack control tempo/meters)
+lecteur vidéo (xjadeo)
+automate fx rack / plugin host
+realtime cpu/memory check (trigger alarms)
+replacement tracks
 
 V0.4
+----
+preloading the next song is possible, for fast context switching
+live cd/usb distribution creation
+
+V0.5
 ------
-éditeur midi (midish avec jack synchro)
-éditeur audio (nama)
-lecteur dmx (synchro jack)
+midi editor (midish with jack synchro)
+audio editor (nama)
+dmx player (with jack synchro) 
+	> probably using midi with http://qlc.sourceforge.net/index.shtml
+	> or OSC .... https://github.com/mcallegari/qlcplus

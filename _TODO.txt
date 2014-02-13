@@ -16,7 +16,10 @@ bug non-mixer when adding a new aux before an existing aux, will also autoconnec
 
 JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
 
-redefine bridge globally
+add option to route individual ins to outs (update livescreens)
+
+add a midi learn page to map osc.csv
+	>maybe add an ID to osc lines, and create a midimap.csv
 
 vérifier les TODO
 
