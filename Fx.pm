@@ -354,9 +354,9 @@ sub EcafxGetControls() {
 	
 	#open effect file
 	my $file;
-						#TODO : path is not generic !!!!!!!!!!!!
+						
 	my $string = '';
-	if (open($file, "<", "/home/seijitsu/2.TestProject/ecacfg/effect_presets")) {
+	if (open($file, "<", "/home/seijitsu/2.TestProject/ecacfg/effect_presets")) { #TODO : path is not generic !!!!!!!!!!!!
 		#get the effect parameters string
 		my $found =0;
 		my $tic = 0;

@@ -16,6 +16,36 @@ my $debug = 0;
 #		 BRIDGE OBJECT functions
 #
 ###########################################################
+sub new {
+	my $class = shift;
+	my $bridgefile = shift;
+	die "Bridge Error: can't create bridge without an ini file\n" unless $bridgefile;
+
+	#init structure
+	my $bridge = {
+		"ini_file" => $bridgefile
+	};
+	
+	bless $bridge,$class;
+	
+	#fill from ini file 
+	$bridge->init($bridgefile);
+
+	return $bridge; 
+}
+
+sub init {
+	my $bridge = shift;
+	my $ini_file = shift;
+
+	use Config::IniFiles;
+	#ouverture du fichier ini de configuration des channels
+	tie my %bridgeinfo, 'Config::IniFiles', ( -file => $ini_file );
+	die "Bridge Error: reading I/O ini file failed\n" unless %bridgeinfo;
+	
+	#update project structure with bridge infos
+	$bridge->{$_} = $bridgeinfo{$_} foreach (keys %bridgeinfo);
+}
 
 ###########################################################
 #
@@ -23,36 +53,33 @@ my $debug = 0;
 #
 ###########################################################
 
-sub create  {
+sub save_osc_file {
 	my $bridge = shift;
 
-	my $filepath = $bridge->{file};
+	my $filepath = $bridge->{OSC}{file};
 	open FILE, ">$filepath" or die $!;
-	print FILE "path;type;value;min;max;[CC;channel]\n";
-	close FILE;
-	$bridge->{status} = "new";
-}
-
-sub save {
-	my $bridge = shift;
-
-	my $filepath = $bridge->{file};
-	open FILE, ">>$filepath" or die $!;
+	
 	#add lines
-	print FILE "$_\n" foreach @{$bridge->{lines}};
+	foreach my $oscpath (sort keys %{$bridge->{OSC}{paths}}) {
+		print FILE "$oscpath;";
+		print FILE "$_;" foreach @{$bridge->{OSC}{paths}{$oscpath}};
+		print FILE "\n";
+	}
 	close FILE;
 }
 
-sub create_lines {
-	my $class = shift;
+sub get_osc_paths {
 	my $project = shift;
 
 	#the rule set
 	my @osclines;
+	#lines are : /osc/path ; targettype ; value ; min ; max [; CC ; channel]
 	
 	# --- LOOP THROUGH MIXERs ---
 	
 	foreach my $mixername (keys %{$project->{mixers}}) {
+
+		#TODO check if ecasound will use osc or midi control
 		
 		#create mixer reference
 		my $mixer = $project->{mixers}{$mixername}{channels};
@@ -69,13 +96,18 @@ sub create_lines {
 			push(@osclines,"/$mixername/$channelname/solo;$project->{mixers}{$mixername}{engine}{engine};0;0;1") unless $channel->is_hardware_out;
 			push(@osclines,"/$mixername/$channelname/bypass;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
 			
-			#TODO add generic volume/pan controls for non-mixer
+			#TODO add midi CC if necessary to mute/solo/bypass
+
+			#TODO add generic osc volume/pan controls for non-mixer
+			#TODO check for spaces and replace for %20 (non-mixer ladspa plugins)
 
 			# --- LOOP THROUGH INSERTS ---
 	
 			foreach my $insertname (keys %{$channel->{inserts}}) {
+
 				#create insert reference
 				my $insert = $channel->{inserts}{$insertname};
+
 				# --- LOOP THROUGH INSERT PARAMETERS ---
 				my $i = 0;
 				foreach my $paramname (@{$insert->{paramnames}}) {
@@ -135,10 +167,8 @@ sub create_lines {
 		$rules{$path} = ();
 		push @{$rules{$path}} , @values;
 	}
-	$project->{osc2midi}{rules} = \%rules;
 
-
-	return @osclines;
+	return \%rules;
 }
 
 ###########################################################

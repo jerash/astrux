@@ -51,6 +51,9 @@ my %ini_project;
 tie %ini_project, 'Config::IniFiles', ( -file => $pathtoproject );
 die "reading project ini file failed\n" unless %ini_project;
 
+#add project base folder
+$ini_project{globals}{base_path} = $base_path;
+
 print "Project init from file : $pathtoproject\n";
 my $ini_project_ref = \%ini_project;
 

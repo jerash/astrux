@@ -92,12 +92,12 @@ sub init {
 sub BuildMainMixer {
 	my $mixer = shift;
 	$mixer->BuildEcaMainMixer if ($mixer->is_ecasound);
-	$mixer->BuildNonMainMixer if ($mixer->is_nonmixer);
+	$mixer->BuildNonMixer if ($mixer->is_nonmixer);
 }
 sub BuildSubmix {
 	my $mixer = shift;
 	$mixer->BuildEcaSubmix if ($mixer->is_ecasound);
-	$mixer->BuildNonSubmix if ($mixer->is_nonmixer);
+	$mixer->BuildNonMixer if ($mixer->is_nonmixer);
 }
 sub BuildPlayers {
 	my $mixer = shift;
@@ -124,6 +124,8 @@ sub Create_File {
 sub Sanitize_EffectsParams {
 	my $mixer = shift;
 	my $samplerate = shift;
+
+	die "Mixer error: can't sanitize effects without samplerate\n" unless $samplerate;
 
 	foreach my $channel (keys %{$mixer->{channels}}) {
 		foreach my $insert (keys %{$mixer->{channels}{$channel}{inserts}}) {
@@ -386,27 +388,7 @@ sub CreateEcaPlayers {
 #
 ###########################################################
 
-sub BuildNonMainMixer {
-	my $mixer = shift;
-	
-	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
-
-	#add channels defined in the IO to mixer
-	foreach my $name (keys %{$mixer->{IOs}} ) {		
-
-		#ignore inactive channels
-		next unless $mixer->{IOs}{$name}{status} eq "active";
-
-		#create the channel strip
-		my $strip = Strip->new;
-		$strip->init($mixer->{IOs}{$name},$mixer->is_midi_controllable);
-
-		#add strip to mixer
-		$mixer->{channels}{$name} = $strip;
-	}
-}
-
-sub BuildNonSubmix {
+sub BuildNonMixer {
 	my $mixer = shift;
 	
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";

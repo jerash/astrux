@@ -51,10 +51,10 @@ sub init {
 	$project->AddSongs;	
 
 	#----------------Add plumbing-----------------------------
-	# MOVED to generates files, after we know the nonmixer auxes
+	# MOVED to generate files, after we know the nonmixer auxes
 
 	#----------------Add bridge-----------------------------
-	$project->AddOscMidiBridge;
+	$project->AddBridge;
 }
 
 ###########################################################
@@ -69,26 +69,25 @@ sub AddMixers {
 	my $foundmain = 0;
 
 	#build path to mixers files
-	my $mixers_path = $project->{project}{base_path} . "/" . $project->{project}{mixers_path};
-	my $output_path = $project->{project}{base_path} . "/" . $project->{project}{output_path};
+	my $output_path = $project->{globals}{base_path} . "/" . $project->{globals}{output_path};
 	
 	#iterate through each mixer file
-	my @files = <$mixers_path/*.ini>;
-	foreach my $mixerfile (@files) {
+	foreach (keys $project->{mixerfiles}) {
+
+	 	#build complete path to file
+		my $mixerfile = $project->{globals}{base_path} . "/" . 
+						$project->{globals}{mixers_path} . "/" . 
+						$project->{mixerfiles}{$_};
+		die "Bad mixerfile reference $mixerfile in project.ini\n" unless (-e $mixerfile);
+
 	 	print "Project: Creating mixer from $mixerfile\n";
 
 		#create mixer
 	 	my $mixer = Mixer->new($mixerfile,$output_path);
+	 	die "could not create mixer" unless $mixer;
 
 	 	#insert into project
 		$project->{mixers}{$mixer->{engine}{name}} = $mixer;
-
-		#ecasound mixer need project info
-		if ($project->{mixers}{$mixer->{engine}{name}}->is_ecasound) {
-			#add the ecaconfig path to mixer
-			my $path = $project->{project}{base_path}."/".$project->{project}{eca_cfg_path};
-			$project->{mixers}{$mixer->{engine}{name}}{engine}{eca_cfg_path} = $path;
-		}
 
 		#check if we have a main mixer
 		if ($project->{mixers}{$mixer->{engine}{name}}->is_main) {
@@ -104,46 +103,64 @@ sub AddMixers {
 sub AddSongs {
 	my $project = shift;
 
-	#build path to songs folder
-	my $songs_path = $project->{project}{base_path} . "/" . $project->{project}{songs_path};
-	
-	#get song list
-	my @songs_folders = <$songs_path/*>;
-
 	#iterate through each song fodlder
-	foreach my $folder (@songs_folders){
+	foreach (keys $project->{songfiles}) {
 
-		#ignore files, use directories only
-		next if (! -d $folder);
-		print "Project: Entering song folder : $folder\n";
+	 	#build complete path to file
+		my $songfile = $project->{globals}{base_path} . "/" . 
+						$project->{globals}{songs_path} . "/" . 
+						$project->{songfiles}{$_};
+		die "Bad song ini reference $songfile in project.ini\n" unless (-e $songfile);
+
+	 	print "Project: Creating songs from $songfile\n";
 
 		#crete a song object
-		my $song = Song->new($folder);
+		my $song = Song->new($songfile);
+	 	die "could not create song" unless $song;
 
-		#update the project with song info
+	 	#insert into project
 		$project->{songs}{$song->{name}} = $song;
 	}
 }
 
-sub AddOscMidiBridge {	
+sub AddBridge {	
 	my $project = shift;
-	
-	$project->{osc2midi}{status} = "notcreated";
-	bless $project->{osc2midi}, Bridge::;
 
-	my @bridgelines = Bridge->create_lines($project);
-	$project->{osc2midi}{lines} = \@bridgelines;
+	#verify if bridge ini file exists
+	my $bridgefile = $project->{globals}{base_path} . "/project/bridge.ini";
+	die "Project error : could not find bridge ini file $bridgefile, aborting.\n" unless (-e $bridgefile);
+
+	#insert into project
+	$project->{bridge} = Bridge->new($bridgefile);
 }
 
 sub AddPlumbing {
 	my $project = shift;
 
-	my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
-	$project->{connections}{file} = $plumbingfilepath;
-	bless $project->{connections} , Plumbing::;
+	#build destination file path
+	my $plumbingfilepath = $project->{globals}{base_path}."/".$project->{globals}{output_path}."/jack.plumbing";
 
-	my @plumbing_rules = Plumbing->create_rules($project);
-	$project->{connections}{rules} = \@plumbing_rules;
+	#create object
+	$project->{audio_patchbay} = Plumbing->new($plumbingfilepath);
+
+	#get rules
+	my @plumbing_rules = $project->Plumbing::get_plumbing_rules;
+
+	#insert into project
+	$project->{audio_patchbay}{rules} = \@plumbing_rules;
+}
+sub AddOSCPaths {
+	my $project = shift;
+
+	#build destination file path
+	my $filepath = $project->{globals}{base_path} . "/" . $project->{globals}{output_path} . "/osc.csv";
+	$project->{bridge}{OSC}{file} = $filepath;
+
+	#get osc paths
+	my $osc_paths = $project->Bridge::get_osc_paths;
+
+	#insert into project
+	$project->{bridge}{OSC}{paths} = $osc_paths;
 }
 
 ###########################################################
@@ -159,8 +176,9 @@ sub Sanitize {
 		#shortcut name
 		my $mixer = $project->{mixers}{$mixername};
 		#sanitize effect
-		$mixer->Sanitize_EffectsParams($project->{AUDIO}{samplerate});
-	}	
+		$mixer->Sanitize_EffectsParams($project->{jack}{samplerate});
+	}
+	print " |_Done\n";
 }
 
 ###########################################################
@@ -173,6 +191,11 @@ sub GenerateFiles {
 	my $project = shift;
 
 	print "Project: generating files\n";
+
+
+	#----------------DUMPER FILE------------------------
+	$project->SaveDumperFile("pre.");
+
 	#----------------MIXERS FILES------------------------
 	#for each mixer, create the mixer file/folder
 	foreach my $mixername (keys %{$project->{mixers}}) {
@@ -189,11 +212,11 @@ sub GenerateFiles {
 		my %engine = %{$project->{mixers}{players}{engine}};
 		$song->{ecasound} = \%engine;
 		bless $song->{ecasound} , EcaEngine::;
-		#update name
-		# $song->{ecasound}{name} = $songname;
+
+		#update name to players so outputs have the same name (plumbing need that)
 		$song->{ecasound}{name} = "players";
 		#update ecsfile path
-		my $ecsfilepath = $project->{project}{base_path}."/songs/$songname/chainsetup.ecs";
+		my $ecsfilepath = $project->{globals}{base_path}."/songs/$songname/chainsetup.ecs";
 		$song->{ecasound}{ecsfile} = $ecsfilepath;
 
 		#add io_chains
@@ -205,35 +228,59 @@ sub GenerateFiles {
 	}
 
 	#----------------PLUMBING FILE------------------------
-	#add the pumbing rules to the project 
-	#TODO we do it now after nonmixer files are generetad, so we know the auxes assignations
-	$project->AddPlumbing;
-	#now generate the file
-	if ($project->{connections}{"jack.plumbing"} == 1) {
-		#we're asked to generate the plumbing file
-		my $plumbingfilepath = $project->{project}{base_path}."/".$project->{project}{output_path}."/jack.plumbing";
-		$project->{connections}{file} = $plumbingfilepath;
-		print " |_Project: creating plumbing file $plumbingfilepath\n";
-		$project->{connections}->create;
-		$project->{connections}->save;
+
+	if ($project->{audio_patchbay}{'jack.plumbing'}) {
+
+		# add the pumbing rules to the project 	
+		# we do it now after nonmixer files are generated, so we know the auxes assignations
+		$project->AddPlumbing;
+
+		#now generate the file
+		print " |_Project: creating plumbing file $project->{audio_patchbay}{file}\n";
+		$project->{audio_patchbay}->save_to_file;
 	}
 	else {
 		print " |_Project: jack.plumbing isn't defined as active. Not creating file.\n";
 	}
 
-	#----------------OSC2MIDI BRIDGE FILE------------------------
-	#TODO define bridge option
-	if ($project->{osc2midi}{enable} == 1) {
-		#we're asked to generate the bridge file
-		my $filepath = $project->{project}{base_path} . "/" . $project->{project}{output_path} . "/oscmidistate.csv";
-		$project->{osc2midi}{file} = $filepath;
-		print " |_Project: creating osc2midi file $filepath\n";
-		$project->{osc2midi}->create;
-		$project->{osc2midi}->save;
+	#----------------OSC BRIDGE FILES------------------------
+	if ($project->{bridge}{OSC}{enable}) {
+
+		#TODO create the OSC paths
+		$project->AddOSCPaths;
+		print " |_Project: creating OSC paths file $project->{bridge}{OSC}{file}\n";
+		
+		#TODO bridge : check for MIDI input memo
+
+		#TODO bridge : check for ecasound
+
+		#now generate the file
+		$project->{bridge}->save_osc_file;
 	}
 	else {
-		print " |_Project: midi2osc bridge isn't defined as active. Not creating file.";
+		print " |_Project: bridge isn't defined as active. Not creating files.";
 	}
+
+
+	#----------------DUMPER FILE------------------------
+	$project->SaveDumperFile;
+}
+
+sub SaveDumperFile {
+	my $project = shift;
+	my $suffix = shift;
+
+	my $outfile = $project->{globals}{name};	
+	#replace any nonalphanumeric character
+	$outfile =~ s/[^\w]/_/g;
+	$outfile = $project->{globals}{base_path}."/". $project->{globals}{output_path} ."/$outfile.$suffix"."dmp";
+	#create a dumper file (human readable)
+	use Data::Dumper;
+	$Data::Dumper::Purity = 1;
+	open my $handle, ">$outfile" or die $!;
+	print $handle Dumper $project;
+	close $handle;
+	print " |_Project: creating dumper file $outfile\n";
 }
 
 sub SaveTofile {
@@ -243,14 +290,7 @@ sub SaveTofile {
 	print "Project: saving project\n";
 	#replace any nonalphanumeric character
 	$outfile =~ s/[^\w]/_/g;
-	$outfile = $project->{project}{base_path}."/".$outfile;
-
-	#we create a dumper file (human readable)
-	use Data::Dumper;
-	$Data::Dumper::Purity = 1;
-	open my $handle, ">$outfile.dmp" or die $!;
-	print $handle Dumper $project;
-	close $handle;
+	$outfile = $project->{globals}{base_path}."/".$outfile;
 
 	# remove all filehandles from structure (storable limitation)
 	#TODO also remove AE containing sub (CODE)
@@ -324,7 +364,7 @@ sub execute_command {
 	my $reply = '';
 
 	if ($command =~ /^save$/) { 
-		$project->SaveTofile("$project->{project}{name}"); 
+		$project->SaveTofile("$project->{globals}{name}"); 
 	}
 	elsif ($command =~ /^status$/) { 
 		foreach my $mixer (keys %{$project->{mixers}}) {

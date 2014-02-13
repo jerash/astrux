@@ -4,7 +4,6 @@ package Song;
 
 use strict;
 use warnings;
-use Config::IniFiles;
 use Audio::SndFile;
 #http://search.cpan.org/~jdiepen/Audio-SndFile-0.09/lib/Audio/SndFile.pm
 
@@ -18,28 +17,18 @@ use Data::Dumper;
 
 sub new {
 	my $class = shift;
-	my $folder = shift;
-	die "Song Error: can't create song without a folder path\n" unless $folder;
+	my $file = shift;
+	die "Song Error: can't create song without an ini file\n" unless $file;
 
 	#init structure
 	my $song = {
-		"path" => $folder
+		"ini_file" => $file
 	};
 	
 	bless $song,$class;
-
-	#get files list
-	my @songfiles = <$folder/*.*>;
-
-	#look for the ini file first
-	foreach my $file (@songfiles) {
-		#ignore directories, use files only
-		next unless ((-e $file) and ($file =~ /.*song.ini$/));
-
-		print " |_Song: Create song from $file\n";
-		#create a song object
-		$song->init($file,$folder);
-	}		
+	
+	#fill from ini file 
+	$song->init($file);
 
 	return $song; 
 }
@@ -48,22 +37,18 @@ sub init {
 	#grap song object from argument
 	my $song = shift;
 	my $ini_file = shift;
-	my $folder = shift;
 
+	use Config::IniFiles;
 	#ouverture du fichier ini de configuration des channels
 	tie my %songinfo, 'Config::IniFiles', ( -file => $ini_file );
 	die "Song Error: reading I/O ini file failed\n" unless %songinfo;
 	my $songinfo_ref = \%songinfo;
 
 	#verify in [song_globals] section exists
-	if (!$songinfo_ref->{song_globals}) {
-		die "Song Error: missing [song_globals] section in $ini_file song file\n";
-	}
-
+	die "Song Error: missing [song_globals] section in $ini_file song file\n" if (!$songinfo_ref->{song_globals});
+	
 	#update song structure with globals
-	foreach my $key (keys $songinfo_ref->{song_globals}) {
-		$song->{$key} = $songinfo_ref->{song_globals}{$key};
-	}
+	$song->{$_} = $songinfo_ref->{song_globals}{$_} foreach (keys $songinfo_ref->{song_globals});
 	delete $songinfo_ref->{song_globals};
 
 	#for each player slot, check file parameters for mono/stereo
@@ -75,6 +60,7 @@ sub init {
 			my $slotnumber = $1;
 			$song->{audio_files}{$section} = $songinfo_ref->{$section};
 			$song->{audio_files}{$section}{slot} = $slotnumber; 
+			print " |_Song: adding player for file $songinfo_ref->{$section}{filename}\n";
 		}
 		# match midi players, and catch player slot number
 		if ($songinfo_ref->{$section}{type} eq "midi_player") {
@@ -82,16 +68,13 @@ sub init {
 			my $slotnumber = $1;
 			$song->{midi_files}{$section} = $songinfo_ref->{$section};
 			$song->{midi_files}{$section}{slot} = $slotnumber; 
+			print " |_Song: adding player for file $songinfo_ref->{$section}{filename}\n";
 		}
 		# match sampler
 		if ($songinfo_ref->{$section}{type} eq "sampler") {
 			$song->{sampler_files}{$section} = $songinfo_ref->{$section};
+			print " |_Song: sampler file $songinfo_ref->{$section}{filename}\n";
 		}
-
-		# #create ecs line for mono file
-		# $song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 1;
-		# #create ecs line for stereo file
-		# $song->{$section}{ecsline} = "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{$section}{channels} eq 2;
 	}
 }
 
@@ -104,6 +87,11 @@ sub init {
 sub build_songfile_chain {
 	my $song = shift;
 
+	die "missing ini_file info in song $song->{name}\n" unless $song->{ini_file};
+
+	#get folder name from inifile path
+	my $path = substr $song->{ini_file} ,0 ,-4;
+
 	my @chains;
 	foreach my $section (sort keys %{$song->{audio_files}}) {
 
@@ -111,7 +99,7 @@ sub build_songfile_chain {
 		next unless (($section =~ /^players_slot_(\d+)/) and ($song->{audio_files}{$section}{type} eq "audio_player"));
 		my $slotnumber = $1;
 		#create path to file
-		my $filename = $song->{path} . "/" . $song->{audio_files}{$section}{filename};
+		my $filename = $path . "/" . $song->{audio_files}{$section}{filename};
 		#create ecs line for mono file
 		push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 1;
 		#create ecs line for stereo file

@@ -11,19 +11,50 @@ use warnings;
 #
 ###########################################################
 
-sub create {
-	#create the file (overwrite)
-	my $connections = shift;
+sub new {
+	my $class = shift;
+	my $plumbingfile = shift;
+	die "Plumbing Error: can't create bridge without an destination filename\n" unless $plumbingfile;
+
+	#init structure
+	my $plumbing = {
+		"file" => $plumbingfile
+	};
+	
+	bless $plumbing,$class;
+	
+	return $plumbing; 
+}
+
+sub init {
+	my $plumbing = shift;
+	my $project = shift;
+
+	#create the rules
+	my @plumbing_rules = $plumbing->give_me_the_rules($project);
+	
+	#insert into project
+	$plumbing->{rules} = \@plumbing_rules;
+}
+
+###########################################################
+#
+#		 PLUMBING FILE functions
+#
+###########################################################
+
+sub save_to_file {
+	my $plumbing = shift;
 
 	#get path to file
-	my $path = $connections->{file};
-	die "no path to create plumbing file\n" unless (defined $path);
-	
-	#create an empty file (overwrite existing)
-	open my $handle, ">$path" or die $!;
-	#update mixer status
-	$connections->{status} = "new";
-	#close file
+	my $path = $plumbing->{file};
+	die "Plumbing error: no path to create plumbing file\n" unless (defined $path);
+
+	warn "Plumbing rules are empty....\n" unless @{$plumbing->{rules}};
+
+	#create the file (overwrite)
+	open my $handle, ">$plumbing->{file}" or die $!;
+	print $handle "$_\n" for @{$plumbing->{rules}};
 	close $handle;
 }
 
@@ -33,8 +64,7 @@ sub create {
 #
 ###########################################################
 
-sub create_rules {
-	my $class = shift;
+sub get_plumbing_rules {
 	my $project = shift;
 
 	#the rule set
@@ -188,6 +218,22 @@ sub create_rules {
 						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
 					}
 				}
+				elsif (($mixer->{$channelname}->is_submix_in) || ($mixer->{$channelname}->is_submix_out)) {
+					#get the table of hardware input connections, will probably have none
+					my @table = @{$mixer->{$channelname}{connect}};
+					#for each channel (assumed max 2 channels)
+					for my $i (1..2) {
+						#take the Nth one, will be undef if connect is empty or undef
+						my $plumbin = $table[$i-1];
+						my $plumbout;
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:in-$i"
+							if ($mixer->{$channelname}{group} eq '');
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/in-$i"
+							if ($mixer->{$channelname}{group} ne '');
+						#add rule
+						push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+					}
+				}
 				else {
 					die "Plumbing Error: untreated channel type $mixer->{$channelname}{type}";
 				}
@@ -201,22 +247,5 @@ sub create_rules {
 	return @rules;
 }
 
-###########################################################
-#
-#		 PLUMBING FILE functions
-#
-###########################################################
-
-sub save {
-	my $connections = shift;
-
-	if (defined $connections->{status}) {
-		open my $handle, ">>$connections->{file}" or die $!;
-		print $handle "$_\n" for @{$connections->{rules}};
-		close $handle;
-	} else {
-		warn "Plumbing file has not been initialized!!\n";
-	}
-}
 
 1;
