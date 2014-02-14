@@ -141,14 +141,15 @@ sub AddPlumbing {
 	my $plumbingfilepath = $project->{globals}{base_path}."/".$project->{globals}{output_path}."/jack.plumbing";
 
 	#create object
-	$project->{audio_patchbay} = Plumbing->new($plumbingfilepath);
+	$project->{plumbing} = Plumbing->new($plumbingfilepath);
 
 	#get rules
 	my @plumbing_rules = $project->Plumbing::get_plumbing_rules;
 
 	#insert into project
-	$project->{audio_patchbay}{rules} = \@plumbing_rules;
+	$project->{plumbing}{rules} = \@plumbing_rules;
 }
+
 sub AddOSCPaths {
 	my $project = shift;
 
@@ -194,7 +195,7 @@ sub GenerateFiles {
 
 
 	#----------------DUMPER FILE------------------------
-	$project->SaveDumperFile("pre.");
+	$project->SaveDumperFile(".pre");
 
 	#----------------MIXERS FILES------------------------
 	#for each mixer, create the mixer file/folder
@@ -213,8 +214,9 @@ sub GenerateFiles {
 		$song->{ecasound} = \%engine;
 		bless $song->{ecasound} , EcaEngine::;
 
-		#update name to players so outputs have the same name (plumbing need that)
-		$song->{ecasound}{name} = "players";
+		#update info with song name
+		$song->{ecasound}{name} = $songname;
+
 		#update ecsfile path
 		my $ecsfilepath = $project->{globals}{base_path}."/songs/$songname/chainsetup.ecs";
 		$song->{ecasound}{ecsfile} = $ecsfilepath;
@@ -229,15 +231,15 @@ sub GenerateFiles {
 
 	#----------------PLUMBING FILE------------------------
 
-	if ($project->{audio_patchbay}{'jack.plumbing'}) {
+	if ( $project->{plumbing}{enable} ) {
 
 		# add the pumbing rules to the project 	
 		# we do it now after nonmixer files are generated, so we know the auxes assignations
 		$project->AddPlumbing;
 
 		#now generate the file
-		print " |_Project: creating plumbing file $project->{audio_patchbay}{file}\n";
-		$project->{audio_patchbay}->save_to_file;
+		print " |_Project: creating plumbing file $project->{plumbing}{file}\n";
+		$project->{plumbing}->save_to_file;
 	}
 	else {
 		print " |_Project: jack.plumbing isn't defined as active. Not creating file.\n";
@@ -273,7 +275,8 @@ sub SaveDumperFile {
 	my $outfile = $project->{globals}{name};	
 	#replace any nonalphanumeric character
 	$outfile =~ s/[^\w]/_/g;
-	$outfile = $project->{globals}{base_path}."/". $project->{globals}{output_path} ."/$outfile.$suffix"."dmp";
+	$outfile .= $suffix if $suffix;
+	$outfile = $project->{globals}{base_path}."/". $project->{globals}{output_path} ."/$outfile.dmp";
 	#create a dumper file (human readable)
 	use Data::Dumper;
 	$Data::Dumper::Purity = 1;
@@ -285,12 +288,14 @@ sub SaveDumperFile {
 
 sub SaveTofile {
 	my $project = shift;
-	my $outfile = shift;
+	
 
 	print "Project: saving project\n";
+	my $outfile = ("$project->{globals}{name}");
 	#replace any nonalphanumeric character
 	$outfile =~ s/[^\w]/_/g;
-	$outfile = $project->{globals}{base_path}."/".$outfile;
+	#create the complete file path
+	$outfile = $project->{globals}{base_path}."/".$outfile . ".cfg";
 
 	# remove all filehandles from structure (storable limitation)
 	#TODO also remove AE containing sub (CODE)
@@ -309,7 +314,6 @@ sub SaveTofile {
 	}
 
 	#Storable : create a project file, not working with opened sockets
-	$outfile .= ".cfg";
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $project, $outfile;
@@ -400,14 +404,13 @@ sub execute_command {
 		$reply = "to ecasound $command"; 
 	}
 	elsif ($command =~ /^eca/) {
-		my ($mixer, $cmd) =
-		$command =~ /eca\s(\S+)\s(.+)$/;
+		my ($mixer, $cmd) =	$command =~ /eca\s(\S+)\s(.+)$/;
 		#TODO check that $cmd is valid
 		$reply .= $project->{mixers}{$mixer}{engine}->SendCmdGetReply($cmd) if $project->{mixers}{$mixer};
 		# $reply = "to ecasound $command\n"; 
 	}
-	#default { $reply = "Other"; }
+	else { $reply = "pong"; }
 	return $reply;
-	}
+}
 
 1;

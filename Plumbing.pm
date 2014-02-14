@@ -18,7 +18,8 @@ sub new {
 
 	#init structure
 	my $plumbing = {
-		"file" => $plumbingfile
+		"file" => $plumbingfile,
+		"enable" => '1'
 	};
 	
 	bless $plumbing,$class;
@@ -219,6 +220,9 @@ sub get_plumbing_rules {
 					}
 				}
 				elsif (($mixer->{$channelname}->is_submix_in) || ($mixer->{$channelname}->is_submix_out)) {
+
+					#TODO all submix inputs need connect to submix output
+
 					#get the table of hardware input connections, will probably have none
 					my @table = @{$mixer->{$channelname}{connect}};
 					#for each channel (assumed max 2 channels)

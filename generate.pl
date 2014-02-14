@@ -26,6 +26,8 @@ print "\n\n\n
 my $pathtoproject = "";
 my $base_path = "";
 
+#------------ Parse arguments ----------------------------
+
 if ($#ARGV+1 eq 0) {
 	#we should be in the project base folder, are we ?
 	print "No argument, trying to find a project file\n";
@@ -39,6 +41,8 @@ elsif ($#ARGV+1 eq 1) {
 	#update the base path with the absolute directory
 	$base_path = abs_path($ARGV[0]);
 }
+
+#------------ parse ini file to object -------------------------
 
 #transforming project file to an absolute path
 $pathtoproject = abs_path($pathtoproject);
@@ -58,16 +62,19 @@ print "Project init from file : $pathtoproject\n";
 my $ini_project_ref = \%ini_project;
 
 #------------Create project structure----------------------------
+
 my $Live = Project->new($ini_project_ref);
 die "Failed to create Project!!!\n" unless defined $Live;
+
 print "
 ---------------------------
 Live Project Generation OK
 ---------------------------\n\n";
 
 #------------Create project files------------------------
+
 $Live->GenerateFiles;
-$Live->SaveTofile("$Live->{project}{name}");
+$Live->SaveTofile;
 
 print " 
 ---------------------------

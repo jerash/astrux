@@ -60,21 +60,21 @@ die "Could not load file $infile\n" unless $project;
 sub Start {
 
 	#TODO verify if Project is valid
-	print "--------- Init Project $project->{project}{name} ---------\n";
+	print "--------- Init Project $project->{globals}{name} ---------\n";
 
 	# copy jack plumbing file
 	#-------------------------
-	if ($project->{connections}{"jack.plumbing"} eq 1) {
-		my $homedir = $ENV{"HOME"};
+	if ( $project->{plumbing}{enable} eq '1') {
+		my $homedir = $ENV{HOME};
 		warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
 		use File::Copy;
-		copy("$project->{connections}{file}","$homedir/.jack.plumbing") or die "Copy failed: $!";
+		copy("$project->{plumbing}{file}","$homedir/.jack.plumbing") or die "jack.plumbing copy failed: $!";
 	}
 
-	#verify that backends are active
-	#---------------------------------
+	#verify services and servers
 	
 	#JACK
+	#---------------------------------
 	my $pid_jackd = qx(pgrep jackd);
 	if (!$pid_jackd) {
 		print "Strange ...JACK server is not running ?? Starting it\n";
@@ -87,76 +87,67 @@ sub Start {
 		print "JACK server running with PID $pid_jackd";
 	}
 	#TODO verify jack parameters
-	$project->{backends}{JACK}{PID} = $pid_jackd;
+	$project->{JACK}{PID} = $pid_jackd;
 
 	#JPMIDI << problem in server mode can't load new midi file....
+	#---------------------------------
 	# my $pid_jpmidi = qx(pgrep jpmidi);
 	# if ($project->{midi_player}{enable}) {
 	# 	die "JPMIDI server is not running" unless $pid_jpmidi;
 	# 	print "JPMIDI server running with PID $pid_jpmidi";
 	# }
-	# $project->{backends}{JPMIDI} = $pid_jpmidi;
+	# $project->{midi_player}{PID} = $pid_jpmidi;
 
 	#SAMPLER
+	#---------------------------------
 	my $pid_linuxsampler = qx(pgrep linuxsampler);
 	if ($project->{linuxsampler}{enable}) {
 		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 		print "LINUXSAMPLER running with PID $pid_linuxsampler";
 	}
-	$project->{backends}{LINUXSAMPLER}{PID} = $pid_linuxsampler;
+	$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
 
 	#jack.plumbing
+	#---------------------------------
 	my $pid_jackplumbing = qx(pgrep jack.plumbing);
-	if (!$pid_jackplumbing) {
-		print "jack.plumbing is not running. Starting it\n";
-		my $command = "jack.plumbing > /dev/null 2>&1 &";
-		# system ($command);
-		sleep 1;
-		$pid_jackplumbing = qx(pgrep jackd);
-	}
-	else {
+	if ($project->{plumbing}{enable}) {
+		if (!$pid_jackplumbing) {
+			print "jack.plumbing is not running. Starting it\n";
+			my $command = "jack.plumbing > /dev/null 2>&1 &";
+			system ($command);
+			sleep 1;
+			$pid_jackplumbing = qx(pgrep jackd);
+		}
 		print "jack.plumbing running with PID $pid_jackplumbing";
 	}
-	$project->{backends}{JACKPLUMBING}{PID} = $pid_jackplumbing;
+	$project->{plumbing}{PID} = $pid_jackplumbing;
 
 	#a2jmidid
+	#---------------------------------
 	my $pid_a2jmidid = qx(pgrep -f a2jmidid);
 	#die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
-	if (!$pid_a2jmidid) {
-		system('a2jmidid -e > /dev/null 2>&1 &');
-		sleep 1;
-		$pid_a2jmidid = qx(pgrep -f a2jmidid);
-	}
-	else {
+	if ($project->{a2jmidid}{enable}) {
+		if (!$pid_a2jmidid) {
+			system('a2jmidid -e > /dev/null 2>&1 &');
+			sleep 1;
+			$pid_a2jmidid = qx(pgrep -f a2jmidid);
+		}
 		print "a2jmidid running with PID $pid_a2jmidid";
 	}
-	$project->{backends}{A2JMIDID}{PID} = $pid_a2jmidid;
+	$project->{a2jmidid}{PID} = $pid_a2jmidid;
 	
-	#OSC/MIDI BRIDGE
-	#----------------
-	if ($project->{osc2midi}{enable} eq 1) {
-		$project->{osc2midi}->create_midi_out_port();
-	}
-
-	# get song list
-	#---------------
-	my @songkeys = sort keys %{$project->{songs}};
-	my @songlist;
-	push (@songlist,$project->{songs}{$_}{friendly_name}) foreach @songkeys;
-	print "SONGS :\n";
-	print " - $_\n" foreach @songlist;
-
 	# start mixers
-	#---------------
-	print "Starting mixers\n"; 
+	#---------------------------------
+	print "Starting mixers engines\n"; 
 	$project->StartEngines;
 
 	# load song chainsetups + dummy
 	#--------------------------------
-	my $playersport = $project->{mixers}{players}{engine}{tcp_port};
+	my @songkeys = sort keys %{$project->{songs}};
+	print "SONGS :\n";
 	foreach my $song (@songkeys) {
 		#load song chainsetup
-		print "Loading song $song\n"; 
+		print " - $project->{songs}{$song}{friendly_name}\n";
 		print $project->{mixers}{players}{engine}->LoadFromFile($project->{songs}{$song}{ecasound}{ecsfile});
 	}
 	#load dummy song chainsetup
@@ -178,12 +169,21 @@ sub Start {
 
 sub PlayIt {
 
-	print "\n--------- Project $project->{project}{name} Running---------\n";
+	print "\n--------- Project $project->{globals}{name} Running---------\n";
 	#Start the global parser accepting many things like:
+
 	#	tcp commands
 	&init_tcp_server if $project->{TCP}{enable};
+	
 	#	OSC messages
 	&init_osc_server if $project->{OSC}{enable};
+
+##### BRIDGE
+	#---------------------------------
+	if ( $project->{bridge}{enable} ) {
+		$project->{bridge}->create_midi_out_port();
+	}
+
 	#	command line interface
 	&init_cli_server if $project->{CLI}{enable};	
 	#	gui actions (from tcp commands is best)
@@ -194,7 +194,7 @@ sub PlayIt {
 	$cv->recv;
 	# old static CLI
 	# while (1) {
-	# 	print "$project->{project}{name}> ";
+	# 	print "$project->{globals}{name}> ";
 	# 	my $command = <STDIN>;
 	# 	chomp $command;
 	# 	return if ($command =~ /exit|x|quit/);
@@ -210,7 +210,7 @@ sub PlayIt {
 
 #-------------------------CLI---------------------------------------------
 sub init_cli_server {
-	my $rl; $rl = new AnyEvent::ReadLine::Gnu prompt => "$project->{project}{name}>  ", on_line => sub {
+	my $rl; $rl = new AnyEvent::ReadLine::Gnu prompt => "$project->{globals}{name}>  ", on_line => sub {
 		# called for each line entered by the user
 		# AnyEvent::ReadLine::Gnu->print ("you entered: $_[0]\n");
 		undef $rl unless process_cli($_[0]);

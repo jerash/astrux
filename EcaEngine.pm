@@ -110,7 +110,10 @@ sub ecs_add_header {
 	$header .= " -n:\"$ecaengine->{name}\"";
 	$header .= " -z:mixmode,".$ecaengine->{mixmode} if $ecaengine->{mixmode};
 	$header .= " -G:jack,$ecaengine->{name},notransport" if (!$ecaengine->{jack_sync});
-	$header .= " -G:jack,$ecaengine->{name},sendrecv" if ($ecaengine->{jack_sync});
+	if ($ecaengine->{jack_sync}) {
+		$header .= " -G:jack,$ecaengine->{name},sendrecv" if (!$ecaengine->{type} eq "player");
+		$header .= " -G:jack,players,sendrecv" if ($ecaengine->{type} eq "player");
+	}
 	$header .= " -Md:".$ecaengine->{midi_port} if $ecaengine->{midi_port};
 	$header .= "\n";
 
