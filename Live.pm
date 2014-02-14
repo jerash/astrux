@@ -155,7 +155,7 @@ sub Start {
 
 	#send previous state to ecasound engines
 	#--------------------------------------
-	&OSC_send("/refresh i 1");
+	&OSC_send("/refresh i 1"); #TODO checkup
 
 	# now we should be back to saved state
 	#--------------------------------------
@@ -173,19 +173,19 @@ sub PlayIt {
 	#Start the global parser accepting many things like:
 
 	#	tcp commands
-	&init_tcp_server if $project->{TCP}{enable};
+	&init_tcp_server if $project->{bridge}{TCP}{enable};
 	
 	#	OSC messages
-	&init_osc_server if $project->{OSC}{enable};
+	&init_osc_server if $project->{bridge}{OSC}{enable};
 
 ##### BRIDGE
 	#---------------------------------
 	if ( $project->{bridge}{enable} ) {
-		$project->{bridge}->create_midi_out_port();
+		$project->{bridge}->create_midi_out_port(); #TODO only needed to control ecasound via midi
 	}
 
 	#	command line interface
-	&init_cli_server if $project->{CLI}{enable};	
+	&init_cli_server if $project->{bridge}{CLI}{enable};	
 	#	gui actions (from tcp commands is best)
 	#	front panel actions (from tcp commands)
 
@@ -204,7 +204,7 @@ sub PlayIt {
 
 ###########################################################
 #
-#		 LIVE SERVICES functions
+#		 LIVE BRIDGE functions
 #
 ###########################################################
 
@@ -218,14 +218,14 @@ sub init_cli_server {
 }
 sub process_cli {
 	my $command = shift;
-	return if ($command =~ /exit|x|quit/);
+	die "User asked to exit\n" if ($command =~ /exit|x|quit/);
 	print $project->execute_command($command);
 	return 1;
 }
 
 #-------------------------TCP---------------------------------------------
 sub init_tcp_server {
-	my $tcpport = $project->{TCP}{port};
+	my $tcpport = $project->{bridge}{TCP}{port};
 	# creating a listening socket
 	my $tcpsocket = new IO::Socket::INET (
 	    LocalHost => '0.0.0.0',
@@ -236,14 +236,15 @@ sub init_tcp_server {
 	);
 	warn "cannot create socket $!\n" unless $tcpsocket;
 	print "Starting TCP listener on port $tcpport\n";
-	$project->{TCP}{socket} = $tcpsocket;
- 	$project->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
+	$project->{bridge}{TCP}{socket} = $tcpsocket;
+ 	$project->{bridge}{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
 }
 sub process_tcp_command {
 
 	#TODO for persistent connection we should fork the connection and put it in a loop until clients asks to exit
+	# but then we need to synchronise the project structure whith childs...
 
-    my $socket = $project->{TCP}{socket};
+    my $socket = $project->{bridge}{TCP}{socket};
     # waiting for a new client connection
     my $client_socket = $socket->accept();
  
@@ -272,27 +273,27 @@ sub process_tcp_command {
 #-------------------------OSC---------------------------------------------
 sub init_osc_server {
 	
-	my $oscip = $project->{OSC}{ip} || 'localhost';
-	my $oscport = $project->{OSC}{inport} || '8000';
+	my $oscip = $project->{bridge}{OSC}{ip} || 'localhost';
+	my $oscport = $project->{bridge}{OSC}{inport} || '8000';
 	print ("Starting OSC listener on port $oscport\n");
 	#init socket on osc port
-	my $osc_in = $project->{OSC}{socket} = IO::Socket::INET->new(
+	my $osc_in = $project->{bridge}{OSC}{socket} = IO::Socket::INET->new(
 		LocalAddr => $oscip, #default is localhost
 		LocalPort => $oscport,
 		Proto	  => 'udp',
 		Type	  =>  SOCK_DGRAM) || die $!;
 	warn "cannot create socket $!\n" unless $osc_in;
 	#create the anyevent watcher on this socket
-	$project->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	$project->{bridge}{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
 	#init an osc object
-	$project->{OSC}{object} = Protocol::OSC->new;
+	$project->{bridge}{OSC}{object} = Protocol::OSC->new;
 }
 sub process_osc_command {
 use Socket qw(getnameinfo NI_NUMERICHOST);
-my $debug = 0;
+my $debug = 1;
 
-	my $in = $project->{OSC}{socket};
-	my $osc = $project->{OSC}{object};
+	my $in = $project->{bridge}{OSC}{socket};
+	my $osc = $project->{bridge}{OSC}{object};
 	
 	#grab the message, and get the sender
 	my $sender = $in->recv(my $packet, $in->sockopt(SO_RCVBUF));
@@ -316,11 +317,11 @@ my $debug = 0;
 		warn "ignored osc message with multiple arguments\n";
 	}
 
-	#check if midi is to be send
-	if ($project->{osc2midi}{enable}) {
-		#send associated midi data
-		$project->{osc2midi}->send_osc2midi($path,$args[0]);
-	}
+	# TODO check if midi is to be sent (ecasound midi control)
+	# if () {
+	# 	#send associated midi data
+	# 	$project->{bridge}->send_osc2midi($path,$args[0]);
+	# }
 
 	#go on with a single argument osc message
 	#cleanup path
@@ -400,15 +401,16 @@ my $debug = 0;
 		}
 	}
 
-	#TODO check if we send back information
-	if ($project->{OSC}{sendback}) {
+	#check if we send back information
+	if ($project->{bridge}{OSC}{sendback}) {
 		#resolve the sender adress
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 		print "we need to send back info to $hostname\n";
+		#TODO send back OSC info
 	}
 }
 
-	#osc send tool
+#osc send tool
 sub OSC_send {
 	use Protocol::OSC;
 	use IO::Socket::INET;
