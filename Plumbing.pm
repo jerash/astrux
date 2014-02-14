@@ -139,8 +139,9 @@ sub get_plumbing_rules {
 			foreach my $channelname (keys %{$mixer}) {
 				#get the table of connections
 				my @table = @{$mixer->{$channelname}{connect}};
-				#for each channel (assumed max 2 channels)
-				for my $i (1..2) {
+				my $channels = $mixer->{$channelname}{channels};
+				#for each channel
+				for my $i (1..$channels) {
 					#take the Nth one, will be undef if connect is empty or undef
 					my $plumbin = $table[$i-1]; 
 					my $plumbout = $project->{mixers}{$mixername}{engine}{name}.":$channelname"."_$i";
@@ -180,13 +181,15 @@ sub get_plumbing_rules {
 
 			foreach my $channelname (keys %{$mixer}) {
 
+				my $channels = $mixer->{$channelname}{channels};
+
 				# --- INPUTS ---
 
 				if ($mixer->{$channelname}->is_main_in) {
 					#get the table of hardware input connections
 					my @table = @{$mixer->{$channelname}{connect}};
-					#for each channel (assumed max 2 channels)
-					for my $i (1..2) {
+					#for each channel
+					for my $i (1..$channels) {
 						#take the Nth one, will be undef if connect is empty or undef
 						my $plumbin = $table[$i-1];
 						my $plumbout;
@@ -199,7 +202,7 @@ sub get_plumbing_rules {
 					}
 
 					#add the route to master
-					for my $i (1..2) {
+					for my $i (1..$channels) {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
@@ -216,7 +219,7 @@ sub get_plumbing_rules {
 
 					#add the routes to aux
 					foreach my $aux (@auxes) {
-						for my $i (1..2) {
+						for my $i (1..$channels) {
 							my $plumbout;
 							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:".$mixer->{$aux}{is_aux}."/out-$i"
 								if ($mixer->{$channelname}{group} eq '');
@@ -238,7 +241,7 @@ sub get_plumbing_rules {
 				elsif ($mixer->{$channelname}->is_send) {
 
 				#add the route to master
-					for my $i (1..2) {
+					for my $i (1..$channels) {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
@@ -260,7 +263,7 @@ sub get_plumbing_rules {
 					#get the table of hardware output connections
 					my @table = @{$mixer->{$channelname}{connect}};
 					#add the route to master
-					for my $i (1..2) {
+					for my $i (1..$channels) {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
@@ -278,7 +281,7 @@ sub get_plumbing_rules {
 					#get the table of hardware output connections
 					my @table = @{$mixer->{$channelname}{connect}};
 					#for each channel (assumed max 2 channels)
-					for my $i (1..2) {
+					for my $i (1..$channels) {
 						#take the Nth one, will be undef if connect is empty or undef
 						my $plumbin = $table[$i-1];
 						my $plumbout;
