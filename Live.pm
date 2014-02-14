@@ -60,16 +60,8 @@ die "Could not load file $infile\n" unless $project;
 sub Start {
 
 	#TODO verify if Project is valid
-	print "--------- Init Project $project->{globals}{name} ---------\n";
 
-	# copy jack plumbing file
-	#-------------------------
-	if ( $project->{plumbing}{enable} eq '1') {
-		my $homedir = $ENV{HOME};
-		warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
-		use File::Copy;
-		copy("$project->{plumbing}{file}","$homedir/.jack.plumbing") or die "jack.plumbing copy failed: $!";
-	}
+	print "--------- Init Project $project->{globals}{name} ---------\n";
 
 	#verify services and servers
 	
@@ -89,7 +81,30 @@ sub Start {
 	#TODO verify jack parameters
 	$project->{JACK}{PID} = $pid_jackd;
 
-	#JPMIDI << problem in server mode can't load new midi file....
+	#jack.plumbing
+	#---------------------------------
+	# copy jack plumbing file
+	if ( $project->{plumbing}{enable} eq '1') {
+		my $homedir = $ENV{HOME};
+		warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
+		use File::Copy;
+		copy("$project->{plumbing}{file}","$homedir/.jack.plumbing") or die "jack.plumbing copy failed: $!";
+	}
+	# start jack.plumbing
+	my $pid_jackplumbing = qx(pgrep jack.plumbing);
+	if ($project->{plumbing}{enable}) {
+		if (!$pid_jackplumbing) {
+			print "jack.plumbing is not running. Starting it\n";
+			my $command = "jack.plumbing > /dev/null 2>&1 &";
+			system ($command);
+			sleep 1;
+			$pid_jackplumbing = qx(pgrep jackd);
+		}
+		print "jack.plumbing running with PID $pid_jackplumbing";
+	}
+	$project->{plumbing}{PID} = $pid_jackplumbing;
+
+	#JPMIDI << TODO problem in server mode can't load new midi file....
 	#---------------------------------
 	# my $pid_jpmidi = qx(pgrep jpmidi);
 	# if ($project->{midi_player}{enable}) {
@@ -106,21 +121,6 @@ sub Start {
 		print "LINUXSAMPLER running with PID $pid_linuxsampler";
 	}
 	$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
-
-	#jack.plumbing
-	#---------------------------------
-	my $pid_jackplumbing = qx(pgrep jack.plumbing);
-	if ($project->{plumbing}{enable}) {
-		if (!$pid_jackplumbing) {
-			print "jack.plumbing is not running. Starting it\n";
-			my $command = "jack.plumbing > /dev/null 2>&1 &";
-			system ($command);
-			sleep 1;
-			$pid_jackplumbing = qx(pgrep jackd);
-		}
-		print "jack.plumbing running with PID $pid_jackplumbing";
-	}
-	$project->{plumbing}{PID} = $pid_jackplumbing;
 
 	#a2jmidid
 	#---------------------------------
