@@ -5,7 +5,7 @@ package NonEngine;
 use strict;
 use warnings;
 
-my $debug = 1;
+my $debug = 0;
 
 ###########################################################
 #
@@ -17,8 +17,8 @@ sub new {
 	my $class = shift;
 	my $output_path = shift;
 	my $enginename = shift;
-	die "EcaEngine Error: can't create ecs engine without a path\n" unless $output_path;
-	die "EcaEngine Error: can't create ecs engine without a name\n" unless $enginename;
+	die "EcaEngine Error: can't create nonmixer engine without a path\n" unless $output_path;
+	die "EcaEngine Error: can't create nonmixer engine without a name\n" unless $enginename;
 
 	my $nonengine = {
 		"path" => $output_path,
@@ -63,13 +63,12 @@ sub StartNonmixer {
 	#if mixer is already running on same port, then reconfigure it
 	if  ($nonengine->is_running) {
 		print "    Found existing Nonmixer engine on osc port $port, reconfiguring engine\n";
-		#TODO how to say nomixer to load a new project ? osc...nsm...
-		print "\n ...well one day we willl do it, not ready \n";
+		#TODO how to say nomixer to load a new project ? osc...nsm... ? or kill and restart
+		print "\n reconfiguring nonmixer ...well one day we will do it, not ready \n";
 	}
 	#if mixer is not existing, launch mixer with needed file
 	else {
 		my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
-		# my $command = "non-mixer-noui $path --instance $name --osc-port $port &\n";
 		system ( $command );
 		#wait for mixer to be ready
 		my $timeout = 0;
@@ -88,8 +87,7 @@ sub StartNonmixer {
 sub is_ready {
 	my $nonengine = shift;
 	
-	#TODO check for PID in case it can't start so we don't wait undefinately
-	# or send for a pecific OSC message and wait for reply
+	# sen a specific OSC message and wait for reply ?
 	return 1 if $nonengine->is_running;
 	return 0;
 }

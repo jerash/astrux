@@ -288,7 +288,6 @@ sub SaveDumperFile {
 
 sub SaveTofile {
 	my $project = shift;
-	
 
 	print "Project: saving project\n";
 	my $outfile = ("$project->{globals}{name}");
