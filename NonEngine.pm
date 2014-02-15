@@ -7,6 +7,8 @@ use warnings;
 
 my $debug = 0;
 
+my $force_gui_mode = 0;
+
 ###########################################################
 #
 #		 NONMIXER OBJECT functions
@@ -68,7 +70,9 @@ sub StartNonmixer {
 	}
 	#if mixer is not existing, launch mixer with needed file
 	else {
-		my $command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n";
+		my $command;
+		$command = "non-mixer-noui $path --instance $name --osc-port $port > /dev/null 2>&1 &\n" if !$force_gui_mode;
+		$command = "non-mixer $path --instance $name --osc-port $port > /dev/null 2>&1 &\n" if $force_gui_mode;
 		system ( $command );
 		#wait for mixer to be ready
 		my $timeout = 0;
@@ -99,7 +103,10 @@ sub is_running {
 
 	my $ps = qx(ps ax);
 	# print "***\n $ps \n***\n";
-	($ps =~ /non-mixer-noui/ and $ps =~ /--instance $name/ and $ps =~ /--osc-port $port/) ? return 1 : return 0;
+	if ($force_gui_mode) {
+		($ps =~ /non-mixer/ and $ps =~ /--instance $name/ and $ps =~ /--osc-port $port/) ? return 1 : return 0; }
+	else { 
+		($ps =~ /non-mixer-noui/ and $ps =~ /--instance $name/ and $ps =~ /--osc-port $port/) ? return 1 : return 0; }
 }
 
 ###########################################################

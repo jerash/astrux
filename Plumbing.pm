@@ -193,6 +193,9 @@ sub get_plumbing_rules {
 						push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
 					}
 
+					#force chanels to 2, as mono tracks have been converted to stereo
+					$channels = 2;
+					
 					#add the route to master
 					for my $i (1..$channels) {
 						my $plumbout;

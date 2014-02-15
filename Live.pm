@@ -20,6 +20,7 @@ use Project;
 use Mixer;
 use Song;
 use Bridge;
+use Utils;
 
 use Data::Dumper;
 
@@ -155,7 +156,7 @@ sub Start {
 
 	#send previous state to ecasound engines
 	#--------------------------------------
-	&OSC_send("/refresh i 1"); #TODO checkup
+	# &OSC_send("/refresh i 1"); #TODO checkup
 
 	# now we should be back to saved state
 	#--------------------------------------
@@ -292,18 +293,22 @@ sub process_osc_command {
 use Socket qw(getnameinfo NI_NUMERICHOST);
 my $debug = 0;
 
+	# verify socket
+	#-----------------------------------------
 	my $insocket = $project->{bridge}{OSC}{socket};
 	die "Live process_osc error: could not read OSC socket in project\n" unless $insocket;
 	my $osc = $project->{bridge}{OSC}{object};
 	die "Live process_osc error: could not read OSC object in project\n" unless $insocket;
 	
 	#grab the message, and get the sender
+	#-----------------------------------------
 	my $sender = $insocket->recv(my $packet, $insocket->sockopt(SO_RCVBUF));
 	#parse the osc packet
 	my $p = $osc->parse($packet);
 
 	#TODO deal with osc bundles
 	#grab osc packet arguments
+	#-----------------------------------------
 	my ($path, $types, @args) = @$p;
 
 	print "OSC MESSAGE\n------------\npath=$path types=$types and args" if $debug;
@@ -311,6 +316,7 @@ my $debug = 0;
 	print "\n" if $debug;
 
 	#verify how many arguments we have
+	#-----------------------------------------
 	if ( length($types) == 0 ) {
 		warn "ignored osc message without arguments\n";
 		return;
@@ -326,12 +332,17 @@ my $debug = 0;
 	# }
 
 	#go on with a single argument osc message
+	#-----------------------------------------
+	
 	#cleanup path
 	$path =~ s(^/)();
 	$path =~ s(/$)(); #this one should never be
+	
 	#split path elements
 	my @pathelements = split '/',$path;
+	
 	#TODO verify number of path elements ?
+	
 	#element 1 = mixername OR system command
 	my $mixername = shift @pathelements;
 	if ($mixername eq "astrux") {
@@ -342,7 +353,6 @@ my $debug = 0;
 		return;
 	}
 
-	#TCP send to ecasound
 	#element 1 = mixername
 	print " mixer $mixername\n" if $debug;
 	#element 2 = trackname
@@ -350,58 +360,109 @@ my $debug = 0;
 	print " track $trackname\n" if $debug;
 	
 	if ((exists $project->{mixers}{$mixername}) and (exists $project->{mixers}{$mixername}{channels}{$trackname})) {
+		
 		#element 3 = fx name OR 'aux_to' OR special command
 		my $el3 = shift @pathelements;
 		print " el3 $el3\n" if $debug;
-		#dependin on the third element
-		if ($el3 eq 'mute') {
-			#channel mute
-			print "mute track $trackname\n" if $debug;
-			#send ecasound command
-			$project->{mixers}{$mixername}->mute_channel($trackname);
-			#TODO udpate current status in strucutre
+
+		# if mixer is NONMIXER
+		#-----------------------------------------
+		#osc message must be translated and passed to nonmixer osc port
+		if ($project->{mixers}{$mixername}->is_nonmixer) {
+			#get osc port
+			my $nonoscport = $project->{mixers}{$mixername}{engine}{osc_port};
+
+			if ($el3 eq 'mute') {
+				my $value = shift @args;
+				#TODO verify value is good type
+				&OSC_send("/strip/$trackname/Gain/Mute f $value",$nonoscport);
+			}
+			elsif ($el3 eq 'panvol') {
+				# element 4 = fx parameter
+				my $panvol = shift @pathelements;
+				#associate with value
+				my $value = shift @args; #TODO verify value has [0,1] range, warn if not
+				warn "empty value on param $panvol!\n" unless defined $value;
+				print "effect $el3 change param $panvol with value $value on track $trackname\n" if $debug;
+				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value",$nonoscport) if ($panvol eq 'vol');
+				# &OSC_send("/strip/$trackname/Pan/balance f $value",$nonoscport) if ($panvol eq 'pan');
+			}
+			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
+				#fx change (LADSPA ID)
+				my $insertID = $el3;
+				#element 4 = fx parameter
+				my $insertparam = shift @pathelements;
+				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}->is_param_ok($insertparam);
+				#associate with value
+				my $value = shift @args;
+				warn "empty value on param $insertparam!\n" unless defined $value;
+				#get insertname
+				my $insertname = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}{name};
+				print "effect $insertID/$insertname change param $insertparam with value $value on track $trackname\n" if $debug;
+				#replace non aplhanum characters with %ascii code
+				$insertname = Utils::encode_my_ascii($insertname);
+				$insertparam = Utils::encode_my_ascii($insertparam);
+				#send osc command to nonmixer
+				&OSC_send("/strip/$trackname/$insertname/$insertparam f $value",$nonoscport);
+			}
+			elsif ($el3 eq 'aux_to') {
+				#TODO nonmixer osc aux commands
+			}
 		}
-		# elsif ($el3 eq 'aux_to') {
-		# 	#channel aux send
-		# 	print "track $trackname aux_to\n" if $debug;
-		# 	#element 4 = channel destination
-		# 	my $destination = shift @pathelements;
-		# 	return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
-		# 	#element 5 = parameter (pan or volume)
-		# 	my $param = shift @pathelements;
-		# 	return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
-		# 	#associate with value
-		# 	my $value = shift @args;
-		# 	warn "empty value on param $param!\n" unless defined $value;
-		# 	print "sending $trackname to $destination with $param $value\n" if $debug;
-		# 	#TODO send ecasound command to EcaStrip
-		# 	#my $position = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}{nb}; 
-		# 	#TODO nb contains 99 for panvol and this is not compatible with ecasound index !!
-		# 	my $position = 1; # this is ok for aux_route
-		# 	$project->{mixers}{$mixername}->udpate_auxroutefx_value($trackname,$destination,$position,$index,$value);
-		# 	#udpate current status in strucutre
-		# 	$project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->update_current_value($index,$value);
-		# }
-		# elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
-		# 	#fx change
-		# 	my $insertname = $el3;
-		# 	#element 4 = fx parameter
-		# 	my $insertparam = shift @pathelements;
-		# 	return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
-		# 	#associate with value
-		# 	my $value = shift @args;
-		# 	warn "empty value on param $insertparam!\n" unless defined $value;
-		# 	print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
-		# 	#send ecasound command to EcaFx
-		# 	my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-		# 	$project->{mixers}{$mixername}->udpate_trackfx_value($trackname,$position,$index,$value);
-		# 	#udpate current status in strucutre
-		# 	$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->update_current_value($index,$value);
-		# }
-		else {
-			warn "unknown osc parameter $el3\n";
-		}
-	}
+
+		# if mixer is ECASOUND
+		#-----------------------------------------
+		if ($project->{mixers}{$mixername}->is_ecasound) {
+			#dependin on the third element
+			if ($el3 eq 'mute') {
+				#channel mute
+				print "mute track $trackname\n" if $debug;
+				#send ecasound command
+				$project->{mixers}{$mixername}->mute_channel($trackname);
+				#TODO udpate current status in structure
+			}		
+			# elsif ($el3 eq 'aux_to') {
+			# 	#channel aux send
+			# 	print "track $trackname aux_to\n" if $debug;
+			# 	#element 4 = channel destination
+			# 	my $destination = shift @pathelements;
+			# 	return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
+			# 	#element 5 = parameter (pan or volume)
+			# 	my $param = shift @pathelements;
+			# 	return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
+			# 	#associate with value
+			# 	my $value = shift @args;
+			# 	warn "empty value on param $param!\n" unless defined $value;
+			# 	print "sending $trackname to $destination with $param $value\n" if $debug;
+			# 	#TODO send ecasound command to EcaStrip
+			# 	#my $position = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}{nb}; 
+			# 	#TODO nb contains 99 for panvol and this is not compatible with ecasound index !!
+			# 	my $position = 1; # this is ok for aux_route
+			# 	$project->{mixers}{$mixername}->udpate_auxroutefx_value($trackname,$destination,$position,$index,$value);
+			# 	#udpate current status in strucutre
+			# 	$project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->update_current_value($index,$value);
+			# }
+			# elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
+			# 	#fx change
+			# 	my $insertname = $el3;
+			# 	#element 4 = fx parameter
+			# 	my $insertparam = shift @pathelements;
+			# 	return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
+			# 	#associate with value
+			# 	my $value = shift @args;
+			# 	warn "empty value on param $insertparam!\n" unless defined $value;
+			# 	print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
+			# 	#send ecasound command to EcaFx
+			# 	my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
+			# 	$project->{mixers}{$mixername}->udpate_trackfx_value($trackname,$position,$index,$value);
+			# 	#udpate current status in strucutre
+			# 	$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->update_current_value($index,$value);
+			# }
+			else {
+				warn "unknown osc parameter $el3\n";
+			}
+		} #endif ecasound
+	} #endif mixer and channel is ok
 	else 
 	{
 		print "could not find corresponding info from $path"
@@ -419,19 +480,26 @@ my $debug = 0;
 
 #osc send tool
 sub OSC_send {
+	my $data = shift;
+	my $port = shift;
+	return unless $port;
+
 	use Protocol::OSC;
 	use IO::Socket::INET;
 
 	my $osc = Protocol::OSC->new;
 	#make packet
-	my $data = $osc->message(my @specs = qw(/refresh i 1));
+	# my $oscpacket = $osc->message(my @specs = qw(/refresh i 1));
     # or
     #use Time::HiRes 'time';
-    #my $data $osc->bundle(time, [@specs], [@specs2], ...);
-		
+    #my $oscpacket $osc->bundle(time, [@specs], [@specs2], ...);
+	my @specs = split(' ',$data);
+	my $oscpacket = $osc->message(@specs);
+	# print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
+
 	#send
-	my $udp = IO::Socket::INET->new( PeerAddr => 'localhost', PeerPort => '8000', Proto => 'udp', Type => SOCK_DGRAM) || die $!;
-	$udp->send($data);	
+	my $udp = IO::Socket::INET->new( PeerAddr => 'localhost', PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
+	$udp->send($oscpacket);	
 }
 
 1;

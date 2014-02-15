@@ -8,6 +8,7 @@ use warnings;
 #http://search.cpan.org/~pjb/MIDI-ALSA-1.18/ALSA.pm
 use MIDI::ALSA;
 use POSIX qw(ceil floor); #for floor/ceil function
+use Utils;
 
 my $debug = 0;
 
@@ -101,9 +102,6 @@ sub get_osc_paths {
 			
 			#TODO add midi CC if necessary to mute/solo/bypass
 
-			#TODO add generic osc volume/pan controls for non-mixer
-			#TODO check for spaces and replace for %20 (non-mixer ladspa plugins)
-
 			# --- LOOP THROUGH INSERTS ---
 	
 			foreach my $insertname (keys %{$channel->{inserts}}) {
@@ -114,6 +112,10 @@ sub get_osc_paths {
 				# --- LOOP THROUGH INSERT PARAMETERS ---
 				my $i = 0;
 				foreach my $paramname (@{$insert->{paramnames}}) {
+					#replace non aplhanum characters with %ascii code (LADSPA mainly for nonmixer)
+					$paramname =~ Utils::encode_my_ascii($paramname) if $project->{mixers}{$mixername}->is_nonmixer;
+					#TODO check how ecasound treats LADSPA plugins names with nonalpha characters
+
 					#construct line with
 					# /mixername/channelname/insertname/paramname;midi|engine_type;value;min;max;CC;channel
 					warn "Insert ($paramname) has a system name... may not work\n" if ($paramname =~ /^(mute|solo|bypass)$/);
@@ -161,17 +163,19 @@ sub get_osc_paths {
 			# --- NON-MIXER SPECIFICS ---
 
 			if ($project->{mixers}{$mixername}->is_nonmixer) {
+				#non-mixer osc values are always within [0,1] 
+				#TODO consider separating plugin value from osc values so we can adapt range on request
 				
 				# Add gain control
-				push(@osclines,"/$mixername/$channelname/panvol/vol;non-mixer;0;-70;6");
+				push(@osclines,"/$mixername/$channelname/panvol/vol;non-mixer;0;0;1");
 
 				# Add pan control
-				push(@osclines,"/$mixername/$channelname/panvol/pan;non-mixer;0;-1;1");
+				push(@osclines,"/$mixername/$channelname/panvol/pan;non-mixer;0;0;1");
 				# push(@osclines,"/$mixername/$channelname/panvol/width;non-mixer;0;-1;1");
 
 				#add aux routes
 				foreach my $aux (@auxes) {
-					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;-70;6")  unless $channel->is_hardware_out;
+					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;0;1")  unless $channel->is_hardware_out;
 				}
 			}
 		}
