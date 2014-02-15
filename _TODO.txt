@@ -3,23 +3,37 @@ FEATURES/BUGS
 
 make a real check for nonengine->is_ready
 
-build the complete project base path on generate
+for nonmixer add default stereopan, (1788, C* Pan - Stereo image.....£Pas bon, entrée mono!!)
+and ensure gain name (gain.1)
+ 	> first gain (default) may be considered for calibration
+ 	> second gain is volume
+
+do the touchosc xml export
+
+update project state on osc/midi receive
+save song state option
+
+in osc.csv
+	add nonmixer monopan//stereopan/volume
+	add nonmixer aux vol/mute routes
 
 don't create some plumbing rules if nonmixer has autoconnect on
 
 regularly ping mixers in Live mode
+
+add a midi learn page to map osc.csv
+	>maybe add an ID to osc lines, and create a midimap.csv
+
+JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
+
+----------------
 
 can we get non-mixer channel meter info from osc ?
 	> doable but not implemented
 bug non-mixer with autoroute from multiple auxes, not coherent routes even if snapshot file says it correctly
 bug non-mixer when adding a new aux before an existing aux, will also autoconnect to same ports
 
-JPMIDI : ("channels") ne me liste pas les tracks qui ne contiennent QUE des PC, vérifier si il les envoi
-
 add option to route individual ins to outs (update livescreens)
-
-add a midi learn page to map osc.csv
-	>maybe add an ID to osc lines, and create a midimap.csv
 
 vérifier les TODO
 

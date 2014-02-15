@@ -290,13 +290,15 @@ sub init_osc_server {
 }
 sub process_osc_command {
 use Socket qw(getnameinfo NI_NUMERICHOST);
-my $debug = 1;
+my $debug = 0;
 
-	my $in = $project->{bridge}{OSC}{socket};
+	my $insocket = $project->{bridge}{OSC}{socket};
+	die "Live process_osc error: could not read OSC socket in project\n" unless $insocket;
 	my $osc = $project->{bridge}{OSC}{object};
+	die "Live process_osc error: could not read OSC object in project\n" unless $insocket;
 	
 	#grab the message, and get the sender
-	my $sender = $in->recv(my $packet, $in->sockopt(SO_RCVBUF));
+	my $sender = $insocket->recv(my $packet, $insocket->sockopt(SO_RCVBUF));
 	#parse the osc packet
 	my $p = $osc->parse($packet);
 
@@ -400,10 +402,15 @@ my $debug = 1;
 			warn "unknown osc parameter $el3\n";
 		}
 	}
+	else 
+	{
+		print "could not find corresponding info from $path"
+	}
 
 	#check if we send back information
 	if ($project->{bridge}{OSC}{sendback}) {
 		#resolve the sender adress
+		#TODO maybe create an OSC clients hash to speed up things
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 		print "we need to send back info to $hostname\n";
 		#TODO send back OSC info
