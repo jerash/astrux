@@ -517,13 +517,15 @@ sub CreateNonFiles {
 			if ($channel->is_stereo);
 		push @snapshot,$line;
 		
-		#Gain module
-		#generate a 0x id
-		$id = &get_next_non_id;
-		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 1 :chain $chainid{$channelname} :active 1";
-		push @snapshot,$line;
-		
+		if ($mixer->{engine}{addpregain}) {
+			#Gain module (default)
+			#generate a 0x id
+			$id = &get_next_non_id;
+			#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
+			$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 1 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
+		}
+
 		#Mono pan module
 		if ($channel->is_mono) {
 			#generate a 0x id
@@ -564,13 +566,22 @@ sub CreateNonFiles {
 			$auxnumber++;
 		}
 
-		#Meter module
+		#Gain module (post fx volume)
 		#generate a 0x id
 		$id = &get_next_non_id;
-		#Meter_Module 0x5 create :is_default 1 :chain 0x2 :active 1
-		$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channelname} :active 1";
+		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
+		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default O :chain $chainid{$channelname} :active 1";
 		push @snapshot,$line;
 		
+		if ($mixer->{engine}{addmeters}) {
+			#Meter module
+			#generate a 0x id
+			$id = &get_next_non_id;
+			#Meter_Module 0x5 create :is_default 1 :chain 0x2 :active 1
+			$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
+		}
+
 		#JACK module
 		#generate a 0x id
 		$id = &get_next_non_id;
