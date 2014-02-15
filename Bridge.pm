@@ -80,10 +80,13 @@ sub get_osc_paths {
 	foreach my $mixername (keys %{$project->{mixers}}) {
 
 		#TODO check if ecasound will use osc or midi control
-		
+	
 		#create mixer reference
 		my $mixer = $project->{mixers}{$mixername}{channels};
 		
+		# --- FIRST GET NONMIXER AUXES ---
+		my @auxes = $project->{mixers}{$mixername}->get_nonmixer_auxes_list;
+
 		# --- LOOP THROUGH CHANNELS ---
 	
 		foreach my $channelname (keys %{$mixer}) {
@@ -152,6 +155,23 @@ sub get_osc_paths {
 					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;midi;$value;$min;$max;$CC;$channel";
 					push(@osclines,$line);
 					$i++;
+				}
+			}
+
+			# --- NON-MIXER SPECIFICS ---
+
+			if ($project->{mixers}{$mixername}->is_nonmixer) {
+				
+				# Add gain control
+				push(@osclines,"/$mixername/$channelname/panvol/vol;non-mixer;0;-70;6");
+
+				# Add pan control
+				push(@osclines,"/$mixername/$channelname/panvol/pan;non-mixer;0;-1;1");
+				# push(@osclines,"/$mixername/$channelname/panvol/width;non-mixer;0;-1;1");
+
+				#add aux routes
+				foreach my $aux (@auxes) {
+					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;-70;6")  unless $channel->is_hardware_out;
 				}
 			}
 		}

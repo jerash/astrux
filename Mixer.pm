@@ -450,7 +450,7 @@ sub CreateNonFiles {
 		# add to auxes if it should be
 		if ($mixer->{channels}{$channel}->is_aux) {
 			#update local list, and project structure with aux reference
-			$mixer->{channels}{$channel}{is_aux} = $auxes{$channel} = "aux-$auxletter";
+			$mixer->{channels}{$channel}{is_aux} = $auxes{$channel} = "$auxletter";
 			$auxletter++;
 		}
 		# add new group if doesn't exist
@@ -598,6 +598,25 @@ sub CreateNonFiles {
 	open FILE, ">$filepath" or die $!;
 	print FILE "$_\n" for @snapshot;
 	close FILE;
+}
+
+sub get_nonmixer_auxes_list {
+	my $mixer = shift;
+
+	my @auxes;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @auxes, $channelname if ($mixer->{channels}{$channelname}->is_aux);
+	}
+	return @auxes;
+}
+sub get_nonmixer_mainout {
+	my $mixer = shift;
+
+	my $main_out;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+		$main_out = $channelname if ($mixer->{channels}{$channelname}->is_main_out);
+	}
+	return $main_out;
 }
 
 sub get_next_non_id {

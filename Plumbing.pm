@@ -166,16 +166,8 @@ sub get_plumbing_rules {
 
 			# --- FIRST GET MAIN OUT AND AUXES ---
 
-			my $main_out;
-			my @auxes;
-			foreach my $channelname (keys %{$mixer}) {
-				if ($mixer->{$channelname}->is_main_out) {
-					$main_out = $channelname;
-				}
-				if ($mixer->{$channelname}->is_aux) {
-					push @auxes, $channelname;
-				}
-			}
+			my @auxes = $project->{mixers}{$mixername}->get_nonmixer_auxes_list;
+			my $main_out = $project->{mixers}{$mixername}->get_nonmixer_mainout;
 
 			# --- LOOP THROUGH CHANNELS ---
 
@@ -221,9 +213,9 @@ sub get_plumbing_rules {
 					foreach my $aux (@auxes) {
 						for my $i (1..$channels) {
 							my $plumbout;
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:".$mixer->{$aux}{is_aux}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{is_aux}."/out-$i"
 								if ($mixer->{$channelname}{group} eq '');
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/".$mixer->{$aux}{is_aux}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/aux-".$mixer->{$aux}{is_aux}."/out-$i"
 								if ($mixer->{$channelname}{group} ne '');
 							my $plumbin;
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$aux:in-$i"

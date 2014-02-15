@@ -248,7 +248,9 @@ sub GenerateFiles {
 	#----------------OSC BRIDGE FILES------------------------
 	if ($project->{bridge}{OSC}{enable}) {
 
-		#TODO create the OSC paths
+		# we do it now after nonmixer files are generated, so we know the auxes assignations
+
+		#create the OSC paths
 		$project->AddOSCPaths;
 		print " |_Project: creating OSC paths file $project->{bridge}{OSC}{file}\n";
 		
