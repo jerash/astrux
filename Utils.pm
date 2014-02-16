@@ -18,4 +18,15 @@ sub decode_my_ascii {
 	return $characters;
 }
 
+use MIME::Base64;
+
+sub encode_my_base64 {
+	my $characters = shift;
+	return encode_base64($characters);
+}
+sub decode_my_base64 {
+	my $characters = shift;
+	return decode_base64($characters);
+}
+
 1;
