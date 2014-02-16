@@ -618,6 +618,34 @@ sub get_nonmixer_mainout {
 	}
 	return $main_out;
 }
+sub get_nonmixer_inputs_list {
+	my $mixer = shift;
+
+	my @inputs;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @inputs, $channelname if (($mixer->{channels}{$channelname}->is_main_in) or 
+											($mixer->{channels}{$channelname}->is_submix_in));
+	}
+	return @inputs;
+}
+sub get_nonmixer_buses_list {
+	my $mixer = shift;
+
+	my @buses;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @buses, $channelname if ($mixer->{channels}{$channelname}->is_bus_out);
+	}
+	return @buses;
+}
+sub get_nonmixer_submix_out {
+	my $mixer = shift;
+
+	my $submix_out;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+		$submix_out = $channelname if ($mixer->{channels}{$channelname}->is_submix_out);
+	}
+	return $submix_out;
+}
 
 sub get_next_non_id {
 	state $id = 0;

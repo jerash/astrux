@@ -9,6 +9,7 @@ use Mixer;
 use Song;
 use Plumbing;
 use Bridge;
+use TouchOSC;
 
 ###########################################################
 #
@@ -265,6 +266,21 @@ sub GenerateFiles {
 		print " |_Project: bridge isn't defined as active. Not creating files.";
 	}
 
+	#----------------TOUCHOSC PRESETS FILES------------------------
+	if ($project->{touchosc}{enable}) {
+
+		my $options = \%{$project->{touchosc}};
+
+		foreach my $mixername (keys $project->{mixers}) {
+			print " |_Project: creating TouchOSC presets for mixer $mixername\n";
+			my $touchoscpresets = TouchOSC::get_touchosc_presets($project->{mixers}{$mixername},$options);
+			print "TOUCHOSC PRESETS for $mixername :\n";
+			use Data::Dumper;
+			print Dumper $touchoscpresets;
+
+			TouchOSC::save_presets_files($touchoscpresets);
+		}
+	}
 
 	#----------------DUMPER FILE------------------------
 	$project->SaveDumperFile;
