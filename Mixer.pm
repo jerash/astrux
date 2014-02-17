@@ -526,12 +526,19 @@ sub CreateNonFiles {
 			push @snapshot,$line;
 		}
 
-		#Mono pan module
-		if ($channel->is_mono) {
+		# pan module
+		if ($channel->is_mono) { #add a mono to stereo converter with pan (nonmixer native)
 			#generate a 0x id
 			$id = &get_next_non_id;
 			#Mono_Pan_Module 0x2B create :parameter_values "-1.000000" :is_default 0 :chain 0x2 :active 1
 			$line = "\tMono_Pan_Module $id create :parameter_values \"0.000000\" :is_default 0 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
+		}
+		elsif ($channel->is_stereo) { #add a stereo balance control (LADSPA 1955)
+			#generate a 0x id
+			$id = &get_next_non_id;
+			# Plugin_Module 0x65 create :plugin_id 1955 :plugin_ins 2 :plugin_outs 2 :parameter_values "0:1" :is_default 0 :chain 0x63 :active 1
+			$line = "\tPlugin_Module $id create :plugin_id 1955 :plugin_ins 2 :plugin_outs 2 :parameter_values \"0:1\" :is_default 0 :chain $chainid{$channelname} :active 1";
 			push @snapshot,$line;
 		}
 		
