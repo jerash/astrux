@@ -17,6 +17,12 @@ sub decode_my_ascii {
 	$characters =~ s/%([0-9A-F][0-9A-F])/chr(hex($1))/eg;
 	return $characters;
 }
+#replace any non space character with _
+sub underscore_my_spaces {
+	my $characters = shift;
+	$characters =~ s/\s/_/g;
+	return $characters;
+}
 
 use MIME::Base64;
 

@@ -112,8 +112,8 @@ sub get_osc_paths {
 				# --- LOOP THROUGH INSERT PARAMETERS ---
 				my $i = 0;
 				foreach my $paramname (@{$insert->{paramnames}}) {
-					#replace non aplhanum characters with %ascii code (LADSPA mainly for nonmixer)
-					$paramname =~ Utils::encode_my_ascii($paramname) if $project->{mixers}{$mixername}->is_nonmixer;
+					#replace space characters with _
+					$paramname = Utils::underscore_my_spaces($paramname);
 					#TODO check how ecasound treats LADSPA plugins names with nonalpha characters
 
 					#construct line with
