@@ -165,6 +165,7 @@ sub save_touchosc_files {
 # { auxnam pagenam  M} { fxname pagenam   }
 # { | | | | | | | | P} {  O  O  O  O    B }
 # { | | | | | | | | |} {  O  O  O  O    G }
+# { | | | | | | | | |} {  O  O  O  O    G }
 # { - - - - - - - - -} {  -  -  -  -      }
 
 # --- main layout for ipad size ---
@@ -180,20 +181,11 @@ sub get_touchosc_presets {
 	my $mainout;
 	my $submixout;
 	
-	# --- FIRST GET INPUTS, AUXES, and MAIN OUT ---
-	if ($mixer->is_nonmixer) {
-		@inputnames = $mixer->get_inputs_list; #main hardware in + submix ins
-		@auxnames = $mixer->get_auxes_list; #will build preset for each aux (hardware out + fx send loop)
-		$mainout = $mixer->get_main_out if $mixer->is_main; #will build preset for mainout (hardware out)
-		$submixout = $mixer->get_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
-	}
-	elsif ($mixer->is_ecasound) {
-		#TODO get ecasound inputs, auxes, mainout for touchosc
-	} 
-	else {
-		warn "TouchOSC error: unknown mixer type\n";
-		return;
-	}
+	# --- GET INPUTS, AUXES, and MAIN OUT ---
+	@inputnames = $mixer->get_inputs_list; #main hardware in + submix ins
+	@auxnames = $mixer->get_auxes_list; #will build preset for each aux (hardware out + fx send loop)
+	$mainout = $mixer->get_main_out if $mixer->is_main; #will build preset for mainout (hardware out)
+	$submixout = $mixer->get_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
 
 	# get layout dimensions
 	my @size = $layouts->{$options->{layout_size}};
@@ -293,10 +285,10 @@ sub get_touchosc_presets {
 	#-------------------------
 	if ($mainout) {
 		# create the hashref
-		$monitor_presets{$mainout} = TouchOSC->new($options);
+		# $monitor_presets{$mainout} = TouchOSC->new($options); # TODO
 	}
 	elsif ($submixout) {
-		$monitor_presets{$submixout} = TouchOSC->new($options);
+		# $monitor_presets{$submixout} = TouchOSC->new($options); # TODO
 	}
 	return \%monitor_presets;
 }
