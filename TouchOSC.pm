@@ -105,39 +105,50 @@ sub new {
 #
 ###########################################################
 
-sub save_presets_files {
-	my $monitor_presets = shift;
+sub save_touchosc_files {
+	my $project = shift;
 
-	foreach my $presetname (keys %{$monitor_presets}) {
-		my $preset = $monitor_presets->{$presetname};
-		open FILE , ">/tmp/index.xml";
-		print FILE $preset->{header};
-		print FILE $preset->{layout_header};
+	my $options = \%{$project->{touchosc}};
 
-		next unless $preset->{pages};
-		foreach my $pagename (sort keys $preset->{pages}) {
-			my $page = $preset->{pages}{$pagename};
-			print FILE $page->{header};
+	foreach my $mixername (keys $project->{mixers}) {
+		print " |_Project: creating TouchOSC presets for mixer $mixername\n";
 
-			next unless $page->{controls};
-			foreach my $controlname (sort keys $page->{controls}) {
-				my $control = $page->{controls}{$controlname};
-				my $line = '<control ';
+		#get the touchosc presets
+		my $touchoscpresets = TouchOSC::get_touchosc_presets($project->{mixers}{$mixername},$options);
 
-				foreach my $ctrlval (sort keys %{$control}) {
-					$line .= "$ctrlval=\"$control->{$ctrlval}\" ";
+		#save temporary xml file
+		foreach my $presetname (keys %{$touchoscpresets}) {
+			my $preset = $touchoscpresets->{$presetname};
+			open FILE , ">/tmp/index.xml";
+			print FILE $preset->{header};
+			print FILE $preset->{layout_header};
+
+			next unless $preset->{pages};
+			foreach my $pagename (sort keys $preset->{pages}) {
+				my $page = $preset->{pages}{$pagename};
+				print FILE $page->{header};
+
+				next unless $page->{controls};
+				foreach my $controlname (sort keys $page->{controls}) {
+					my $control = $page->{controls}{$controlname};
+					my $line = '<control ';
+
+					foreach my $ctrlval (sort keys %{$control}) {
+						$line .= "$ctrlval=\"$control->{$ctrlval}\" ";
+					}
+					print FILE "$line></control>";
 				}
-				print FILE "$line></control>";
+				print FILE '</tabpage>';
 			}
-			print FILE '</tabpage>';
+			print FILE $preset->{layout_footer};
+			close FILE;
+			#build output path
+			my $path = $project->{globals}{base_path}."/".$project->{globals}{output_path}."/$presetname.touchosc";
+			#zip temporary file as a touchosc preset file
+			system("zip -j $path /tmp/index.xml > /dev/null 2>&1");
+			#delete temporary xml file
+			unlink "/tmp/index.xml";
 		}
-		print FILE $preset->{layout_footer};
-		close FILE;
-
-		#zip file
-		system("zip -j ./$presetname.touchosc /tmp/index.xml > /dev/null 2>&1");
-		#delete temp file
-		unlink "/tmp/index.xml";
 	}
 }
 
@@ -151,42 +162,29 @@ sub save_presets_files {
 # TODO if not exist plugin preset, make default
 
 # --- monitor layout for iphone size ---
-# { auxname page    m}
-# { | | | | | | | | I}
-# { - - - - - - - - -}
-#	page 1..n 	
-	# texts :
-		# label w=190 h=30, x=0   y=15, textsize 20, textcolor red,  oscpath /dummy, text "monitor name"
-		# label w=155 h=30, x=190 y=15, textsize 20, textcolor gray, oscpath /dummy, text "group name"
-	# myaux tracks volume : 
-		# fader w50 h200, x=2+53* y=60
-		# label w50 h20,  x=2+53* y=260, textsize 13, oscpath /dummy
-	# mymonitor volume : 
-		# fader w=50 h=200, y=60  x=layout width - 53
-		# label w=50 h=20,  y=260 x=layout width - 53, textsize uppercase 13, oscpath /dummy
-	# mymonitor pan : 
-		# small centered pot w=50 h=50, y=6 x=layout width - 53
-	# global mute
-		# togglebutton w=50 h=50, y=6 x=layout width - 2*53
-		# label w=50 h=20, y=22 x=layout width - 2*53, textsize 13, oscpath /dummy
-#	page n+1..
-	# my fx params (equaliser,limiter)
-# --- main ---
+# { volume mix pages } { fx  pages        }
+# { auxnam pagenam  M} { fxname pagenam   }
+# { | | | | | | | | P} {  O  O  O  O    B }
+# { | | | | | | | | |} {  O  O  O  O    G }
+# { - - - - - - - - -} {  -  -  -  -      }
+
+# --- main layout for ipad size ---
 #	
+
 sub get_touchosc_presets {
 	my $mixer = shift;
 	my $options = shift; #hashref containing layout options
 
 	my %monitor_presets;
-	my @inputs;
-	my @auxes;
+	my @inputnames;
+	my @auxnames;
 	my $mainout;
 	my $submixout;
 	
 	# --- FIRST GET INPUTS, AUXES, and MAIN OUT ---
 	if ($mixer->is_nonmixer) {
-		@inputs = $mixer->get_nonmixer_inputs_list; #main hardware in + submix ins
-		@auxes = $mixer->get_nonmixer_auxes_list; #will build preset for each aux (hardware out + fx send loop)
+		@inputnames = $mixer->get_nonmixer_inputs_list; #main hardware in + submix ins
+		@auxnames = $mixer->get_nonmixer_auxes_list; #will build preset for each aux (hardware out + fx send loop)
 		$mainout = $mixer->get_nonmixer_mainout if $mixer->is_main; #will build preset for mainout (hardware out)
 		$submixout = $mixer->get_nonmixer_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
 	}
@@ -202,11 +200,11 @@ sub get_touchosc_presets {
 	my @size = $layouts->{$options->{layout_size}};
 	my $max_channels_faders_per_page = int (($size[0] - 53) / 53);
 	use POSIX qw(ceil);
-	my $mix_pages_number = ceil( $#inputs/$max_channels_faders_per_page );
+	my $mix_pages_number = ceil( $#inputnames/$max_channels_faders_per_page );
 
 	#build mix preset for each aux
 	#------------------------------
-	foreach my $auxname (@auxes) {
+	foreach my $auxname (@auxnames) {
 		# create the hashref 
 		$monitor_presets{$auxname} = TouchOSC->new($options);
 
@@ -216,25 +214,31 @@ sub get_touchosc_presets {
 		for my $pagenumber (1..$mix_pages_number) {
 			#add volume faders page(s)
 			$monitor_presets{$auxname}->add_page("Mix$pagenumber");
+			print " | |_adding page Mix$pagenumber for aux output $auxname\n";
 	
 			#for each input channel, add a volume control
 			for my $nb (0..($max_channels_faders_per_page-1)) {
-				my $input = $inputs[$control_index];
+				#get inputname from list of inputs
+				my $inputname = $inputnames[$control_index];
+				#get input's mixer group
+				my $color = &get_next_group_color($mixer->{channels}{$inputname}{group});
 				# add input volume control fader
-				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$input");
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$inputname");
 				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),20);
 				$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 				$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
-				$control->set_control_name("vol_$input");
-				$control->set_control_oscpath("/$mixer->{engine}{name}/$input/aux_to/$auxname/vol");
+				$control->set_control_name("vol_$inputname");
+				$control->set_control_color($color);
+				$control->set_control_oscpath("/$mixer->{engine}{name}/$inputname/aux_to/$auxname/vol");
 				#add input label
-				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","label_$input");
-				$control->set_control_name("label_$input");
-				$control->set_label_text("$input");
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","label_$inputname");
+				$control->set_control_name("label_$inputname");
+				$control->set_control_color($color);
+				$control->set_label_text("$inputname");
 				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),0);
 				$control->set_control_oscpath("/dummy");
 				#stop if we have done all inputs
-				last if ++$control_index > $#inputs;
+				last if ++$control_index > $#inputnames;
 			}
 			#add aux master volume fader
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
@@ -297,6 +301,33 @@ sub get_touchosc_presets {
 	return \%monitor_presets;
 }
 
+sub get_next_group_color {
+	my $groupname = shift;
+
+	return $colors[$default_color] if $groupname eq "";
+
+	use feature 'state';
+	state $groups = "";
+	state $new = 0;
+
+	my $index;
+	my @table = split(',',$groups);
+
+	if ( grep( /^$groupname$/, @table ) ) {
+		#group existing, get its index as color index
+		for my $nb (0..$#table) {
+			$index = $nb if ($groupname eq $table[$nb]);
+		}
+	}
+	else {
+		#add groupname to groups list
+		$groups .= "$groupname,";
+		return $colors[$#table+$new++];
+	}
+	
+	return $colors[$index||$default_color];
+}
+
 #	--- add something ---
 #----------------------------------
 
@@ -304,7 +335,6 @@ sub add_page {
 	my $touchosc = shift;
 	my $pagename = shift;
 
-	print " | |_adding page $pagename\n";
 	#encode page name
 	my $page_title_base64 = Utils::encode_my_base64($pagename);
 	chomp $page_title_base64;
@@ -326,7 +356,7 @@ sub add_control {
 	my $position;
 	#verify if the control is a astrux_controls preset
 	if (exists $astrux_controls->{$presetname}) {
-		print " | | |_adding control $controlname\n";
+		# print " | | |_adding control $controlname\n";
 
 		#create a control from preset
 		my %control = %{$astrux_controls->{$presetname}};

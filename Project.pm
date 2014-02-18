@@ -268,14 +268,7 @@ sub GenerateFiles {
 
 	#----------------TOUCHOSC PRESETS FILES------------------------
 	if ($project->{touchosc}{enable}) {
-
-		my $options = \%{$project->{touchosc}};
-
-		foreach my $mixername (keys $project->{mixers}) {
-			print " |_Project: creating TouchOSC presets for mixer $mixername\n";
-			my $touchoscpresets = TouchOSC::get_touchosc_presets($project->{mixers}{$mixername},$options);
-			TouchOSC::save_presets_files($touchoscpresets);
-		}
+		$project->TouchOSC::save_touchosc_files;
 	}
 
 	#----------------DUMPER FILE------------------------
