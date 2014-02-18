@@ -187,7 +187,7 @@ sub get_plumbing_rules {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:in-$i"
 							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/in-$i"
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/in-$i"
 							if ($mixer->{$channelname}{group} ne '');
 						#add rule
 						push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
@@ -201,12 +201,12 @@ sub get_plumbing_rules {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 							if ($mixer->{$channelname}{group} ne '');
 						my $plumbin;
 						$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
 							if ($mixer->{$main_out}{group} eq '');
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$main_out}{group}."):$main_out/in-$i"
+						$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
 							if ($mixer->{$main_out}{group} ne '');
 						#add rule
 						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
@@ -218,12 +218,12 @@ sub get_plumbing_rules {
 							my $plumbout;
 							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{is_aux}."/out-$i"
 								if ($mixer->{$channelname}{group} eq '');
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/aux-".$mixer->{$aux}{is_aux}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/aux-".$mixer->{$aux}{is_aux}."/out-$i"
 								if ($mixer->{$channelname}{group} ne '');
 							my $plumbin;
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$aux:in-$i"
 								if ($mixer->{$aux}{group} eq '');
-							$plumbin = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$aux}{group}."):$aux/in-$i"
+							$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$aux}{group}."\\):$aux/in-$i"
 								if ($mixer->{$aux}{group} ne '');
 							#add rule
 							push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
@@ -240,12 +240,12 @@ sub get_plumbing_rules {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 							if ($mixer->{$channelname}{group} ne '');
 						my $plumbin;
 						$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
 							if ($mixer->{$main_out}{group} eq '');
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$main_out}{group}."):$main_out/in-$i"
+						$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
 							if ($mixer->{$main_out}{group} ne '');
 						#add rule
 						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
@@ -262,7 +262,7 @@ sub get_plumbing_rules {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 							if ($mixer->{$channelname}{group} ne '');
 						my $plumbin = $table[$i-1];
 						#add rule
@@ -282,7 +282,7 @@ sub get_plumbing_rules {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 							if ($mixer->{$channelname}{group} ne '');
 						#add rule
 						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
