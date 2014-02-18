@@ -510,11 +510,4 @@ sub set_control_oscpath {
 	$controlref->{osc_cs} = Utils::encode_my_base64($oscpath);
 	chomp($controlref->{osc_cs});
 }
-sub set_label_text {
-	my $controlref = shift;
-	my $text = shift;
-	$controlref->{text} = Utils::encode_my_base64($text);
-	chomp($controlref->{text});
-}
-
-1;
+sub set_label_
