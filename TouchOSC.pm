@@ -8,6 +8,12 @@ use warnings;
 use Data::Dumper;
 my $debug = 1;
 
+# Warnings :
+# - in preset file vertical means horizontal, and vice-versa
+# - in touchosc editor xy position is relative to upper-left corner of widget/screen
+#   whereas in preset file it is relative to bottom-left corner of widget/screen
+# - screen size defined in layout size is reduced by 40 vertical pixels for usable area
+
 ###########################################################
 #
 #		 TOUCHOSC GLOBAL definitions
@@ -15,7 +21,7 @@ my $debug = 1;
 ###########################################################
 
 my $xml_header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
-my $layout_sizes = { #(x,y) total screen pixels, usable area is (x,y-40) in horizontal mode
+my $layout_sizes = { #(x,y)
 	iphone => (480,320),
 	ipad => (1024,768),
 	iphone5 => (568,320),
@@ -42,13 +48,15 @@ my $default_text_size = 13;
 #-----------------------
 my $astrux_controls = {
 	vol_fader => &create_fader(200,50,"$colors[$default_color]"),
+	aux_fader => &create_fader(157,50,"orange"),
 	small_pot => &create_pot(50,50,"$colors[$default_color]"),
 	big_pot => &create_pot(80,80,"$colors[$default_color]"),
 	small_button => &create_button(50,50,"$colors[$default_color]"),
 	big_button => &create_button(80,80,"$colors[$default_color]"),
 	track_label => &create_label(20,50,"$colors[$default_color]",13),
-	monitor_label => &create_label(190,30,'gray',20),
-	group_label => &create_label(155,30,"$colors[$default_color]",20)
+	aux_label => &create_label(20,50,"orange",13),
+	monitor_label => &create_label(30,190,'gray',20),
+	group_label => &create_label(30,155,"$colors[$default_color]",20)
 };
 
 ###########################################################
@@ -144,6 +152,9 @@ sub save_presets_files {
 # TODO if not exist plugin preset, make default
 
 # --- monitor layout for iphone size ---
+# { auxname page    m}
+# { | | | | | | | | I}
+# { - - - - - - - - -}
 #	page 1..n 	
 	# texts :
 		# label w=190 h=30, x=0   y=15, textsize 20, textcolor red,  oscpath /dummy, text "monitor name"
@@ -209,7 +220,6 @@ sub get_touchosc_presets {
 		foreach my $input (@inputs) {
 			# add input volume control
 			$monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$input");
-
 				# set position
 				my @position = (2+53*$control_number,20);
 				$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"vol_$input"}->set_control_position(\@position);
@@ -244,7 +254,96 @@ sub get_touchosc_presets {
 				$monitor_presets{$auxname}->add_page("Mix$pagenumber");
 			}				
 		}
-		#TODO add aux master volume / mute / pan
+		#add aux master volume
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
+			# set position
+			my @position = ($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,20);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"vol_$auxname"}->set_control_position(\@position);
+			# add minmax
+			my @minmax;
+			@minmax = (0,1) if $mixer->is_nonmixer;
+			@minmax = (-60,6) if $mixer->is_ecasound;
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"vol_$auxname"}->set_control_minmax(\@minmax);
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"vol_$auxname"}->set_control_name("vol_$auxname");
+			#osc
+			my $oscpath = "/$mixer->{engine}{name}/$auxname/panvol/vol";
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"vol_$auxname"}->set_control_oscpath($oscpath);
+		#add aux master input label
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","track_$auxname");
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"track_$auxname"}->set_control_name("track_$auxname");
+			#set label text
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"track_$auxname"}->set_label_text("Volume");
+			# set position
+			@position = ($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,0);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"track_$auxname"}->set_control_position(\@position);
+			#osc
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"track_$auxname"}->set_control_oscpath("/dummy");
+		#add aux master pan
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
+			# set position
+			@position = ($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,176);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"pan_$auxname"}->set_control_position(\@position);
+			# add minmax
+			@minmax;
+			@minmax = (0,1) if $mixer->is_nonmixer;
+			@minmax = (0,100) if $mixer->is_ecasound;
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"pan_$auxname"}->set_control_minmax(\@minmax);
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"pan_$auxname"}->set_control_name("pan_$auxname");
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"pan_$auxname"}->set_control_color("orange");
+			#osc
+			$oscpath = "/$mixer->{engine}{name}/$auxname/panvol/pan";
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"pan_$auxname"}->set_control_oscpath($oscpath);
+		#add aux master mute
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mutel_$auxname"}->set_control_name("mutel_$auxname");
+			#set label text
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mutel_$auxname"}->set_label_text("mute");
+			# set position
+			@position = ($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,243);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mutel_$auxname"}->set_control_position(\@position);
+			#osc
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mutel_$auxname"}->set_control_oscpath("/dummy");
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
+			# set position
+			@position = ($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,227);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mute_$auxname"}->set_control_position(\@position);
+			# add minmax
+			@minmax;
+			@minmax = (0,1);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mute_$auxname"}->set_control_minmax(\@minmax);
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mute_$auxname"}->set_control_name("mute_$auxname");
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mute_$auxname"}->set_control_color("orange");
+			#osc
+			$oscpath = "/$mixer->{engine}{name}/$auxname/mute";
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"mute_$auxname"}->set_control_oscpath($oscpath);
+
+		#add page label
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","monitor_label","label1_$auxname");
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label1_$auxname"}->set_control_name("label1_$auxname");
+			#set label text
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label1_$auxname"}->set_label_text("$auxname");
+			# set position
+			@position = (0,230);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label1_$auxname"}->set_control_position(\@position);
+			#osc
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label1_$auxname"}->set_control_oscpath("/dummy");
+		#add page name
+		$monitor_presets{$auxname}->add_control("Mix$pagenumber","group_label","label2_$auxname");
+			#name
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label2_$auxname"}->set_control_name("label2_$auxname");
+			#set label text
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label2_$auxname"}->set_label_text("Mix$pagenumber");
+			# set position
+			@position = (190,230);
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label2_$auxname"}->set_control_position(\@position);
+			#osc
+			$monitor_presets{$auxname}{pages}{"Mix$pagenumber"}{controls}{"label2_$auxname"}->set_control_oscpath("/dummy");
 
 		#add fx inserts page(s) # TODO
 	}
@@ -419,6 +518,12 @@ sub set_control_name {
 	my $name = shift;
 	$controlref->{name} = Utils::encode_my_base64($name);
 	chomp($controlref->{name});
+}
+sub set_control_color {
+	my $controlref = shift;
+	my $color = shift;
+	$controlref->{color} = $color;
+	chomp($controlref->{color});
 }
 sub set_control_minmax {
 	my $controlref = shift;
