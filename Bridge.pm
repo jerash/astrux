@@ -374,8 +374,8 @@ sub process_osc_command {
 	#-----------------------------------------
 	my ($path, $types, @args) = @$p;
 
-	print "OSC MESSAGE\n------------\npath=$path types=$types and args" if $debug;
-	print Dumper @args if $debug;
+	print "OSC MESSAGE\n------------\npath=$path types=$types and args " if $debug;
+	if ($debug){print "$_," for @args};
 	print "\n" if $debug;
 
 	#verify how many arguments we have
