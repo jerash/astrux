@@ -208,34 +208,36 @@ sub get_touchosc_presets {
 	#build mix preset for each aux
 	#------------------------------
 	foreach my $auxname (@auxes) {
+		# create the hashref 
+		$monitor_presets{$auxname} = TouchOSC->new($options);
+
+		my $control;
+		my $control_index = 0;
 		#create the mix pages with volumes control
-		foreach my $pagenumber (1..$mix_pages_number) {
-			# create the hashref 
-			$monitor_presets{$auxname} = TouchOSC->new($options);
+		for my $pagenumber (1..$mix_pages_number) {
 			#add volume faders page(s)
 			$monitor_presets{$auxname}->add_page("Mix$pagenumber");
 	
-			my $control;
-			my $control_number = 0;
 			#for each input channel, add a volume control
-			foreach my $input (@inputs) {
-				# add input volume control
+			for my $nb (0..($max_channels_faders_per_page-1)) {
+				my $input = $inputs[$control_index];
+				# add input volume control fader
 				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$input");
-				$control->set_control_position(2+53*$control_number,20);
+				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),20);
 				$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 				$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
 				$control->set_control_name("vol_$input");
 				$control->set_control_oscpath("/$mixer->{engine}{name}/$input/aux_to/$auxname/vol");
 				#add input label
-				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","track_$input");
-				$control->set_control_name("track_$input");
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","label_$input");
+				$control->set_control_name("label_$input");
 				$control->set_label_text("$input");
-				$control->set_control_position(2+53*$control_number,0);
+				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),0);
 				$control->set_control_oscpath("/dummy");
-				#increment the control number
-				$control_number++;
+				#stop if we have done all inputs
+				last if ++$control_index > $#inputs;
 			}
-			#add aux master volume
+			#add aux master volume fader
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
 			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,20);
 			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
@@ -243,12 +245,12 @@ sub get_touchosc_presets {
 			$control->set_control_name("vol_$auxname");
 			$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/vol");
 			#add aux master input label
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","track_$auxname");
-			$control->set_control_name("track_$auxname");
+			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","label_$auxname");
+			$control->set_control_name("label_$auxname");
 			$control->set_label_text("Volume");
 			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,0);
 			$control->set_control_oscpath("/dummy");
-			#add aux master pan
+			#add aux master pan rotary
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
 			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,176);
 			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
@@ -256,12 +258,13 @@ sub get_touchosc_presets {
 			$control->set_control_name("pan_$auxname");
 			$control->set_control_color("orange");
 			$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/pan");
-			#add aux master mute
+			#add aux master mute label
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
 			$control->set_control_name("mutel_$auxname");
 			$control->set_label_text("mute");
 			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,243);
 			$control->set_control_oscpath("/dummy");
+			#add aux master mute button
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
 			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,227);
 			$control->set_control_minmax(0,1);

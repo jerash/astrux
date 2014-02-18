@@ -321,7 +321,7 @@ sub BuildEcaSubmix {
 	my @o_chaintab;
 
 	#check each channel defined in the IO
-	foreach my $name (keys %{$mixer->{IOs}} ) {		
+	foreach my $name (sort keys %{$mixer->{IOs}} ) {		
 
 		#ignore inactive channels
 		next unless $mixer->{IOs}{$name}{status} eq "active";
@@ -360,7 +360,7 @@ sub CreateEcaPlayers {
 	my @io_chaintab;
 
 	#check each channel defined in the IO
-	foreach my $name (keys %{$mixer->{IOs}} ) {		
+	foreach my $name (sort keys %{$mixer->{IOs}} ) {		
 
 		#ignore inactive channels
 		next unless $mixer->{IOs}{$name}{status} eq "active";
@@ -394,7 +394,7 @@ sub BuildNonMixer {
 	print " |_Mixer:Create Main Mixer name : " . $mixer->get_name . "\n";
 
 	#add channels defined in the IO to mixer
-	foreach my $name (keys %{$mixer->{IOs}} ) {		
+	foreach my $name (sort keys %{$mixer->{IOs}} ) {		
 
 		#ignore inactive channels
 		next unless $mixer->{IOs}{$name}{status} eq "active";
