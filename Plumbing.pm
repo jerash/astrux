@@ -166,8 +166,8 @@ sub get_plumbing_rules {
 
 			# --- FIRST GET MAIN OUT AND AUXES ---
 
-			my @auxes = $project->{mixers}{$mixername}->get_nonmixer_auxes_list;
-			my $main_out = $project->{mixers}{$mixername}->get_nonmixer_mainout;
+			my @auxes = $project->{mixers}{$mixername}->get_auxes_list;
+			my $main_out = $project->{mixers}{$mixername}->get_main_out;
 
 			# --- LOOP THROUGH CHANNELS ---
 

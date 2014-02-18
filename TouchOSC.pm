@@ -158,7 +158,6 @@ sub save_touchosc_files {
 #
 ###########################################################
 
-# TODO use "groups" to define colours
 # TODO if not exist plugin preset, make default
 
 # --- monitor layout for iphone size ---
@@ -183,10 +182,10 @@ sub get_touchosc_presets {
 	
 	# --- FIRST GET INPUTS, AUXES, and MAIN OUT ---
 	if ($mixer->is_nonmixer) {
-		@inputnames = $mixer->get_nonmixer_inputs_list; #main hardware in + submix ins
-		@auxnames = $mixer->get_nonmixer_auxes_list; #will build preset for each aux (hardware out + fx send loop)
-		$mainout = $mixer->get_nonmixer_mainout if $mixer->is_main; #will build preset for mainout (hardware out)
-		$submixout = $mixer->get_nonmixer_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
+		@inputnames = $mixer->get_inputs_list; #main hardware in + submix ins
+		@auxnames = $mixer->get_auxes_list; #will build preset for each aux (hardware out + fx send loop)
+		$mainout = $mixer->get_main_out if $mixer->is_main; #will build preset for mainout (hardware out)
+		$submixout = $mixer->get_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
 	}
 	elsif ($mixer->is_ecasound) {
 		#TODO get ecasound inputs, auxes, mainout for touchosc

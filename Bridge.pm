@@ -86,7 +86,7 @@ sub get_osc_paths {
 		my $mixer = $project->{mixers}{$mixername}{channels};
 		
 		# --- FIRST GET NONMIXER AUXES ---
-		my @auxes = $project->{mixers}{$mixername}->get_nonmixer_auxes_list;
+		my @auxes = $project->{mixers}{$mixername}->get_auxes_list;
 
 		# --- LOOP THROUGH CHANNELS ---
 	

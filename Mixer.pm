@@ -167,6 +167,18 @@ sub is_nonmixer {
 	return 1 if $mixer->{engine}{engine} eq "non-mixer";
 	return 0;
 }
+sub is_midi_controllable {
+	my $mixer = shift;
+	return 1 if ($mixer->{engine}{control} =~ /midi/);
+}
+sub is_osc_controllable {
+	my $mixer = shift;
+	return 1 if ($mixer->{engine}{control} =~ /osc/);
+}
+sub is_tcp_controllable {
+	my $mixer = shift;
+	return 1 if ($mixer->{engine}{control} =~ /tcp/);
+}
 
 ###########################################################
 #
@@ -182,17 +194,49 @@ sub get_tcp_port {
 	my $mixer = shift;
 	return $mixer->{engine}{tcp_port};
 }
-sub is_midi_controllable {
+sub get_inputs_list {
 	my $mixer = shift;
-	return 1 if ($mixer->{engine}{control} =~ /midi/);
+	my @inputnames;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @inputnames, $channelname if (($mixer->{channels}{$channelname}->is_main_in) or 
+											($mixer->{channels}{$channelname}->is_submix_in));
+	}
+	my @sorted_inputnames = &sort_by_group_and_name($mixer,\@inputnames);
+	return @sorted_inputnames;
 }
-sub is_osc_controllable {
+sub get_auxes_list {
 	my $mixer = shift;
-	return 1 if ($mixer->{engine}{control} =~ /osc/);
+	my @auxnames;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @auxnames, $channelname if ($mixer->{channels}{$channelname}->is_aux);
+	}
+	my @sorted_auxnames = &sort_by_group_and_name($mixer,\@auxnames);
+	return @sorted_auxnames;
 }
-sub is_tcp_controllable {
+sub get_buses_list {
 	my $mixer = shift;
-	return 1 if ($mixer->{engine}{control} =~ /tcp/);
+	my @busnames;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+			push @busnames, $channelname if ($mixer->{channels}{$channelname}->is_bus_out);
+	}
+	my @sorted_busnames = &sort_by_group_and_name($mixer,\@busnames);
+	return @sorted_busnames;
+}
+sub get_main_out {
+	my $mixer = shift;
+	my $mainout;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+		$mainout = $channelname if ($mixer->{channels}{$channelname}->is_main_out);
+	}
+	return $mainout;
+}
+sub get_submix_out {
+	my $mixer = shift;
+	my $submixout;
+	foreach my $channelname (keys %{$mixer->{channels}}) {
+		$submixout = $channelname if ($mixer->{channels}{$channelname}->is_submix_out);
+	}
+	return $submixout;
 }
 
 ###########################################################
@@ -605,55 +649,6 @@ sub CreateNonFiles {
 	open FILE, ">$filepath" or die $!;
 	print FILE "$_\n" for @snapshot;
 	close FILE;
-}
-
-sub get_nonmixer_auxes_list {
-	my $mixer = shift;
-
-	my @auxes;
-	foreach my $channelname (keys %{$mixer->{channels}}) {
-			push @auxes, $channelname if ($mixer->{channels}{$channelname}->is_aux);
-	}
-	my @sorted_auxes = &sort_by_group_and_name($mixer,\@auxes);
-	return @sorted_auxes;
-}
-sub get_nonmixer_mainout {
-	my $mixer = shift;
-
-	my $main_out;
-	foreach my $channelname (keys %{$mixer->{channels}}) {
-		$main_out = $channelname if ($mixer->{channels}{$channelname}->is_main_out);
-	}
-	return $main_out;
-}
-sub get_nonmixer_inputs_list {
-	my $mixer = shift;
-
-	my @inputs;
-	foreach my $channelname (keys %{$mixer->{channels}}) {
-			push @inputs, $channelname if (($mixer->{channels}{$channelname}->is_main_in) or 
-											($mixer->{channels}{$channelname}->is_submix_in));
-	}
-	my @sorted_inputs = &sort_by_group_and_name($mixer,\@inputs);
-	return @sorted_inputs;
-}
-sub get_nonmixer_buses_list {
-	my $mixer = shift;
-
-	my @buses;
-	foreach my $channelname (keys %{$mixer->{channels}}) {
-			push @buses, $channelname if ($mixer->{channels}{$channelname}->is_bus_out);
-	}
-	return @buses;
-}
-sub get_nonmixer_submix_out {
-	my $mixer = shift;
-
-	my $submix_out;
-	foreach my $channelname (keys %{$mixer->{channels}}) {
-		$submix_out = $channelname if ($mixer->{channels}{$channelname}->is_submix_out);
-	}
-	return $submix_out;
 }
 
 sub get_next_non_id {
