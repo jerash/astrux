@@ -209,6 +209,7 @@ sub get_touchosc_presets {
 		$monitor_presets{$auxname} = TouchOSC->new($options);
 
 		my $control;
+		my $color;
 		my $control_index = 0;
 		#create the mix pages with volumes control
 		for my $pagenumber (1..$mix_pages_number) {
@@ -221,7 +222,8 @@ sub get_touchosc_presets {
 				#get inputname from list of inputs
 				my $inputname = $inputnames[$control_index];
 				#get input's mixer group
-				my $color = &get_next_group_color($mixer->{channels}{$inputname}{group});
+				$color = &get_group_color($mixer->{channels}{$inputname}{group});
+print "+++++colour is $color\n";
 				# add input volume control fader
 				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$inputname");
 				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),20);
@@ -301,9 +303,8 @@ sub get_touchosc_presets {
 	return \%monitor_presets;
 }
 
-sub get_next_group_color {
+sub get_group_color {
 	my $groupname = shift;
-
 	return $colors[$default_color] if $groupname eq "";
 
 	use feature 'state';
@@ -322,10 +323,12 @@ sub get_next_group_color {
 	else {
 		#add groupname to groups list
 		$groups .= "$groupname,";
-		return $colors[$#table+$new++];
+print "--------we give $#table+1+$new\n";		
+		return $colors[$#table+1+$new];
+		$new++;
 	}
 	
-	return $colors[$index||$default_color];
+	return $colors[$index];
 }
 
 #	--- add something ---
@@ -493,7 +496,7 @@ sub set_control_name {
 sub set_control_color {
 	my $controlref = shift;
 	my $color = shift;
-	$controlref->{color} = $color;
+	$controlref->{color} = $color || $default_color;
 	chomp($controlref->{color});
 }
 sub set_control_minmax {

@@ -614,7 +614,8 @@ sub get_nonmixer_auxes_list {
 	foreach my $channelname (keys %{$mixer->{channels}}) {
 			push @auxes, $channelname if ($mixer->{channels}{$channelname}->is_aux);
 	}
-	return @auxes;
+	my @sorted_auxes = &sort_by_group_and_name($mixer,\@auxes);
+	return @sorted_auxes;
 }
 sub get_nonmixer_mainout {
 	my $mixer = shift;
@@ -633,8 +634,7 @@ sub get_nonmixer_inputs_list {
 			push @inputs, $channelname if (($mixer->{channels}{$channelname}->is_main_in) or 
 											($mixer->{channels}{$channelname}->is_submix_in));
 	}
-	#reorder list by groupname and channelname
-	my @sorted_inputs = sort { lc($a) cmp lc($b) } @inputs;
+	my @sorted_inputs = &sort_by_group_and_name($mixer,\@inputs);
 	return @sorted_inputs;
 }
 sub get_nonmixer_buses_list {
@@ -660,6 +660,31 @@ sub get_next_non_id {
 	state $id = 0;
 	$id++;
 	return sprintf ("0x%x",$id);
+}
+
+sub sort_by_group_and_name {
+	my $mixer = shift;
+	my $channelnames = shift;
+	#organize channels by group
+	my $tree;
+	foreach my $channelname (@{$channelnames}) {
+		if ($mixer->{channels}{$channelname}{group}) {
+			$tree->{$mixer->{channels}{$channelname}{group}} .= "$channelname,";
+		}
+		else {
+			$tree->{zzzzz} .= "$channelname,";
+		}
+	}
+	#sort group names
+	my @sorted_groups = sort { lc($a) cmp lc($b) } (keys %{$tree});
+	#sort channels by group then channelname
+	my $sorted_channelnames = "";
+	while (my $val = shift @sorted_groups) {
+		#sort channels
+		$sorted_channelnames .= join "," , sort { lc($a) cmp lc($b) } (split "," , $tree->{$val});
+		$sorted_channelnames .= ",";
+	}
+	return split "," , $sorted_channelnames;
 }
 
 1;
