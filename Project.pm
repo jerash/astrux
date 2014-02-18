@@ -274,7 +274,6 @@ sub GenerateFiles {
 		foreach my $mixername (keys $project->{mixers}) {
 			print " |_Project: creating TouchOSC presets for mixer $mixername\n";
 			my $touchoscpresets = TouchOSC::get_touchosc_presets($project->{mixers}{$mixername},$options);
-			print "TOUCHOSC PRESETS for $mixername :\n";
 			TouchOSC::save_presets_files($touchoscpresets);
 		}
 	}
