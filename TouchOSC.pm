@@ -21,7 +21,7 @@ my $debug = 1;
 ###########################################################
 
 my $xml_header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
-my $layout_sizes = { #(x,y)
+my $layouts = { #(x,y)
 	iphone => (480,320),
 	ipad => (1024,768),
 	iphone5 => (568,320),
@@ -35,16 +35,16 @@ my @type_fader = qw(faderh faderv);
 my @type_rotary = qw(rotaryh rotaryv);
 
 #defaults
-my $default_layout_size = 'iphone';
+my $default_layout = 'iphone';
 my $default_color = 0;
 my $default_layout_orientation = 0;
 my $default_layout_mode = 0;
-my $default_response = 1;
+my $default_control_response = 1;
 my $default_type_fader = 0;
 my $default_type_rotary = 0;
 my $default_text_size = 13;
 
-# controls definitions
+# controls definitions  #TODO make it a hash with presets for each layout in %layouts
 #-----------------------
 my $astrux_controls = {
 	vol_fader => &create_fader(200,50,"$colors[$default_color]"),
@@ -69,14 +69,14 @@ sub new {
 	my $class = shift;
 	my $options = shift; #hashref containing layout options
 
-	my $layout_size = $options->{layout_size} || $default_layout_size;
+	my $layout_size = $options->{layout_size} || $default_layout;
 	my $layout_orientation = $options->{layout_orientation} || $default_layout_orientation;
 	my $layout_mode = $options->{layout_mode} || $default_layout_mode;
 
 	#verify if passed info is usable
-	if (! exists $layout_sizes->{$layout_size} ) {
+	if (! exists $layouts->{$layout_size} ) {
 		warn "TouchOSC warning: could not find layout_size $layout_size. Fallback to default\n";
-		$layout_size = $default_layout_size;
+		$layout_size = $default_layout;
 	}
 	if (! grep( /^$layout_orientation$/, @layout_orientations ) ) {
 		warn "TouchOSC warning: could not find layout_orientation $layout_orientation. Fallback to default\n";
@@ -200,7 +200,7 @@ sub get_touchosc_presets {
 	}
 
 	# get layout dimensions
-	my @size = $layout_sizes->{$options->{layout_size}};
+	my @size = $layouts->{$options->{layout_size}};
 	my $max_channels_faders_per_page = int (($size[0] - 53) / 53);
 	use POSIX qw(ceil);
 	my $mix_pages_number = ceil( $#inputs/$max_channels_faders_per_page );
@@ -232,10 +232,12 @@ sub get_touchosc_presets {
 				$control->set_label_text("$input");
 				$control->set_control_position(2+53*$control_number,0);
 				$control->set_control_oscpath("/dummy");
+				#increment the control number
+				$control_number++;
 			}
 			#add aux master volume
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
-			$control->set_control_position($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,20);
+			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,20);
 			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 			$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
 			$control->set_control_name("vol_$auxname");
@@ -244,11 +246,11 @@ sub get_touchosc_presets {
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","track_$auxname");
 			$control->set_control_name("track_$auxname");
 			$control->set_label_text("Volume");
-			$control->set_control_position($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,0);
+			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,0);
 			$control->set_control_oscpath("/dummy");
 			#add aux master pan
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
-			$control->set_control_position($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,176);
+			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,176);
 			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 			$control->set_control_minmax(0,100) if $mixer->is_ecasound;
 			$control->set_control_name("pan_$auxname");
@@ -258,10 +260,10 @@ sub get_touchosc_presets {
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
 			$control->set_control_name("mutel_$auxname");
 			$control->set_label_text("mute");
-			$control->set_control_position($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,243);
+			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,243);
 			$control->set_control_oscpath("/dummy");
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
-			$control->set_control_position($layout_sizes->{$monitor_presets{$auxname}{layout_size}}-53,227);
+			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,227);
 			$control->set_control_minmax(0,1);
 			$control->set_control_name("mute_$auxname");
 			$control->set_control_color("orange");
@@ -362,8 +364,8 @@ sub create_fader {
 		scalef => "", #minimum value
 		scalet => "", #maximum value
 		osc_cs => "", #base64 encoded osc path
-		type => "faderh", #faderh... or faderv ?
-		response => "relative", #relative||absolute
+		type => $type_fader[$default_type_fader], #faderh... or faderv ?
+		response => $response[$default_control_response], #relative||absolute
 		inverted => "false",
 		centered => "false"
 	};
@@ -385,8 +387,8 @@ sub create_pot {
 		scalef => "", #minimum value
 		scalet => "", #maximum value
 		osc_cs => "", #base64 encoded osc path
-		type => "rotaryh", #rotaryh||rotaryv
-		response => "absolute", #relative||absolute
+		type => $type_rotary[$default_type_rotary], #rotaryh||rotaryv
+		response => $response[$default_control_response], #relative||absolute
 		inverted => "false",
 		centered => "true",
 		norollover => "true"
