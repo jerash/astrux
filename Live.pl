@@ -23,7 +23,6 @@ use Utils;
 
 #autoflush
 $| = 1;
-# use vars qw($project);
 
 #----------------------------------------------------------------
 # This is the main entry point for Astrux Live
@@ -39,13 +38,6 @@ my $infile = $ARGV[0];
 print "Opening : $infile\n";
 Load::LoadStoredProject($infile);
 our $project;
-
-###########################################################
-#
-#		 LIVE INIT functions
-#
-###########################################################
-
 
 #TODO verify if Project is valid
 
@@ -104,6 +96,7 @@ $project->{plumbing}{PID} = $pid_jackplumbing;
 #SAMPLER
 #---------------------------------
 my $pid_linuxsampler = qx(pgrep linuxsampler);
+#TODO check linuxsampler is running on the expected port
 if ($project->{linuxsampler}{enable}) {
 	die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 	print "LINUXSAMPLER running with PID $pid_linuxsampler";
