@@ -136,10 +136,9 @@ sub save_presets_files {
 
 		#zip file
 		system("zip -j ./$presetname.touchosc /tmp/index.xml > /dev/null 2>&1");
-		#todo delete temp file
+		#delete temp file
+		unlink "/tmp/index.xml";
 	}
-	# filename index.xml
-	# zip to xxx.touchosc
 }
 
 ###########################################################
