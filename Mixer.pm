@@ -633,7 +633,9 @@ sub get_nonmixer_inputs_list {
 			push @inputs, $channelname if (($mixer->{channels}{$channelname}->is_main_in) or 
 											($mixer->{channels}{$channelname}->is_submix_in));
 	}
-	return @inputs;
+	#reorder list by groupname and channelname
+	my @sorted_inputs = sort { lc($a) cmp lc($b) } @inputs;
+	return @sorted_inputs;
 }
 sub get_nonmixer_buses_list {
 	my $mixer = shift;

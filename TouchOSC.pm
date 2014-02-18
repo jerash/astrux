@@ -283,7 +283,7 @@ sub get_touchosc_presets {
 			#add page name
 			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","group_label","label2_$auxname");
 			$control->set_control_name("label2_$auxname");
-			$control->set_label_text("Mix$pagenumber");
+			$control->set_label_text("Mix$pagenumber/$mix_pages_number");
 			$control->set_control_position(190,230);
 			$control->set_control_oscpath("/dummy");
 		}
