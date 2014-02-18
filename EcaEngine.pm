@@ -235,6 +235,7 @@ sub reply_is_ok { #verify if there is an error mentioned, drop the first line, r
 }
 
 sub init_socket {
+use IO::Socket::INET;
 	my $ecaengine = shift;	
 	my $port = shift;
 	print ("   Creating engine socket on port $port.\n");
