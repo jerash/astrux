@@ -70,6 +70,7 @@ sub AddMixers {
 	my $foundmain = 0;
 
 	#build path to mixers files
+	die "Project Error: missing output_path in project.ini\n" unless exists $project->{globals}{output_path};
 	my $output_path = $project->{globals}{base_path} . "/" . $project->{globals}{output_path};
 	
 	#iterate through each mixer file
@@ -79,7 +80,7 @@ sub AddMixers {
 		my $mixerfile = $project->{globals}{base_path} . "/" . 
 						$project->{globals}{mixers_path} . "/" . 
 						$project->{mixerfiles}{$_};
-		die "Bad mixerfile reference $mixerfile in project.ini\n" unless (-e $mixerfile);
+		die "Project Error: Bad mixerfile reference $mixerfile in project.ini\n" unless (-e $mixerfile);
 
 	 	print "Project: Creating mixer from $mixerfile\n";
 
