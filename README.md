@@ -109,7 +109,7 @@ song2 = song2.ini
 [jack]
 samplerate = 48000
 clocksource = internal
-buffer = 256
+buffer = 128
 periods = 2
 start = jackd -R -P89 -d alsa -d hw:DSP -p128 -n2 &
 
@@ -193,7 +193,8 @@ can_be_backed = yes
 ```
 
 here's a bridge.ini example 
-```#creates an OSC server
+```
+#creates an OSC server
 [OSC]
 enable = 1
 ip = 192.168.0.15
