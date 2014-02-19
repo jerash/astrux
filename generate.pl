@@ -62,23 +62,22 @@ print "Project init from file : $pathtoproject\n";
 my $ini_project_ref = \%ini_project;
 
 #------------Create project structure----------------------------
-
-my $Live = Project->new($ini_project_ref);
-die "Failed to create Project!!!\n" unless defined $Live;
+our $project = Project->new($ini_project_ref);
+die "Failed to create Project!!!\n" unless defined $project;
 
 print "
 ---------------------------
-Live Project Generation OK
+   Project Generation OK
 ---------------------------\n\n";
 
 #------------Create project files------------------------
 
-$Live->GenerateFiles;
-$Live->SaveTofile;
+$project->GenerateFiles;
+$project->SaveTofile;
 
 print " 
 ---------------------------
--- Live Project Saved :) --
+--    Project Saved :)   --
 ---------------------------\n\n";
 
-#print Dumper $Live;
+#print Dumper $project;
