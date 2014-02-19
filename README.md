@@ -243,76 +243,69 @@ filename = drums.lscp
 Goals
 ======
 
-Setup :
-1)astrux scans the computer for audio/midi capabilities
-2)the user builds a project
-  - add analog/digital audio inputs/outputs based on computer capabilities
-  - add audio and midi players (synchronized backing tracks)
-  - add metronome track
-  - add sampler instruments
-3)astrux is generating the audio/midi configurations and offers unified/standardized control over TCP/OSC/MIDI
+>SETUP
+1- astrux scans the computer for audio/midi capabilities
+2- the user builds a project
+- add analog/digital audio inputs/outputs based on computer capabilities
+- add audio and midi players (synchronized backing tracks)
+- add metronome track
+- add sampler instruments
+3- astrux is generating the audio/midi configurations and offers unified/standardized control over TCP/OSC/MIDI
 
-Use:
-1) start saved project
-2) now play !
+>USE
+1- start saved project
+2- now play !
 
 OPTIONS
---------
- - rehersal mode
-  audio channel strips are editable (will restart mixers)
-  midi filters/patch are editable (will restart midi bridge)
-  players remain active after the end, so you can rewind to any position
- - live mode
-  players are stopped once reaching the end
-  fallback to a defined inter-song state possible
- - preload all sampler instruments on startup
+Rehersal mode
+- audio channel strips are editable (will restart mixers)
+- midi filters/patch are editable (will restart midi bridge)
+- players remain active after the end, so you can rewind to any position
+Live mode
+- players are stopped once reaching the end
+- fallback to a defined inter-song state possible
+- preload all sampler instruments on startup
 
 Milestones
 ======
 
 V0.1 (12/02/2014)
 -----
-*INPUTS mixer 
-  strips with volume,eq,auxsends
-*PLAYERS 
-  with ecasound
-*MIXERS
-  with ecasound or non-mixer
+- INPUTS mixer : strips with volume,eq,auxsends
+- PLAYERS : with ecasound
+- MIXERS : with ecasound or non-mixer
 
 V0.2
 -----
-MIDI/OSC/TCP bridge live control
-optionally generated touchosc presets
-*SAMPLER
-  clic
-  drums
-*MIDIPLAY
-  jpmidi v0.3
+- MIDI/OSC/TCP bridge live control
+- optionally generated touchosc presets
+- SAMPLER : clic, drums
+- MIDIPLAY : jpmidi v0.3
 
 V0.3
 -----
-jpmidi with master mode (jack control tempo/meters), or klick
-video player (xjadeo)
-automate fx rack / plugin host
-realtime cpu/memory check (trigger alarms)
-replacement tracks
+- jpmidi with master mode (jack control tempo/meters), or klick
+- video player (xjadeo)
+- automate fx rack / plugin host
+- realtime cpu/memory check (trigger alarms)
+- replacement tracks
 
 V0.4
 ----
-preloading the next song is possible, for faster context switching
-live cd/usb distribution creation
+- preloading the next song is possible, for faster context switching
+- live cd/usb distribution creation
 
 V0.5
 ------
-midi editor (midish with jack synchro)
-audio editor (nama)
-dmx player (with jack synchro) 
-  > probably using midi with http://qlc.sourceforge.net/index.shtml
-  > or OSC .... https://github.com/mcallegari/qlcplus
+- midi editor (midish with jack synchro)
+- audio editor (nama)
+- dmx player (with jack synchro) 
+> probably using midi with http://qlc.sourceforge.net/index.shtml
+> or OSC .... https://github.com/mcallegari/qlcplus
 
 MIXER ini file infos
 ======
-
+```
 #*************************************************************************
 # INPUT/OUTPUT CHANNEL OPTIONS
 #*************************************************************************
@@ -356,3 +349,4 @@ MIXER ini file infos
 #     stereo : output channel as stereo (default, as internals are stereo)
 #     mono : force mono output
 #*************************************************************************
+```
