@@ -356,33 +356,39 @@ sub EcafxGetControls() {
 	my $file;
 						
 	my $string = '';
-	if (open($file, "<", "/home/seijitsu/2.TestProject/ecacfg/effect_presets")) { #TODO : path is not generic !!!!!!!!!!!!
-		#get the effect parameters string
-		my $found =0;
-		my $tic = 0;
-		while (<$file>) {
-			if ( $tic == 1 ) {
-				$string = $string . $_; #print $string,"\n";
-				last if $_ !~ /\\$/; #print "notlast\n";
-			}
-			if (( /^$plugin\b/ ) && ( $tic eq 0) ) {
-				$found = 1; #print "found : ",$_,"\n";
-				$tic = 1 if $_ =~ /\\$/; #print "tic=",$tic,"\n";
-				$string = $_;
-			}
+	my $filepath = $ENV{'ECA_CFG_PATH'}."/effect_presets";
+	if (!-e $filepath) {
+		warn "Fx warning: could not acess project specific ecasound effects file\n";
+		#try the user home ecasound folder
+		$filepath = $ENV{HOME}."/.ecasound/effect_presets";
+	}
+	if (!-e $filepath) {
+		warn "Fx Error: can't open user ecasound effect preset files\n";
+		return 0;
+	}
+
+	#continue with found file
+	open($file, "<", $filepath);
+	#get the effect parameters string
+	my $found =0;
+	my $tic = 0;
+	while (<$file>) {
+		if ( $tic == 1 ) {
+			$string = $string . $_; #print $string,"\n";
+			last if $_ !~ /\\$/; #print "notlast\n";
 		}
-		#close file
-		close($file) || warn "close failed: $!";
-		if ($found eq 0) {
-			warn "Plugin $plugin not found\n";
-			return 0;
+		if (( /^$plugin\b/ ) && ( $tic eq 0) ) {
+			$found = 1; #print "found : ",$_,"\n";
+			$tic = 1 if $_ =~ /\\$/; #print "tic=",$tic,"\n";
+			$string = $_;
 		}
 	}
-	else { die "Fx Error: can't open ecasound effect preset files.... to fix in Fx.pm\n";}
-	# TODO : fallback from project file to global file
-	# "$ENV{HOME}/.ecasound/effect_presets";
-	# warn "cannot open effect_presets file : $!";
-	# return 0;
+	#close file
+	close($file) || warn "close failed: $!";
+	if ($found eq 0) {
+		warn "Plugin $plugin not found\n";
+		return 0;
+	}
 
 	my $paramnames = '';
 	my $defaultvalues = '';
@@ -445,6 +451,9 @@ sub Generate_eca_midi_CC {
 	my $fx = shift;
 	my $plugin = shift;
 	
+	return 0 unless exists $fx->{lowvalues};
+	return 0 unless exists $fx->{highvalues};
+
 	my @lows = @{$fx->{lowvalues}};
 	my @highs = @{$fx->{highvalues}};
 

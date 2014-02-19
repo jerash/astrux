@@ -59,6 +59,11 @@ sub init {
 		#create ecsfile path
 		my $ecsfile = $mixer->{output_path} . "/" . $globals{name} . ".ecs";
 		$mixer->{engine} = EcaEngine->new($ecsfile,$globals{name});
+		#add ENV variable for effect path
+		die "Mixer Error: missing eca_cfg_path in mixer_globals inifile\n" unless exists $globals{eca_cfg_path};
+		use File::Basename;
+		my ($filename,$pathto,$suffix) = fileparse($ini_mixer_file);
+		$ENV{'ECA_CFG_PATH'} = "$pathto$globals{eca_cfg_path}";
 	}
 	elsif ($globals{engine} eq "non-mixer") {
 		#bless structure to access data with module functions
