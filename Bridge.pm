@@ -69,17 +69,14 @@ sub start {
 	#	OSC messages
 	$bridge->init_osc_server if $bridge->{OSC}{enable};
 
-	#send previous state to engines >> TODO move it to bridge init
-	#--------------------------------------
-	# &OSC_send("/refresh i 1"); #TODO checkup
-
-	if ( $bridge->{enable} ) {
-		$bridge->create_midi_out_port(); #TODO only needed to control ecasound via midi
-	}
+	#   MIDI messages
+	$bridge->create_midi_ports if $bridge->{MIDI}{enable};
 
 	#	command line interface
 	&init_cli_server if $bridge->{CLI}{enable};	
-	#	gui actions (from tcp commands is best)
+
+	#	gui actions (from tcp commands)
+
 	#	front panel actions (from tcp commands)
 
 	#main loop waiting
@@ -230,16 +227,19 @@ sub save_midi_file {
 #create alsa midi port with only 1 output
 my @alsa_output = ("astrux",0);
 
-sub create_midi_out_port {
+sub create_midi_ports {
 	my $bridge = shift;
 
 	#update bridge structure
-	$bridge->{midiout} = @alsa_output;
+	$bridge->{MIDI}{alsa_output} = @alsa_output;
+	my $clientname = $bridge->{MIDI}{clientname} || "astrux";
+	my $ninputports = $bridge->{MIDI}{inputports} || 1;
+	my $noutputports = $bridge->{MIDI}{outputports} || 1;
 
 	#client($name, $ninputports, $noutputports, $createqueue)
-	my $status = MIDI::ALSA::client("astrux",0,1,0) || die "could not create alsa midi port.\n";
-	print "successfully created alsa midi out port\n";
-	$bridge->{status} = 'created';
+	my $status = MIDI::ALSA::client($clientname,$ninputports,$noutputports,0) || die "could not create alsa midi port.\n";
+	print "successfully created \"$clientname\" alsa midi client\n";
+	$bridge->{MIDI}{status} = 'created';
 }
 
 sub getnextCC {
@@ -257,56 +257,6 @@ sub getnextCC {
 	$CC++;
 	#return values
 	return($CC,$channel);
-}
-
-sub send_osc2midi {
-	my $bridge = shift;
-	my $path = shift;
-	my $inval = shift;
-	
-	print "in osc2midi\n" if $debug;
-	
-	#create a hash of rules, TODO change to use the project info
-	my %rules = %{$bridge->{rules}};
-	#check if received message can be translated
-	if (exists $rules{$path}) {
-		#get elements
-		my $type = $rules{$path}[0];
-		return if $type eq 'ecs';
-		my $default = $rules{$path}[1];
-		my $min = $rules{$path}[2];
-		my $max = $rules{$path}[3];
-		my $CC = $rules{$path}[4];
-		my $channel = $rules{$path}[5];
-		print "I've found you !!! $inval $min $max $CC $channel\n" if $debug;
-
-		if (	!defined $type or
-				!defined $inval or
-				!defined $min or
-				!defined $max or
-				!defined $CC or
-				!defined $channel
-				) {
-			warn "something is missing in type=$type inval=$inval min=$min max=$max CC=$CC channel=$channel\n";
-			return;
-		}
-		
-		#update value in structure
-		# $rules{$path}[1] = $inval;
-		
-		#scale value to midirange
-		my $outval = &ScaleToMidiValue($inval,$min,$max);
-		print "value scaled to $outval\n" if $debug;
-
-		#prepare midi data
-		my @outCC = ($channel-1, '','','',$CC,$outval);
-		my @alsa_output = $bridge->{midiout};
-		#send midi data
-		warn "could not send midi data\n" unless MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,\@outCC);
-	}
-	else {
-		print "ignored=$path $inval\n";
-	}
 }
 
 sub ScaleToMidiValue {
@@ -577,39 +527,6 @@ sub OSC_send {
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
 	$udp->send($oscpacket);	
-}
-
-sub Refresh {
-	my $bridge = shift;
-
-	my %rules = %{$bridge->{rules}};
-
-	print "Sending all data!!\n";
-	foreach my $path (keys %rules) {
-		#get elements
-		my $type = $rules{$path}[0];
-		my $inval = $rules{$path}[1];
-		my $min = $rules{$path}[2];
-		my $max = $rules{$path}[3];
-		my $CC = $rules{$path}[4];
-		my $channel = $rules{$path}[5];
-
-		#check for needed info
-		next unless ( defined $type and defined $inval and defined $min and defined $max );
-
-		if ($type eq "midi"){
-
-			#check for needed info
-			next unless ( defined $CC and defined $channel );
-			print "inval=$inval min=$min max=$max CC=$CC channel=$channel\n" if $debug;
-
-			my $outval = &ScaleToMidiValue($inval,$min,$max);
-			#send midi data
-			my @outCC = ($channel-1, '','','',$CC,$outval);
-			warn "could not send midi data\n" unless &SendMidiCC(\@outCC);
-		}
-		#TODO check for non midi type !
-	}
 }
 
 ###########################################################
