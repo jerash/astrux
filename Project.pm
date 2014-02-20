@@ -162,12 +162,8 @@ sub AddMIDIOSCPaths {
 	$filepath = $project->{globals}{base_path} . "/" . $project->{globals}{output_path} . "/midi.csv";
 	$project->{bridge}{MIDI}{file} = $filepath;
 
-	#get midi/osc paths
-	my $midiosc_paths = $project->Bridge::get_midiosc_paths;
-
-	#insert into project
-	$project->{bridge}{OSC}{paths} = $midiosc_paths->{OSC};
-	$project->{bridge}{MIDI}{paths} = $midiosc_paths->{MIDI};
+	#create midi/osc paths
+	$project->Bridge::create_midiosc_paths;
 }
 
 ###########################################################

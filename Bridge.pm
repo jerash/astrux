@@ -88,50 +88,9 @@ sub start {
 	$cv->recv;
 }
 
-###########################################################
-#
-#		 BRIDGE FILE functions
-#
-###########################################################
-
-sub save_osc_file {
-	my $bridge = shift;
-
-	my $filepath = $bridge->{OSC}{file};
-	open FILE, ">$filepath" or die $!;
-	
-	#add lines
-	foreach my $oscpath (sort keys %{$bridge->{OSC}{paths}}) {
-		print FILE "$oscpath;";
-		print FILE "$_;" foreach @{$bridge->{OSC}{paths}{$oscpath}};
-		print FILE "\n";
-	}
-	close FILE;
-}
-
-sub save_midi_file {
-	my $bridge = shift;
-
-	my $filepath = $bridge->{MIDI}{file};
-	open FILE, ">$filepath" or die $!;
-	
-	#add lines
-	foreach my $midipath (sort keys %{$bridge->{MIDI}{paths}}) {
-		print FILE "$midipath;";
-		print FILE "$_;" foreach @{$bridge->{MIDI}{paths}{$midipath}};
-		print FILE "\n";
-	}
-	close FILE;
-}
-
-sub get_midiosc_paths {
+sub create_midiosc_paths {
 	my $project = shift;
-
-	#the rule sets
-	my @osclines;
-	#lines are : /osc/path ; targettype ; default_value ; input_min ; input_max 
-	my @midilines;
-	#lines are : channel ; CC ; /osc/path
+	my $bridge = $project->{bridge};
 	
 	# --- LOOP THROUGH MIXERs ---
 	
@@ -153,16 +112,10 @@ sub get_midiosc_paths {
 			#create channel reference
 			my $channelstrip = $mixer->{$channelname};
 			
-			#add generic channel options
-			push(@osclines,"/$mixername/$channelname/mute;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
-			($midiCC,$midichannel) = &getnextCC();
-			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/mute");
-			push(@osclines,"/$mixername/$channelname/solo;$project->{mixers}{$mixername}{engine}{engine};0;0;1") unless $channelstrip->is_hardware_out;
-			($midiCC,$midichannel) = &getnextCC();
-			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/solo");
-			push(@osclines,"/$mixername/$channelname/bypass;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
-			($midiCC,$midichannel) = &getnextCC();
-			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/bypass");
+			#add generic channelstrip options
+			$bridge->add_midioscpaths("/$mixername/$channelname/mute","toggle",0);
+			$bridge->add_midioscpaths("/$mixername/$channelname/solo","toggle",0) unless $channelstrip->is_hardware_out;
+			$bridge->add_midioscpaths("/$mixername/$channelname/bypass","toggle",0);
 			
 			# --- LOOP THROUGH INSERTS ---
 	
@@ -172,35 +125,18 @@ sub get_midiosc_paths {
 				my $insert = $channelstrip->{inserts}{$insertname};
 
 				# --- LOOP THROUGH INSERT PARAMETERS ---
+
 				my $i = 0;
 				foreach my $paramname (@{$insert->{paramnames}}) {
-					#replace space characters with _
+					warn "Insert ($paramname) has a system name... may not work\n" if ($paramname =~ /^(mute|solo|bypass)$/);	
+					#replace space characters with _ #TODO check how ecasound treats LADSPA plugins names with nonalpha characters
 					$paramname = Utils::underscore_my_spaces($paramname);
-					#TODO check how ecasound treats LADSPA plugins names with nonalpha characters
 
-					#construct line with
-					# /mixername/channelname/insertname/paramname;midi|engine_type;value;min;max;CC;channel
-					warn "Insert ($paramname) has a system name... may not work\n" if ($paramname =~ /^(mute|solo|bypass)$/);
-					my $value = $insert->{defaultvalues}[$i];
-					my $min = $insert->{lowvalues}[$i];
-					my $max = $insert->{highvalues}[$i];
-					my ($CC,$channel) = ('','');
-					($CC,$channel) = split(',',$insert->{CCs}[$i]) if $insert->{CCs}; #ignore if CC not created
-
-					my $line;
-					$line = "/$mixername/$channelname/$insertname/$paramname;midi;$value;$min;$max"
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$insert->{defaultvalues}[$i])
 						if $project->{mixers}{$mixername}->is_ecasound;
-					$line = "/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i];non-mixer;$value;$min;$max"
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$insert->{defaultvalues}[$i])
 						if $project->{mixers}{$mixername}->is_nonmixer;
-
-					($midiCC,$midichannel) = &getnextCC();
-					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/$insertname/$paramname")
-						if $project->{mixers}{$mixername}->is_ecasound;
-					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]")
-						if $project->{mixers}{$mixername}->is_nonmixer;
-					
-					push(@osclines,$line);
-					# print "**$line \n";
+				
 					$i++;
 				}
 			}
@@ -208,20 +144,16 @@ sub get_midiosc_paths {
 			# --- LOOP THROUGH AUX ROUTES (ecasound only) ---
 			
 			foreach my $auxroute (keys %{$channelstrip->{aux_route}}) {
+
 				#create route reference
 				my $route = $channelstrip->{aux_route}{$auxroute}{inserts}{panvol};
+
 				# --- LOOP THROUGH route PARAMETERS ---
+
 				my $i = 0;
 				foreach my $paramname (@{$route->{paramnames}}) {
-					#construct line with
-					# /mixername/channelname/aux_to/route/paramname;midi;value;min;max;CC;channel
 					my $value = $route->{defaultvalues}[$i];
-					my $min = $route->{lowvalues}[$i];
-					my $max = $route->{highvalues}[$i];
-					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;midi;$value;$min;$max";
-					push(@osclines,$line);
-					($midiCC,$midichannel) = &getnextCC();
-					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/aux_to/$auxroute/$paramname");
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$route->{defaultvalues}[$i]);
 					$i++;
 				}
 			}
@@ -229,50 +161,64 @@ sub get_midiosc_paths {
 			# --- NON-MIXER SPECIFICS ---
 
 			if ($project->{mixers}{$mixername}->is_nonmixer) {
-				#non-mixer osc values are always within [0,1] 
-				#TODO consider separating plugin value from osc values so we can adapt range on request
-				
 				# Add gain control
-				push(@osclines,"/$mixername/$channelname/panvol/vol;non-mixer;0;0;1");
-				($midiCC,$midichannel) = &getnextCC();
-				push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/panvol/vol");
-
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0);
 				# Add pan control
-				push(@osclines,"/$mixername/$channelname/panvol/pan;non-mixer;0;0;1");
-				# push(@osclines,"/$mixername/$channelname/panvol/width;non-mixer;0;-1;1");
-				($midiCC,$midichannel) = &getnextCC();
-				push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/panvol/pan");
-
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0);
 				#add aux routes
 				foreach my $aux (@auxes) {
-					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;0;1")  unless $channelstrip->is_hardware_out;
-					($midiCC,$midichannel) = &getnextCC();
-					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/aux_to/$aux/vol");
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0) unless $channelstrip->is_hardware_out;
 				}
 			}
 		}
 	}
+}
 
-	#TODO (osc2midi) integrate this loop above, this is just a temporrary workaround
-	my @templines = @osclines;
-	my %rules;
-	foreach (@templines) { #fill the hash with the file info
-		chomp($_);
-		my @values = split(';',$_);
-		my $path = shift @values;
-		$rules{OSC}{$path} = ();
-		push @{$rules{OSC}{$path}} , @values;
-	}
-	@templines = @midilines;
-	foreach (@templines) { #fill the hash with the file info
-		chomp($_);
-		my @values = split(';',$_);
-		my $path = (shift @values) . "," . (shift @values); #midiCC
-		$rules{MIDI}{$path} = ();
-		push @{$rules{MIDI}{$path}} , @values; #osc path remaining
-	}
+sub add_midioscpaths {
+	my $bridge = shift;
+	my $oscpath = shift;
+	my $type = shift;
+	my $val = shift;
 
-	return \%rules;
+	#get a new midi CC/channel
+	my ($midiCC,$midichannel) = &getnextCC();
+
+	#insert into project
+	$bridge->{OSC}{paths}{$oscpath} = $type;
+	$bridge->{MIDI}{paths}{"$midichannel,$midiCC"} = $oscpath;
+	$bridge->{current_values}{$oscpath} = $val;
+}
+
+###########################################################
+#
+#		 BRIDGE FILE functions
+#
+###########################################################
+
+sub save_osc_file {
+	my $bridge = shift;
+
+	my $filepath = $bridge->{OSC}{file};
+	open FILE, ">$filepath" or die $!;
+	
+	#add lines
+	foreach my $oscpath (sort keys %{$bridge->{OSC}{paths}}) {
+		print FILE "$oscpath;$bridge->{OSC}{paths}{$oscpath}\n";
+	}
+	close FILE;
+}
+
+sub save_midi_file {
+	my $bridge = shift;
+
+	my $filepath = $bridge->{MIDI}{file};
+	open FILE, ">$filepath" or die $!;
+	
+	#add lines
+	foreach my $midipath (sort keys %{$bridge->{MIDI}{paths}}) {
+		print FILE "$midipath;$bridge->{MIDI}{paths}{$midipath}\n";
+	}
+	close FILE;
 }
 
 ###########################################################
@@ -445,23 +391,19 @@ sub process_osc_command {
 		warn "ignored osc message with multiple arguments\n";
 	}
 
-	# TODO check if midi is to be sent (ecasound midi control)
-	# if () {
-	# 	#send associated midi data
-	# 	$project->{bridge}->send_osc2midi($path,$args[0]);
-	# }
-
 	#go on with a single argument osc message
 	#-----------------------------------------
 	
+	#TODO verify that incoming value is within (0,1) range
+	# warn if not
+	# warn "empty value on param $panvol!\n" unless defined $value;
+
 	#cleanup path
 	$path =~ s(^/)();
 	$path =~ s(/$)(); #this one should never be
 	
 	#split path elements
 	my @pathelements = split '/',$path;
-	
-	#TODO verify number of path elements ?
 	
 	#element 1 = mixername OR system command
 	my $mixername = shift @pathelements;
@@ -497,25 +439,29 @@ sub process_osc_command {
 				#TODO verify value is good type
 				&OSC_send("/strip/$trackname/Gain/Mute f $value",$nonoscport);
 			}
+			elsif ($el3 eq 'solo') {
+				#TODO nonmixer osc solo command
+			}
+			elsif ($el3 eq 'bypass') {
+				#TODO nonmixer osc bypass command
+			}
 			elsif ($el3 eq 'panvol') {
 				# element 4 = fx parameter
-				my $panvol = shift @pathelements;
+				my $el4 = shift @pathelements;
 				#associate with value
-				my $value = shift @args; #TODO verify value has [0,1] range, warn if not
-				warn "empty value on param $panvol!\n" unless defined $value;
-				print "effect $el3 change param $panvol with value $value on track $trackname\n" if $debug;
-				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value",$nonoscport) if ($panvol eq 'vol');
-				# &OSC_send("/strip/$trackname/Pan/balance f $value",$nonoscport) if ($panvol eq 'pan');
+				my $value = shift @args;
+				print "effect $el3 change param $el4 with value $value on track $trackname\n" if $debug;
+				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value",$nonoscport) if ($el4 eq 'vol');
+				&OSC_send("/strip/$trackname/Pan/balance f $value",$nonoscport) if ($el4 eq 'pan'); #TODO make this correct if mono or stereo track
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 				#fx change (LADSPA ID)
 				my $insertID = $el3;
 				#element 4 = fx parameter
 				my $insertparam = shift @pathelements;
-				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}->is_param_ok($insertparam);
+				return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}->is_param_ok($insertparam);
 				#associate with value
 				my $value = shift @args;
-				warn "empty value on param $insertparam!\n" unless defined $value;
 				#get insertname
 				my $insertname = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}{name};
 				print "effect $insertID/$insertname change param $insertparam with value $value on track $trackname\n" if $debug;
@@ -590,7 +536,7 @@ sub process_osc_command {
 
 	#check if we send back information
 	if ($project->{bridge}{OSC}{sendback}) {
-		#resolve the sender adress
+		#resolve the sender adress...it is in $sender
 		#TODO maybe create an OSC clients hash to speed up things
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 		print "we need to send back info to $hostname\n";
@@ -616,6 +562,8 @@ sub OSC_send {
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => 'localhost', PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
 	$udp->send($oscpacket);	
+
+	#TODO update $bridge->{current_values}{$oscpath} with received value
 }
 
 sub Refresh {
