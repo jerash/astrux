@@ -127,7 +127,7 @@ sub SanitizeLADSPAFx {
 	my @paramnames = @{$fxhash->{paramnames}};
 	my $nb = $#paramnames;
 
-	my @totest = ("lowvalues","highvalues","defaultvalues","currentvalues");
+	my @totest = ("lowvalues","highvalues","defaultvalues");
 	foreach my $ref (@totest) {
 		my @values = @{$fxhash->{$ref}};
 		for my $i (0..$nb) {
