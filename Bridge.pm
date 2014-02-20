@@ -384,19 +384,16 @@ sub process_osc_command {
 	#verify how many arguments we have
 	#-----------------------------------------
 	if ( length($types) == 0 ) {
-		warn "ignored osc message without arguments\n";
+		warn "Bridge warning: ignored osc message without arguments\n";
 		return;
 	}
 	elsif ( length($types) > 1 ) {
-		warn "ignored osc message with multiple arguments\n";
+		warn "Bridge warning: ignored osc message with multiple arguments\n";
+		return;
 	}
 
 	#go on with a single argument osc message
 	#-----------------------------------------
-	
-	#TODO verify that incoming value is within (0,1) range
-	# warn if not
-	# warn "empty value on param $panvol!\n" unless defined $value;
 
 	#cleanup path
 	$path =~ s(^/)();
@@ -414,6 +411,23 @@ sub process_osc_command {
 		print $project->execute_command($command);
 		return;
 	}
+
+	#verify that incoming value is within (0,1) range
+	#------------------------------------------------
+	my $value = shift @args;
+	if (!defined $value) {
+		warn "Bridge warning: ignored message without value\n";
+		return;
+	}
+	elsif ($value < 0) {
+		warn "Bridge warning: OSC values must be within [0,1]\n";
+		$value = 0;
+	}
+	elsif ($value > 1) {
+		warn "Bridge warning: OSC values must be within [0,1]\n";
+		$value = 1;
+	}
+	# warn "empty value on param $panvol!\n" unless defined $value;
 
 	#element 1 = mixername
 	print " mixer $mixername\n" if $debug;
@@ -435,8 +449,7 @@ sub process_osc_command {
 			my $nonoscport = $project->{mixers}{$mixername}{engine}{osc_port};
 
 			if ($el3 eq 'mute') {
-				my $value = shift @args;
-				#TODO verify value is good type
+				return unless (($value eq 0)or($value eq 1));
 				&OSC_send("/strip/$trackname/Gain/Mute f $value","localhost",$nonoscport);
 			}
 			elsif ($el3 eq 'solo') {
@@ -449,10 +462,13 @@ sub process_osc_command {
 				# element 4 = fx parameter
 				my $el4 = shift @pathelements;
 				#associate with value
-				my $value = shift @args;
 				print "effect $el3 change param $el4 with value $value on track $trackname\n" if $debug;
 				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value","localhost",$nonoscport) if ($el4 eq 'vol');
-				&OSC_send("/strip/$trackname/Pan/balance f $value","localhost",$nonoscport) if ($el4 eq 'pan'); #TODO make this correct if mono or stereo track
+				if ($el4 eq 'pan') {
+					#TODO make this correct if mono or stereo track
+					&OSC_send("/strip/$trackname/Mono%20Pan/balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_mono;
+					&OSC_send("/strip/$trackname/Stereo%20balance%20and%20panner/Balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_stereo;
+				}
 				#udpate current value
 				$project->{bridge}{current_values}{$path} = $value;
 			}
@@ -463,7 +479,6 @@ sub process_osc_command {
 				my $insertparam = shift @pathelements;
 				return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}->is_param_ok($insertparam);
 				#associate with value
-				my $value = shift @args;
 				#get insertname
 				my $insertname = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}{name};
 				print "effect $insertID/$insertname change param $insertparam with value $value on track $trackname\n" if $debug;
@@ -499,7 +514,6 @@ sub process_osc_command {
 				my $param = shift @pathelements;
 				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
 				#associate with value
-				my $value = shift @args;
 				warn "empty value on param $param!\n" unless defined $value;
 				print "sending $trackname to $destination with $param $value\n" if $debug;
 				my $position = 1; # this is ok for aux_route
@@ -514,7 +528,6 @@ sub process_osc_command {
 				my $insertparam = shift @pathelements;
 				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
 				#associate with value
-				my $value = shift @args;
 				warn "empty value on param $insertparam!\n" unless defined $value;
 				print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
 				#send ecasound command to EcaFx
