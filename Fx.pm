@@ -80,17 +80,6 @@ sub init {
 #
 ###########################################################
 
-sub update_current_value {
-	my $ecafx = shift;
-	my $index = shift;
-	my $value = shift;
-
-	#TODO verify if value is within range, return adequately for next actions
-	#update value
-	print "EcaFx : updating at index $index with value $value\n" if $debug;
-	$ecafx->{currentvalues}[$index-1] = $value;
-}
-
 ###########################################################
 #
 #		 FX TEST functions
@@ -197,7 +186,6 @@ sub LADSPAfxGetControls {
 			$fxhash->{name} = $LADSPA_PluginsList->{$fx}{name};
 			push( @{$fxhash->{paramnames}} ,@names);
 			push( @{$fxhash->{defaultvalues}} ,@defaults);
-			push( @{$fxhash->{currentvalues}} ,@defaults);
 			push( @{$fxhash->{lowvalues}} ,@lowvals);
 			push( @{$fxhash->{highvalues}} ,@highvals);
 			$fxhash->{audio_io} = $LADSPA_PluginsList->{$fx}{audio_io};
@@ -438,7 +426,6 @@ sub EcafxGetControls() {
 	#insert values
 	push( @{$fx->{paramnames}} ,@names);
 	push( @{$fx->{defaultvalues}} ,@defaults);
-	push( @{$fx->{currentvalues}} ,@defaults);
 	push( @{$fx->{lowvalues}} ,@lowvals);
 	push( @{$fx->{highvalues}} ,@highvals);
 
