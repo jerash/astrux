@@ -437,7 +437,7 @@ sub process_osc_command {
 			if ($el3 eq 'mute') {
 				my $value = shift @args;
 				#TODO verify value is good type
-				&OSC_send("/strip/$trackname/Gain/Mute f $value",$nonoscport);
+				&OSC_send("/strip/$trackname/Gain/Mute f $value","localhost",$nonoscport);
 			}
 			elsif ($el3 eq 'solo') {
 				#TODO nonmixer osc solo command
@@ -451,8 +451,8 @@ sub process_osc_command {
 				#associate with value
 				my $value = shift @args;
 				print "effect $el3 change param $el4 with value $value on track $trackname\n" if $debug;
-				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value",$nonoscport) if ($el4 eq 'vol');
-				&OSC_send("/strip/$trackname/Pan/balance f $value",$nonoscport) if ($el4 eq 'pan'); #TODO make this correct if mono or stereo track
+				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value","localhost",$nonoscport) if ($el4 eq 'vol');
+				&OSC_send("/strip/$trackname/Pan/balance f $value","localhost",$nonoscport) if ($el4 eq 'pan'); #TODO make this correct if mono or stereo track
 				#udpate current value
 				$project->{bridge}{current_values}{$path} = $value;
 			}
@@ -471,7 +471,7 @@ sub process_osc_command {
 				$insertname = Utils::encode_my_ascii($insertname);
 				$insertparam = Utils::encode_my_ascii($insertparam);
 				#send osc command to nonmixer
-				&OSC_send("/strip/$trackname/$insertname/$insertparam f $value",$nonoscport);
+				&OSC_send("/strip/$trackname/$insertname/$insertparam f $value","localhost",$nonoscport);
 			}
 			elsif ($el3 eq 'aux_to') {
 				#TODO nonmixer osc aux commands
@@ -535,16 +535,19 @@ sub process_osc_command {
 
 	#check if we send back information
 	if ($project->{bridge}{OSC}{sendback}) {
-		#resolve the sender adress...it is in $sender
 		#TODO maybe create an OSC clients hash to speed up things
+		#resolve the sender adress
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
-		print "we need to send back info to $hostname\n";
-		#TODO send back OSC info
+		warn "Cannot resolve name - $err" if $err;
+		print "we send back info to $hostname\n" if $debug;
+		#send back OSC info
+		&OSC_send("$path f $value",$hostname,$project->{bridge}{OSC}{outport});
 	}
 }
 
 sub OSC_send {
 	my $data = shift;
+	my $destination = shift;
 	my $port = shift;
 	return unless $port;
 
@@ -559,7 +562,7 @@ sub OSC_send {
 	# print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
 
 	#send
-	my $udp = IO::Socket::INET->new( PeerAddr => 'localhost', PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
+	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
 	$udp->send($oscpacket);	
 }
 
