@@ -109,19 +109,37 @@ sub save_osc_file {
 	close FILE;
 }
 
-sub get_osc_paths {
+sub save_midi_file {
+	my $bridge = shift;
+
+	my $filepath = $bridge->{MIDI}{file};
+	open FILE, ">$filepath" or die $!;
+	
+	#add lines
+	foreach my $midipath (sort keys %{$bridge->{MIDI}{paths}}) {
+		print FILE "$midipath;";
+		print FILE "$_;" foreach @{$bridge->{MIDI}{paths}{$midipath}};
+		print FILE "\n";
+	}
+	close FILE;
+}
+
+sub get_midiosc_paths {
 	my $project = shift;
 
-	#the rule set
+	#the rule sets
 	my @osclines;
-	#lines are : /osc/path ; targettype ; value ; min ; max [; CC ; channel]
+	#lines are : /osc/path ; targettype ; default_value ; input_min ; input_max 
+	my @midilines;
+	#lines are : channel ; CC ; /osc/path
 	
 	# --- LOOP THROUGH MIXERs ---
 	
 	foreach my $mixername (keys %{$project->{mixers}}) {
 
-		#TODO check if ecasound will use osc or midi control
-	
+		#variables to hold the bridge midi input info
+		my ($midiCC,$midichannel);
+
 		#create mixer reference
 		my $mixer = $project->{mixers}{$mixername}{channels};
 		
@@ -133,21 +151,25 @@ sub get_osc_paths {
 		foreach my $channelname (keys %{$mixer}) {
 			
 			#create channel reference
-			my $channel = $mixer->{$channelname};
+			my $channelstrip = $mixer->{$channelname};
 			
 			#add generic channel options
 			push(@osclines,"/$mixername/$channelname/mute;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
-			push(@osclines,"/$mixername/$channelname/solo;$project->{mixers}{$mixername}{engine}{engine};0;0;1") unless $channel->is_hardware_out;
+			($midiCC,$midichannel) = &getnextCC();
+			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/mute");
+			push(@osclines,"/$mixername/$channelname/solo;$project->{mixers}{$mixername}{engine}{engine};0;0;1") unless $channelstrip->is_hardware_out;
+			($midiCC,$midichannel) = &getnextCC();
+			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/solo");
 			push(@osclines,"/$mixername/$channelname/bypass;$project->{mixers}{$mixername}{engine}{engine};0;0;1");
+			($midiCC,$midichannel) = &getnextCC();
+			push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/bypass");
 			
-			#TODO add midi CC if necessary to mute/solo/bypass
-
 			# --- LOOP THROUGH INSERTS ---
 	
-			foreach my $insertname (keys %{$channel->{inserts}}) {
+			foreach my $insertname (keys %{$channelstrip->{inserts}}) {
 
 				#create insert reference
-				my $insert = $channel->{inserts}{$insertname};
+				my $insert = $channelstrip->{inserts}{$insertname};
 
 				# --- LOOP THROUGH INSERT PARAMETERS ---
 				my $i = 0;
@@ -171,8 +193,12 @@ sub get_osc_paths {
 					$line = "/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i];non-mixer;$value;$min;$max"
 						if $project->{mixers}{$mixername}->is_nonmixer;
 
-					$line .= ";$CC" if $CC;
-					$line .= ";$channel" if $channel;
+					($midiCC,$midichannel) = &getnextCC();
+					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/$insertname/$paramname")
+						if $project->{mixers}{$mixername}->is_ecasound;
+					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]")
+						if $project->{mixers}{$mixername}->is_nonmixer;
+					
 					push(@osclines,$line);
 					# print "**$line \n";
 					$i++;
@@ -181,9 +207,9 @@ sub get_osc_paths {
 			
 			# --- LOOP THROUGH AUX ROUTES (ecasound only) ---
 			
-			foreach my $auxroute (keys %{$channel->{aux_route}}) {
+			foreach my $auxroute (keys %{$channelstrip->{aux_route}}) {
 				#create route reference
-				my $route = $channel->{aux_route}{$auxroute}{inserts}{panvol};
+				my $route = $channelstrip->{aux_route}{$auxroute}{inserts}{panvol};
 				# --- LOOP THROUGH route PARAMETERS ---
 				my $i = 0;
 				foreach my $paramname (@{$route->{paramnames}}) {
@@ -192,10 +218,10 @@ sub get_osc_paths {
 					my $value = $route->{defaultvalues}[$i];
 					my $min = $route->{lowvalues}[$i];
 					my $max = $route->{highvalues}[$i];
-					my ($CC,$channel) = ('','');
-					($CC,$channel) = split(',',$route->{CCs}[$i]) if $route->{CCs}; #ignore if CC not created					
-					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;midi;$value;$min;$max;$CC;$channel";
+					my $line = "/$mixername/$channelname/aux_to/$auxroute/$paramname;midi;$value;$min;$max";
 					push(@osclines,$line);
+					($midiCC,$midichannel) = &getnextCC();
+					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/aux_to/$auxroute/$paramname");
 					$i++;
 				}
 			}
@@ -208,14 +234,20 @@ sub get_osc_paths {
 				
 				# Add gain control
 				push(@osclines,"/$mixername/$channelname/panvol/vol;non-mixer;0;0;1");
+				($midiCC,$midichannel) = &getnextCC();
+				push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/panvol/vol");
 
 				# Add pan control
 				push(@osclines,"/$mixername/$channelname/panvol/pan;non-mixer;0;0;1");
 				# push(@osclines,"/$mixername/$channelname/panvol/width;non-mixer;0;-1;1");
+				($midiCC,$midichannel) = &getnextCC();
+				push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/panvol/pan");
 
 				#add aux routes
 				foreach my $aux (@auxes) {
-					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;0;1")  unless $channel->is_hardware_out;
+					push(@osclines,"/$mixername/$channelname/aux_to/$aux/vol;non-mixer;0;0;1")  unless $channelstrip->is_hardware_out;
+					($midiCC,$midichannel) = &getnextCC();
+					push(@midilines,"$midichannel;$midiCC;/$mixername/$channelname/aux_to/$aux/vol");
 				}
 			}
 		}
@@ -228,8 +260,16 @@ sub get_osc_paths {
 		chomp($_);
 		my @values = split(';',$_);
 		my $path = shift @values;
-		$rules{$path} = ();
-		push @{$rules{$path}} , @values;
+		$rules{OSC}{$path} = ();
+		push @{$rules{OSC}{$path}} , @values;
+	}
+	@templines = @midilines;
+	foreach (@templines) { #fill the hash with the file info
+		chomp($_);
+		my @values = split(';',$_);
+		my $path = (shift @values) . "," . (shift @values); #midiCC
+		$rules{MIDI}{$path} = ();
+		push @{$rules{MIDI}{$path}} , @values; #osc path remaining
 	}
 
 	return \%rules;
@@ -254,6 +294,23 @@ sub create_midi_out_port {
 	my $status = MIDI::ALSA::client("astrux",0,1,0) || die "could not create alsa midi port.\n";
 	print "successfully created alsa midi out port\n";
 	$bridge->{status} = 'created';
+}
+
+sub getnextCC {
+	use feature 'state';
+	state $channel = 1;
+	state $CC = 0;
+	#verify end of midi CC range
+	die "Bridge error: CC max range error!!\n" if (($CC eq 127) and ($channel eq 16));
+	#CC range from 1 to 127, update channel if needed
+	if ($CC == 127) {
+		$CC = 0;
+		$channel++;
+	}
+	#increment CC number
+	$CC++;
+	#return values
+	return($CC,$channel);
 }
 
 sub send_osc2midi {

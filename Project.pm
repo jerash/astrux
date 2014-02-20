@@ -152,18 +152,22 @@ sub AddPlumbing {
 	$project->{plumbing}{rules} = \@plumbing_rules;
 }
 
-sub AddOSCPaths {
+sub AddMIDIOSCPaths {
 	my $project = shift;
 
-	#build destination file path
+	#build osc destination file path
 	my $filepath = $project->{globals}{base_path} . "/" . $project->{globals}{output_path} . "/osc.csv";
 	$project->{bridge}{OSC}{file} = $filepath;
+	#build midi destination file path
+	$filepath = $project->{globals}{base_path} . "/" . $project->{globals}{output_path} . "/midi.csv";
+	$project->{bridge}{MIDI}{file} = $filepath;
 
-	#get osc paths
-	my $osc_paths = $project->Bridge::get_osc_paths;
+	#get midi/osc paths
+	my $midiosc_paths = $project->Bridge::get_midiosc_paths;
 
 	#insert into project
-	$project->{bridge}{OSC}{paths} = $osc_paths;
+	$project->{bridge}{OSC}{paths} = $midiosc_paths->{OSC};
+	$project->{bridge}{MIDI}{paths} = $midiosc_paths->{MIDI};
 }
 
 ###########################################################
@@ -247,13 +251,13 @@ sub GenerateFiles {
 		print " |_Project: jack.plumbing isn't defined as active. Not creating file.\n";
 	}
 
-	#----------------OSC BRIDGE FILES------------------------
+	#----------------OSC BRIDGE FILE------------------------
 	if ($project->{bridge}{OSC}{enable}) {
 
 		# we do it now after nonmixer files are generated, so we know the auxes assignations
 
 		#create the OSC paths
-		$project->AddOSCPaths;
+		$project->AddMIDIOSCPaths;
 		print " |_Project: creating OSC paths file $project->{bridge}{OSC}{file}\n";
 		
 		#TODO bridge : check for MIDI input memo
@@ -265,6 +269,12 @@ sub GenerateFiles {
 	}
 	else {
 		print " |_Project: bridge isn't defined as active. Not creating files.";
+	}
+
+	#----------------MIDI BRIDGE FILE------------------------
+	if ($project->{bridge}{MIDI}{enable}) {
+		# we do it now after osc files are generated, so we know the paths
+		$project->{bridge}->save_midi_file;		
 	}
 
 	#----------------TOUCHOSC PRESETS FILES------------------------
