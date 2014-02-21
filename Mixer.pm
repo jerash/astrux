@@ -70,7 +70,7 @@ sub init {
 		$mixer->{engine} = NonEngine->new($mixer->{output_path},$globals{name});
 	}
 
-	#merge global info info to created engine #TODO optimize which info is really needed
+	#merge global info info to created engine
 	$mixer->{engine}{$_} = $globals{$_} for (keys %globals);
 
 	#remove mixer globals from IO hash to prevent further ignore
