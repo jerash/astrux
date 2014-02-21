@@ -451,7 +451,8 @@ sub process_osc_command {
 				print "mute track $trackname\n" if $debug;
 				#send ecasound command
 				$project->{mixers}{$mixername}->mute_channel($trackname);
-				#TODO udpate current status in structure
+				#udpate current status in structure
+				$project->{bridge}{current_values}{$path} = $value;
 			}		
 			elsif ($el3 eq 'aux_to') {
 				#channel aux send
