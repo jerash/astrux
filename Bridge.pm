@@ -415,8 +415,7 @@ sub process_osc_command {
 				print "effect $el3 change param $el4 with value $value on track $trackname\n" if $debug;
 				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value","localhost",$nonoscport) if ($el4 eq 'vol');
 				if ($el4 eq 'pan') {
-					#TODO make this correct if mono or stereo track
-					&OSC_send("/strip/$trackname/Mono%20Pan/balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_mono;
+					&OSC_send("/strip/$trackname/Mono%20Pan/Pan f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_mono;
 					&OSC_send("/strip/$trackname/Stereo%20balance%20and%20panner/Balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_stereo;
 				}
 				#udpate current value
