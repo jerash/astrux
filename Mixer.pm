@@ -626,7 +626,7 @@ sub CreateNonFiles {
 		#generate a 0x id
 		$id = &get_next_non_id;
 		#Gain_Module 0x4 create :parameter_values "0.500000:0.000000" :is_default 1 :chain 0x2 :active 1
-		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default O :chain $chainid{$channelname} :active 1";
+		$line = "\tGain_Module $id create :parameter_values \"0.000000:0.000000\" :is_default 0 :chain $chainid{$channelname} :active 1";
 		push @snapshot,$line;
 		
 		if ($mixer->{engine}{addmeters}) {
