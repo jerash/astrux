@@ -511,9 +511,9 @@ sub process_osc_command {
 		#resolve the sender adress
 		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 		warn "Cannot resolve name - $err" if $err;
-		print "we send back info to $hostname\n" if $debug;
+		print "we send back osc message \"/$path f $value\" to $hostname\n" if $debug;
 		#send back OSC info
-		&OSC_send("$path f $value",$hostname,$project->{bridge}{OSC}{outport});
+		&OSC_send("/$path f $value",$hostname,$project->{bridge}{OSC}{outport});
 	}
 }
 
