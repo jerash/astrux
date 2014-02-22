@@ -535,7 +535,7 @@ sub CreateNonFiles {
 		$line .= ":group $groups{$channel->{group}} " if ($channel->{group} ne '');
 		$line .= ":group \"\" " if ($channel->{group} eq '');
 		#autoconnect mains out
-		if (($channel->is_main_out) and ($mixer->{engine}{autoconnect} eq 1)){
+		if ((($channel->is_main_out) or ($channel->is_submix_out)) and ($mixer->{engine}{autoconnect} eq 1)){
 			$line .= ":auto_input \"inputs/mains\" ";
 		}
 		#autoconnect auxes
