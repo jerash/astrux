@@ -311,47 +311,42 @@ sub process_osc_command {
 
 	# verify socket
 	#-----------------------------------------
-	my $insocket = $project->{bridge}{OSC}{socket};
-	die "Live process_osc error: could not read OSC socket in project\n" unless $insocket;
-	my $osc = $project->{bridge}{OSC}{object};
-	die "Live process_osc error: could not read OSC object in project\n" unless $insocket;
+	die "Live process_osc error: could not read OSC socket in project\n" unless $project->{bridge}{OSC}{socket};
+	die "Live process_osc error: could not read OSC object in project\n" unless $project->{bridge}{OSC}{object};
 	
-	#grab the message, and get the sender
+	#grab the message and sender info
 	#-----------------------------------------
-	my $sender = $insocket->recv(my $packet, $insocket->sockopt(SO_RCVBUF));
+	my $sender = $project->{bridge}{OSC}{socket}->recv(my $oscpacket, $project->{bridge}{OSC}{socket}->sockopt(SO_RCVBUF));
+	return unless defined $sender;
+	#resolve the sender adress
+	my($err, $sender_hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
+	if ($err) { warn "Cannot resolve name - $err"; }
+	#add sender address to known clients
+	else { $project->{bridge}{OSC}{clients}{$sender_hostname} = 1; }
+
 	#parse the osc packet
-	my $p = $osc->parse($packet);
-
-	#TODO deal with osc bundles
-	#grab osc packet arguments
 	#-----------------------------------------
-	my ($path, $types, @args) = @$p;
+	my ($oscpath, $argtypes, @args) = @{$project->{bridge}{OSC}{object}->parse($oscpacket)};
+	#TODO deal with osc bundles
 
-	print "OSC MESSAGE\n------------\npath=$path types=$types and args " if $debug;
+	print "OSC MESSAGE\n------------\npath=$oscpath types=$argtypes and args " if $debug;
 	if ($debug){print "$_," for @args};
 	print "\n" if $debug;
 
 	#verify how many arguments we have
 	#-----------------------------------------
-	if ( length($types) == 0 ) {
-		warn "Bridge warning: ignored osc message without arguments\n";
-		return;
-	}
-	elsif ( length($types) > 1 ) {
-		warn "Bridge warning: ignored osc message with multiple arguments\n";
-		return;
-	}
+	warn "Bridge warning: ignored osc message without arguments\n", return if ( length($argtypes) == 0 );
+	warn "Bridge warning: ignored osc message with multiple arguments\n", return if ( length($argtypes) > 1 );
 
 	#go on with a single argument osc message
 	#-----------------------------------------
 
 	#cleanup path
-	$path =~ s(^/)();
-	$path =~ s(/$)(); #this one should never be
+	$oscpath =~ s(^/)();
 	
 	#split path elements
-	my @pathelements = split '/',$path;
-	
+	my @pathelements = split '/',$oscpath;
+
 	#element 1 = mixername OR system command
 	my $mixername = shift @pathelements;
 	if ($mixername eq "astrux") {
@@ -365,33 +360,12 @@ sub process_osc_command {
 	#verify that incoming value is within (0,1) range
 	#------------------------------------------------
 	my $value = shift @args;
-	if (!defined $value) {
-		warn "Bridge warning: ignored message without value\n";
-		return;
-	}
-	elsif ($value < 0) {
-		warn "Bridge warning: OSC values must be within [0,1]\n";
-		$value = 0;
-	}
-	elsif ($value > 1) {
-		warn "Bridge warning: OSC values must be within [0,1]\n";
-		$value = 1;
-	}
+	warn "Bridge warning: ignored message without value\n", return if (!defined $value);
+	warn "Bridge warning: OSC values must be within [0,1]\n", $value = 0 if ($value < 0);
+	warn "Bridge warning: OSC values must be within [0,1]\n", $value = 1 if ($value > 1);
 
-	#resolve the sender adress
-	my($err, $sender_hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
-	if ($err) {
-		warn "Cannot resolve name - $err";
-	}
-	else {
-		$project->{bridge}{OSC}{clients}{$sender_hostname} = 1;
-	}
-
-	#element 1 = mixername
-	print " mixer $mixername\n" if $debug;
 	#element 2 = trackname
 	my $trackname = shift @pathelements;
-	print " track $trackname\n" if $debug;
 	
 	if ((exists $project->{mixers}{$mixername}) and (exists $project->{mixers}{$mixername}{channels}{$trackname})) {
 		
@@ -427,7 +401,7 @@ sub process_osc_command {
 					&OSC_send("/strip/$trackname/Stereo%20balance%20and%20panner/Balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_stereo;
 				}
 				#udpate current value
-				$project->{bridge}{current_values}{$path} = $value;
+				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 				#fx change (LADSPA ID)
@@ -469,7 +443,7 @@ sub process_osc_command {
 				#send ecasound command
 				$project->{mixers}{$mixername}->mute_channel($trackname);
 				#udpate current status in structure
-				$project->{bridge}{current_values}{$path} = $value;
+				$project->{bridge}{current_values}{$oscpath} = $value;
 			}		
 			elsif ($el3 eq 'aux_to') {
 				#channel aux send
@@ -486,7 +460,7 @@ sub process_osc_command {
 				my $position = 1; # this is ok for aux_route
 				$project->{mixers}{$mixername}->udpate_auxroutefx_value($trackname,$destination,$position,$index,$value);
 				#udpate current value
-				$project->{bridge}{current_values}{$path} = $value;
+				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 				#fx change
@@ -501,7 +475,7 @@ sub process_osc_command {
 				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
 				$project->{mixers}{$mixername}->udpate_trackfx_value($trackname,$position,$index,$value);
 				#udpate current value
-				$project->{bridge}{current_values}{$path} = $value;
+				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			else {
 				warn "unknown osc parameter $el3\n";
@@ -510,14 +484,14 @@ sub process_osc_command {
 	} #endif mixer and channel is ok
 	else 
 	{
-		print "could not find corresponding info from $path"
+		print "could not find corresponding info from $oscpath"
 	}
 
 	#check if we send back information
 	if ($project->{bridge}{OSC}{sendback}) {
-		print "we send back osc message \"/$path f $value\" to $sender_hostname\n" if $debug;
+		print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
 		#send back OSC info
-		&OSC_send("/$path f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+		&OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
 	}
 }
 
