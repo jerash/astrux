@@ -438,7 +438,16 @@ sub process_osc_command {
 				&OSC_send("/strip/$trackname/$insertname/$insertparam f $value","localhost",$nonoscport);
 			}
 			elsif ($el3 eq 'aux_to') {
-				#TODO nonmixer osc aux commands
+				# element 4 = auxname
+				my $auxname = shift @pathelements;
+				return unless exists $project->{mixers}{$mixername}{channels}{$auxname};
+				my $letter = $project->{mixers}{$mixername}{channels}{$auxname}{aux_letter};
+				return unless $letter;
+				# element 5 = command
+				my $command = shift @pathelements;
+				return unless $command eq 'vol'; #TODO for now only volume command on track aux send to monitor
+				#send osc command to nonmixer
+				&OSC_send("/strip/$trackname/Aux%20\($letter\)/Gain%20\(dB\) f $value","localhost",$nonoscport);
 			}
 		}
 
