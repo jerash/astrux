@@ -107,12 +107,12 @@ sub get_plumbing_rules {
 
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 								if ($mixer->{$channelname}{group} eq '');
-							$plumbin = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$channelname}{group}."):$channelname/out-$i"
+							$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 								if ($mixer->{$channelname}{group} ne '');
 							
 							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
 								if ($mixer->{$main_out}{group} eq '');
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}." (".$mixer->{$main_out}{group}."):$main_out/in-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
 								if ($mixer->{$main_out}{group} ne '');
 						}
 						if ($project->{mixers}{$mixername}->is_ecasound) {
