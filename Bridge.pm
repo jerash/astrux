@@ -377,7 +377,15 @@ sub process_osc_command {
 		warn "Bridge warning: OSC values must be within [0,1]\n";
 		$value = 1;
 	}
-	# warn "empty value on param $panvol!\n" unless defined $value;
+
+	#resolve the sender adress
+	my($err, $sender_hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
+	if ($err) {
+		warn "Cannot resolve name - $err";
+	}
+	else {
+		$project->{bridge}{OSC}{clients}{$sender_hostname} = 1;
+	}
 
 	#element 1 = mixername
 	print " mixer $mixername\n" if $debug;
@@ -507,13 +515,9 @@ sub process_osc_command {
 
 	#check if we send back information
 	if ($project->{bridge}{OSC}{sendback}) {
-		#TODO maybe create an OSC clients hash to speed up things
-		#resolve the sender adress
-		my($err, $hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
-		warn "Cannot resolve name - $err" if $err;
-		print "we send back osc message \"/$path f $value\" to $hostname\n" if $debug;
+		print "we send back osc message \"/$path f $value\" to $sender_hostname\n" if $debug;
 		#send back OSC info
-		&OSC_send("/$path f $value",$hostname,$project->{bridge}{OSC}{outport});
+		&OSC_send("/$path f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
 	}
 }
 
