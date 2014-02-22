@@ -79,6 +79,14 @@ sub start {
 
 	#	front panel actions (from tcp commands)
 
+	#catch signals
+	#--------------------------------------
+	$SIG{INT} = sub { 
+		print "\nSIGINT, saving state\n";
+		$bridge->save_state_file;
+		exit(0);
+	};
+
 	#main loop waiting
 	#--------------------------------------
 	my $cv = AE::cv;
@@ -225,7 +233,7 @@ sub save_state_file {
 	$filepath =~ s/.csv/.state/;
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
-	store $bridge->{OSC}{current_values}, $filepath;
+	store $bridge->{current_values}, $filepath;
 }
 
 ###########################################################

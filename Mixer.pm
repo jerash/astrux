@@ -455,6 +455,7 @@ sub BuildNonMixer {
 		#add strip to mixer
 		$mixer->{channels}{$name} = $strip;
 	}
+	#TODO now check for auxes and stuff, and add default elements
 }
 
 sub CreateNonFiles {

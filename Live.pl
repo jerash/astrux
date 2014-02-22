@@ -138,5 +138,3 @@ $project->{mixers}{players}{engine}->SelectAndConnectChainsetup("players");
 #--------------------------------------
 print "\n--------- Project $project->{globals}{name} Running---------\n";
 $project->{bridge}->start;
-
-# TODO catch SIG to exit cleanly
