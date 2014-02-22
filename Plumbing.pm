@@ -216,9 +216,9 @@ sub get_plumbing_rules {
 					foreach my $aux (@auxes) {
 						for my $i (1..$channels) {
 							my $plumbout;
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{is_aux}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{aux_letter}."/out-$i"
 								if ($mixer->{$channelname}{group} eq '');
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/aux-".$mixer->{$aux}{is_aux}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/aux-".$mixer->{$aux}{aux_letter}."/out-$i"
 								if ($mixer->{$channelname}{group} ne '');
 							my $plumbin;
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$aux:in-$i"
