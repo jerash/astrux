@@ -196,37 +196,39 @@ sub get_plumbing_rules {
 					#force chanels to 2, as mono tracks have been converted to stereo
 					$channels = 2;
 					
-					#add the route to master
-					for my $i (1..$channels) {
-						my $plumbout;
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
-							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
-							if ($mixer->{$channelname}{group} ne '');
-						my $plumbin;
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
-							if ($mixer->{$main_out}{group} eq '');
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
-							if ($mixer->{$main_out}{group} ne '');
-						#add rule
-						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
-					}
-
-					#add the routes to aux
-					foreach my $aux (@auxes) {
+					if (!$project->{mixers}{$mixername}{engine}{autoconnect}) {
+						#add the route to master
 						for my $i (1..$channels) {
 							my $plumbout;
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{aux_letter}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 								if ($mixer->{$channelname}{group} eq '');
-							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/aux-".$mixer->{$aux}{aux_letter}."/out-$i"
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
 								if ($mixer->{$channelname}{group} ne '');
 							my $plumbin;
-							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$aux:in-$i"
-								if ($mixer->{$aux}{group} eq '');
-							$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$aux}{group}."\\):$aux/in-$i"
-								if ($mixer->{$aux}{group} ne '');
+							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
+								if ($mixer->{$main_out}{group} eq '');
+							$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
+								if ($mixer->{$main_out}{group} ne '');
 							#add rule
 							push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
+						}
+
+						#add the routes to aux
+						foreach my $aux (@auxes) {
+							for my $i (1..$channels) {
+								my $plumbout;
+								$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{aux_letter}."/out-$i"
+									if ($mixer->{$channelname}{group} eq '');
+								$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/aux-".$mixer->{$aux}{aux_letter}."/out-$i"
+									if ($mixer->{$channelname}{group} ne '');
+								my $plumbin;
+								$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$aux:in-$i"
+									if ($mixer->{$aux}{group} eq '');
+								$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$aux}{group}."\\):$aux/in-$i"
+									if ($mixer->{$aux}{group} ne '');
+								#add rule
+								push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
+							}
 						}
 					}
 				}
