@@ -218,6 +218,16 @@ sub save_midi_file {
 	close FILE;
 }
 
+sub save_state_file {
+	my $bridge = shift;
+
+	my $filepath = $bridge->{OSC}{file};
+	$filepath =~ s/.csv/.state/;
+	use Storable;
+	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
+	store $bridge->{OSC}{current_values}, $filepath;
+}
+
 ###########################################################
 #
 #		 BRIDGE MIDI functions
