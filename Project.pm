@@ -269,6 +269,7 @@ sub GenerateFiles {
 
 	#----------------MIDI BRIDGE FILE------------------------
 	if ($project->{bridge}{MIDI}{enable}) {
+		print " |_Project: creating MIDI paths file $project->{bridge}{MIDI}{file}\n";
 		# we do it now after osc files are generated, so we know the paths
 		$project->{bridge}->save_midi_file;		
 	}
