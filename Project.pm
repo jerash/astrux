@@ -134,6 +134,11 @@ sub AddBridge {
 
 	#insert into project
 	$project->{bridge} = Bridge->new($bridgefile);
+
+	#add statefile path to bridge
+	$project->{bridge}{statefile} = $project->{globals}{base_path} . "/" . 
+									$project->{globals}{output_path} . "/". 
+									$project->{globals}{name} . ".state";
 }
 
 sub AddPlumbing {

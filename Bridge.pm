@@ -229,11 +229,9 @@ sub save_midi_file {
 sub save_state_file {
 	my $bridge = shift;
 
-	my $filepath = $bridge->{OSC}{file};
-	$filepath =~ s/.csv/.state/;
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
-	store $bridge->{current_values}, $filepath;
+	store $bridge->{current_values}, $project->{bridge}{statefile};
 }
 
 ###########################################################
