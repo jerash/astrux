@@ -119,6 +119,11 @@ sub AddSongs {
 		#crete a song object
 		my $song = Song->new($songfile);
 	 	die "could not create song" unless $song;
+	 	#add markers if any
+	 	my $output_path = $project->{globals}{base_path} . "/" . 
+						$project->{globals}{songs_path} . "/" . 
+						$song->{name};
+	 	$song->add_markers($output_path);
 
 	 	#insert into project
 		$project->{songs}{$song->{name}} = $song;

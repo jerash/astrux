@@ -49,7 +49,7 @@ sub init {
 	$song->{$_} = $songinfo_ref->{song_globals}{$_} foreach (keys $songinfo_ref->{song_globals});
 	delete $songinfo_ref->{song_globals};
 
-	#for each player slot, check file parameters for mono/stereo
+	#for each player slot, check file type
 	foreach my $section (keys %{$songinfo_ref}) {
 
 		# match audio players, and catch player slot number
@@ -58,7 +58,7 @@ sub init {
 			my $slotnumber = $1;
 			$song->{audio_files}{$section} = $songinfo_ref->{$section};
 			$song->{audio_files}{$section}{slot} = $slotnumber; 
-			print " |_Song: adding player for file $songinfo_ref->{$section}{filename}\n";
+			print " |_Song: adding audio player for file $songinfo_ref->{$section}{filename}\n";
 		}
 		# match midi players, and catch player slot number
 		if ($songinfo_ref->{$section}{type} eq "midi_player") {
@@ -66,7 +66,7 @@ sub init {
 			my $slotnumber = $1;
 			$song->{midi_files}{$section} = $songinfo_ref->{$section};
 			$song->{midi_files}{$section}{slot} = $slotnumber; 
-			print " |_Song: adding player for file $songinfo_ref->{$section}{filename}\n";
+			print " |_Song: adding midi player for file $songinfo_ref->{$section}{filename}\n";
 		}
 		# match sampler
 		if ($songinfo_ref->{$section}{type} eq "sampler") {
@@ -76,21 +76,35 @@ sub init {
 	}
 }
 
-sub create_markers_file {
+###########################################################
+#
+#		 SONG functions
+#
+###########################################################
+
+sub add_markers {
 	my $song = shift;
 	my $output_path = shift;
 
 	foreach my $midifilename (keys %{$song->{midi_files}}) {
 		next unless ((defined $song->{midi_files}{$midifilename}{time_master}) and ($song->{midi_files}{$midifilename}{time_master} eq 1));
 		my $midifile = $output_path . "/$song->{midi_files}{$midifilename}{filename}";
+		print " |_Song: adding midi markers from file $midifile\n";
 		my @songevents = MidiFile::get_timed_events($midifile);
 		return unless @songevents;
-		my $outfilename = $output_path . "/markers.csv";
-		print " |_Song: creating markers file $outfilename from $song->{midi_files}{$midifilename}{filename}\n";
-		open FILE,">$outfilename" or die "$!";
-		print FILE "$_->[0];$_->[1];$_->[2]\n" for @songevents;
-		close FILE;
+		$song->{markers} = \@songevents;
 	}
+}
+
+sub create_markers_file {
+	my $song = shift;
+	my $output_path = shift;
+
+	$song->{markers_file} = $output_path . "/markers.csv";
+	print " |_Song: creating markers file $song->{markers_file}\n";
+	open FILE,">$song->{markers_file}" or die "$!";
+	print FILE "$_->[0];$_->[1];$_->[2]\n" for @{$song->{markers}};
+	close FILE;
 }
 
 ###########################################################
