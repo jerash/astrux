@@ -5,6 +5,8 @@ package Song;
 use strict;
 use warnings;
 
+use MidiFile;
+
 ###########################################################
 #
 #		 SONG OBJECT functions
@@ -71,6 +73,23 @@ sub init {
 			$song->{sampler_files}{$section} = $songinfo_ref->{$section};
 			print " |_Song: sampler file $songinfo_ref->{$section}{filename}\n";
 		}
+	}
+}
+
+sub create_markers_file {
+	my $song = shift;
+	my $output_path = shift;
+
+	foreach my $midifilename (keys %{$song->{midi_files}}) {
+		next unless ((defined $song->{midi_files}{$midifilename}{time_master}) and ($song->{midi_files}{$midifilename}{time_master} eq 1));
+		my $midifile = $output_path . "/$song->{midi_files}{$midifilename}{filename}";
+		my @songevents = MidiFile::get_timed_events($midifile);
+		return unless @songevents;
+		my $outfilename = $output_path . "/markers.csv";
+		print " |_Song: creating markers file $outfilename from $song->{midi_files}{$midifilename}{filename}\n";
+		open FILE,">$outfilename" or die "$!";
+		print FILE "$_->[0];$_->[1];$_->[2]\n" for @songevents;
+		close FILE;
 	}
 }
 

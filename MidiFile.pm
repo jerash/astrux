@@ -14,15 +14,16 @@ my $debug = 0;
 
 sub get_timed_events {
   my $file = shift;
-  die "file $file not found" unless -e $file;
+  die "missing file to read\n" unless $file;
 
   #import midi file
   my $song = MIDI::Opus->new( {
-   "from_file" => $ARGV[0],
+   "from_file" => $file,
   } );
 
   #get song tracks references
   my @tracks = $song->tracks;
+  return unless @tracks;
 
   #for each track, create an event list with absolute ticks reference
   my $nb = 0;
@@ -45,10 +46,11 @@ sub get_timed_events {
     $linear_tracks->{$nb} = \@linear_events;
     $nb++;
   }
+  return unless $linear_tracks;
 
   #now we have absolute ticks, we can merge and filter out necessary events
   my @absolute_tick_events;
-  foreach my $track (keys $linear_tracks) {
+  foreach my $track (keys %{$linear_tracks}) {
     foreach my $event (@{$linear_tracks->{$track}}) {
       push (@absolute_tick_events , $event) 
         if ( ($event->[0] eq "set_tempo") or
@@ -56,6 +58,7 @@ sub get_timed_events {
              ($event->[0] eq "time_signature") );
     }
   }
+  return unless @absolute_tick_events;
 
   #we should have set_tempo and time_signature at tick position 0
   my $time_signature;
@@ -78,13 +81,19 @@ sub get_timed_events {
   my $time_denominator = 2**($time_signature->[3]);
   #calculate tempo in BPM and tick duration
   my $MicrosecondsPerQuarterNote = $set_tempo->[2];
-  my $BPM = ( 60000000 / $MicrosecondsPerQuarterNote ) * ( $time_denominator / 4 );
+  my $BPM = sprintf "%.1f", ( 60000000 / $MicrosecondsPerQuarterNote ) * ( $time_denominator / 4 );
   my $tick_duration = &get_tick_duration($TPQN,$MicrosecondsPerQuarterNote);
 
   print "Song ticks is $TPQN\nStart tempo is $BPM\nStart Time signature is $time_numerator/$time_denominator\n" if $debug;
 
-  #now we have only needed elements, we can calculate position in seconds
+  #add first values to array output
   my @absolute_seconds_events;
+  my @init1 = (0,"set_tempo",$BPM);
+  push @absolute_seconds_events , \@init1;
+  my @init2 = (0,"time_signature","$time_numerator/$time_denominator");
+  push @absolute_seconds_events , \@init2;
+
+  #now we have only needed elements, we can calculate position in seconds
   my $current_seconds_position = 0;
   my $last_tick_change = 0;
   my $last_seconds_counter = 0;

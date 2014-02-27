@@ -234,6 +234,10 @@ sub GenerateFiles {
 		$song->{ecasound}->CreateEcsFile;
 		#remove io_chains
 		delete $song->{ecasound}{io_chains} if defined $song->{ecasound}{io_chains};
+
+		#create tempo/timebase/markers file
+		my $output_path = $project->{globals}{base_path}."/songs/$songname";
+		$song->create_markers_file($output_path);
 	}
 
 	#----------------PLUMBING FILE------------------------
