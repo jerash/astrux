@@ -4,10 +4,6 @@ package Song;
 
 use strict;
 use warnings;
-use Audio::SndFile;
-#http://search.cpan.org/~jdiepen/Audio-SndFile-0.09/lib/Audio/SndFile.pm
-
-use Data::Dumper;
 
 ###########################################################
 #
