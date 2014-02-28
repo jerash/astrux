@@ -215,7 +215,7 @@ sub get_plumbing_rules {
 
 						#add the routes to aux
 						foreach my $aux (@auxes) {
-							#TODO no rule for aux to himself (send_xx to ret_xx)
+							next if ((defined $project->{mixers}{$mixername}{channels}{$aux}{return}) and ($project->{mixers}{$mixername}{channels}{$aux}{return} eq $channelname)); #don't create an aux route to myself
 							for my $i (1..$channels) {
 								my $plumbout;
 								$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{aux_letter}."/out-$i"
@@ -233,31 +233,10 @@ sub get_plumbing_rules {
 						}
 					}
 				}
+				
+				# --- BUS OUTPUT --- SEND AUXES ---
 
-				# --- SEND AUXES ---
-
-				elsif ($mixer->{$channelname}->is_send) {
-
-				#add the route to master
-					for my $i (1..$channels) {
-						my $plumbout;
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
-							if ($mixer->{$channelname}{group} eq '');
-						$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
-							if ($mixer->{$channelname}{group} ne '');
-						my $plumbin;
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$main_out:in-$i"
-							if ($mixer->{$main_out}{group} eq '');
-						$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$main_out}{group}."\\):$main_out/in-$i"
-							if ($mixer->{$main_out}{group} ne '');
-						#add rule
-						push (@rules , "(connect \"$plumbout\" \"$plumbin\")") if $plumbin;
-					}
-				}
-
-				# --- BUS OUTPUT ---
-
-				elsif ($mixer->{$channelname}->is_bus_out) {
+				elsif ($mixer->{$channelname}->is_bus_out or $mixer->{$channelname}->is_send) {
 					#get the table of hardware output connections
 					my @table = @{$mixer->{$channelname}{connect}};
 					#add the route to master
