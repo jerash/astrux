@@ -375,7 +375,7 @@ sub mute_channel {
 	$ecaengine->SendCmdGetReply("c-muting");
 }
 
-sub udpate_trackfx_value {
+sub update_trackfx_value {
 	my $ecaengine = shift;
 	my $trackname = shift;
 	my $position = shift;
@@ -392,7 +392,7 @@ sub udpate_trackfx_value {
 	$ecaengine->SendCmdGetReply("copp-set $value");
 }
 
-sub udpate_auxroutefx_value {
+sub update_auxroutefx_value {
 	my $ecaengine = shift;
 	my $trackname = shift;
 	my $destination = shift;

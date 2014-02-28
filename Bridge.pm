@@ -83,9 +83,12 @@ sub start {
 	#--------------------------------------
 	$SIG{INT} = sub { 
 		print "\nSIGINT, saving state\n";
-		$bridge->save_state_file;
+		$bridge->save_state_file($project->{bridge}{statefile});
 		exit(0);
 	};
+
+	#reload state
+	$bridge->reload_state_file($project->{bridge}{statefile});
 
 	#main loop waiting
 	#--------------------------------------
@@ -136,10 +139,12 @@ sub create_midiosc_paths {
 					warn "Insert ($paramname) has a system name... may not work\n" if ($paramname =~ /^(mute|solo|bypass)$/);	
 					#replace space characters with _ #TODO check how ecasound treats LADSPA plugins names with nonalpha characters
 					$paramname = Utils::underscore_my_spaces($paramname);
-
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$insert->{defaultvalues}[$i])
+					#scale value to [0,1] range
+					my $outvalue = ( $insert->{defaultvalues}[$i]-$insert->{lowvalues}[$i] ) / ( $insert->{highvalues}[$i] - $insert->{lowvalues}[$i] );
+					#add to paths
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$outvalue)
 						if $project->{mixers}{$mixername}->is_ecasound;
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$insert->{defaultvalues}[$i])
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$outvalue)
 						if $project->{mixers}{$mixername}->is_nonmixer;
 				
 					$i++;
@@ -158,7 +163,10 @@ sub create_midiosc_paths {
 				my $i = 0;
 				foreach my $paramname (@{$route->{paramnames}}) {
 					my $value = $route->{defaultvalues}[$i];
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$route->{defaultvalues}[$i]);
+					#scale value to [0,1] range
+					my $outvalue = ( $route->{defaultvalues}[$i]-$route->{lowvalues}[$i] ) / ( $route->{highvalues}[$i] - $route->{lowvalues}[$i] );
+					#add to paths
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$outvalue);
 					$i++;
 				}
 			}
@@ -228,10 +236,25 @@ sub save_midi_file {
 
 sub save_state_file {
 	my $bridge = shift;
-
+	my $outfile = shift;
+	return unless defined $outfile;
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
-	store $bridge->{current_values}, $project->{bridge}{statefile};
+	store $bridge->{current_values}, $outfile;
+}
+sub reload_state_file {
+	my $bridge = shift;
+	my $infile = shift;
+	return unless defined $infile;	
+	return unless -e $infile;
+	print "Loading previous state\n";
+	use Storable;
+	#load state file
+	$bridge->{current_values} = retrieve($infile);
+	#send values to services/servers
+	foreach my $oscval (keys %{$bridge->{current_values}}){
+		&OSC_send("$oscval f $bridge->{current_values}{$oscval}",$bridge->{OSC}{ip},$bridge->{OSC}{inport});
+	}
 }
 
 ###########################################################
@@ -416,7 +439,7 @@ sub process_osc_command {
 					&OSC_send("/strip/$trackname/Mono%20Pan/Pan f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_mono;
 					&OSC_send("/strip/$trackname/Stereo%20balance%20and%20panner/Balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_stereo;
 				}
-				#udpate current value
+				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
@@ -458,7 +481,7 @@ sub process_osc_command {
 				print "mute track $trackname\n" if $debug;
 				#send ecasound command
 				$project->{mixers}{$mixername}->mute_channel($trackname);
-				#udpate current status in structure
+				#update current status in structure
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}		
 			elsif ($el3 eq 'aux_to') {
@@ -474,8 +497,8 @@ sub process_osc_command {
 				warn "empty value on param $param!\n" unless defined $value;
 				print "sending $trackname to $destination with $param $value\n" if $debug;
 				my $position = 1; # this is ok for aux_route
-				$project->{mixers}{$mixername}->udpate_auxroutefx_value($trackname,$destination,$position,$index,$value);
-				#udpate current value
+				$project->{mixers}{$mixername}->update_auxroutefx_value($trackname,$destination,$position,$index,$value);
+				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
@@ -489,8 +512,8 @@ sub process_osc_command {
 				print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
 				#send ecasound command to EcaFx
 				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-				$project->{mixers}{$mixername}->udpate_trackfx_value($trackname,$position,$index,$value);
-				#udpate current value
+				$project->{mixers}{$mixername}->update_trackfx_value($trackname,$position,$index,$value);
+				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			else {
@@ -500,7 +523,7 @@ sub process_osc_command {
 	} #endif mixer and channel is ok
 	else 
 	{
-		print "could not find corresponding info from $oscpath"
+		print "could not find corresponding info from $oscpath\n"
 	}
 
 	#check if we send back information
