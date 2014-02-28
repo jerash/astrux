@@ -497,7 +497,10 @@ sub process_osc_command {
 				warn "empty value on param $param!\n" unless defined $value;
 				print "sending $trackname to $destination with $param $value\n" if $debug;
 				my $position = 1; # this is ok for aux_route
-				$project->{mixers}{$mixername}{engine}->update_auxroutefx_value($trackname,$destination,$position,$index,$value);
+				#scale to real value
+				my $insert = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol};
+				my $realvalue = $value * ( $insert->{highvalues}[$index-1] - $insert->{lowvalues}[$index-1] ) + $insert->{lowvalues}[$index-1];
+				$project->{mixers}{$mixername}{engine}->update_auxroutefx_value($trackname,$destination,$position,$index,$realvalue);
 				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
@@ -512,8 +515,11 @@ sub process_osc_command {
 				print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
 				#send ecasound command to EcaFx
 				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-				$project->{mixers}{$mixername}{engine}->update_trackfx_value($trackname,$position,$index,$value);
-				#update current value
+				#scale to real value
+				my $insert =$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname};
+				my $realvalue = $value * ( $insert->{highvalues}[$index-1] - $insert->{lowvalues}[$index-1] ) + $insert->{lowvalues}[$index-1];
+				$project->{mixers}{$mixername}{engine}->update_trackfx_value($trackname,$position,$index,$realvalue);
+				#update current value (scaled to real value)
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
 			else {
