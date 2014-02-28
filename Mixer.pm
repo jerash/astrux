@@ -614,7 +614,8 @@ sub CreateNonFiles {
 		my $auxnumber = 0;
 		foreach my $aux (keys %auxes) {
 			if ($channel->is_main_in) { #create an aux send only for main mixer input channels
-				next if ((defined $mixer->{channels}{$aux}{return}) and ($mixer->{channels}{$aux}{return} eq $channelname)); #don't create an aux send to myself
+				# next if ((defined $mixer->{channels}{$aux}{return}) and ($mixer->{channels}{$aux}{return} eq $channelname));
+					 #we shouldn't create an aux send to ourself, but it screws up the aux letter assignations, so we create it but we won't route it.
 				#generate a 0x id
 				$id = &get_next_non_id;
 			#AUX_Module 0x2D create :number 0 :parameter_values "0.000000" :is_default 0 :chain 0x2 :active 1
