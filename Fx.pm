@@ -8,7 +8,7 @@ use feature 'state';
 
 use Data::Dumper;
 my $debug = 0;
-
+my $export = 0;
 ###########################################################
 #
 #		 FX globals
@@ -23,7 +23,11 @@ if (!defined $LADSPA_PluginsList) {
 	$LADSPA_PluginsList = &get_LADSPA_PluginsList;
 	print Dumper $LADSPA_PluginsList if $debug;
 }
-
+if ($export) {
+	open FILE,">$ENV{HOME}/LADSPA_PluginsList.txt" or die "$!";
+	print FILE Dumper $LADSPA_PluginsList;
+	close FILE;
+}
 ###########################################################
 #
 #		 FX OBJECT functions
@@ -164,7 +168,8 @@ sub LADSPAfxGetControls {
 		if (exists $LADSPA_PluginsList->{$fx}) {
 			#fill arrays
 			my (@names, @defaults,@lowvals,@highvals);
-			foreach my $control (sort keys $LADSPA_PluginsList->{$fx}{controls}) {
+			my $nbcontrols = scalar keys $LADSPA_PluginsList->{$fx}{controls};
+			for my $control (1..$nbcontrols) {
 				push @names, $LADSPA_PluginsList->{$fx}{controls}{$control}{name} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{name};
 				push @lowvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{min} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{min};
 				push @highvals, $LADSPA_PluginsList->{$fx}{controls}{$control}{max} if exists $LADSPA_PluginsList->{$fx}{controls}{$control}{max};
@@ -334,7 +339,7 @@ sub parse_audio_io {
 #
 ###########################################################
 
-sub EcafxGetControls() {
+sub EcafxGetControls {
 	my $fx = shift;
 	my $plugin = shift;
 
