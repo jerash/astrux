@@ -690,14 +690,4 @@ sub sort_by_group_and_name {
 	return split "," , $sorted_channelnames;
 }
 
-###########################################################
-#
-#		 NON-MIXER LIVE functions
-#
-###########################################################
-
-sub mute_channel {
-	#TODO mute channel
-}
-
 1;

@@ -480,7 +480,7 @@ sub process_osc_command {
 				#channel mute
 				print "mute track $trackname\n" if $debug;
 				#send ecasound command
-				$project->{mixers}{$mixername}->mute_channel($trackname);
+				$project->{mixers}{$mixername}{engine}->mute_channel($trackname);
 				#update current status in structure
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}		
@@ -497,7 +497,7 @@ sub process_osc_command {
 				warn "empty value on param $param!\n" unless defined $value;
 				print "sending $trackname to $destination with $param $value\n" if $debug;
 				my $position = 1; # this is ok for aux_route
-				$project->{mixers}{$mixername}->update_auxroutefx_value($trackname,$destination,$position,$index,$value);
+				$project->{mixers}{$mixername}{engine}->update_auxroutefx_value($trackname,$destination,$position,$index,$value);
 				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
@@ -512,7 +512,7 @@ sub process_osc_command {
 				print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
 				#send ecasound command to EcaFx
 				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-				$project->{mixers}{$mixername}->update_trackfx_value($trackname,$position,$index,$value);
+				$project->{mixers}{$mixername}{engine}->update_trackfx_value($trackname,$position,$index,$value);
 				#update current value
 				$project->{bridge}{current_values}{$oscpath} = $value;
 			}
