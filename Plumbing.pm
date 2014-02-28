@@ -215,6 +215,7 @@ sub get_plumbing_rules {
 
 						#add the routes to aux
 						foreach my $aux (@auxes) {
+							#TODO no rule for aux to himself (send_xx to ret_xx)
 							for my $i (1..$channels) {
 								my $plumbout;
 								$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:aux-".$mixer->{$aux}{aux_letter}."/out-$i"
