@@ -88,6 +88,20 @@ if ($project->{plumbing}{enable}) {
 }
 $project->{plumbing}{PID} = $pid_jackplumbing;
 
+#JACK-OSC (jack.clock)
+#---------------------------------
+my $pid_jackosc = qx(pgrep jack-osc);
+if ($project->{'jack-osc'}{enable}) {
+	if (!$pid_jackosc) {
+		print "jack-osc server is not running, starting it\n";
+		my $command = "jack-osc -p $project->{'jack-osc'}{osc_port} 2>&1 &";
+		system ($command);
+		sleep 1;
+		$pid_jackosc = qx(pgrep jack-osc);
+	}
+	print "jack-osc server running with PID $pid_jackosc";
+	$project->{'jack-osc'}{PID} = $pid_jackosc;
+}
 #JPMIDI << TODO problem in server mode can't load new midi file....
 #---------------------------------
 # my $pid_jpmidi = qx(pgrep jpmidi);
@@ -104,8 +118,8 @@ my $pid_linuxsampler = qx(pgrep linuxsampler);
 if ($project->{linuxsampler}{enable}) {
 	die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 	print "LINUXSAMPLER running with PID $pid_linuxsampler";
+	$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
 }
-$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
 
 #a2jmidid
 #---------------------------------
@@ -118,8 +132,8 @@ if ($project->{a2jmidid}{enable}) {
 		$pid_a2jmidid = qx(pgrep -f a2jmidid);
 	}
 	print "a2jmidid running with PID $pid_a2jmidid";
+	$project->{a2jmidid}{PID} = $pid_a2jmidid;
 }
-$project->{a2jmidid}{PID} = $pid_a2jmidid;
 
 # start mixers
 #---------------------------------
