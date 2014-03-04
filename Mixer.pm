@@ -199,6 +199,14 @@ sub get_tcp_port {
 	my $mixer = shift;
 	return $mixer->{engine}{tcp_port};
 }
+sub get_osc_port {
+	my $mixer = shift;
+	return $mixer->{engine}{osc_port};
+}
+sub get_midi_port {
+	my $mixer = shift;
+	return $mixer->{engine}{midi_port};
+}
 sub get_inputs_list {
 	my $mixer = shift;
 	my @inputnames;

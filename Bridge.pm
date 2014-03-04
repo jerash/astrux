@@ -108,6 +108,10 @@ sub create_midiosc_paths {
 		my $mixer = $project->{mixers}{$mixername};
 		my $engine = $mixer->{engine}{engine};
 		my $protocol = $mixer->{engine}{control};
+		my $port;
+		$port = $mixer->get_tcp_port if $mixer->is_tcp_controllable;
+		$port = $mixer->get_osc_port if $mixer->is_osc_controllable;
+		$port = $mixer->get_midi_port if $mixer->is_midi_controllable;
 		
 		# --- FIRST GET NONMIXER AUXES ---
 		my @auxes = $mixer->get_auxes_list;
@@ -120,9 +124,9 @@ sub create_midiosc_paths {
 			my $channelstrip = $mixer->{channels}{$channelname};
 			
 			#add generic channelstrip options
-			$bridge->add_midioscpaths("/$mixername/$channelname/mute","toggle",0,$engine,$protocol);
-			$bridge->add_midioscpaths("/$mixername/$channelname/solo","toggle",0,$engine,$protocol) unless $channelstrip->is_hardware_out;
-			$bridge->add_midioscpaths("/$mixername/$channelname/bypass","toggle",0,$engine,$protocol);
+			$bridge->add_midioscpaths("/$mixername/$channelname/mute","toggle",0,$engine,$protocol,$port);
+			$bridge->add_midioscpaths("/$mixername/$channelname/solo","toggle",0,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
+			$bridge->add_midioscpaths("/$mixername/$channelname/fxbypass","toggle",0,$engine,$protocol,$port);
 			
 			# --- LOOP THROUGH INSERTS ---
 	
@@ -141,9 +145,9 @@ sub create_midiosc_paths {
 					#scale value to [0,1] range
 					my $outvalue = ( $insert->{defaultvalues}[$i]-$insert->{lowvalues}[$i] ) / ( $insert->{highvalues}[$i] - $insert->{lowvalues}[$i] );
 					#add to paths
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$outvalue,$engine,$protocol)
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$outvalue,$engine,$protocol,$port)
 						if $mixer->is_ecasound;
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$outvalue,$engine,$protocol)
+					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$outvalue,$engine,$protocol,$port)
 						if $mixer->is_nonmixer;
 					$i++;
 				}
@@ -164,7 +168,7 @@ sub create_midiosc_paths {
 					#scale value to [0,1] range
 					my $outvalue = ( $route->{defaultvalues}[$i]-$route->{lowvalues}[$i] ) / ( $route->{highvalues}[$i] - $route->{lowvalues}[$i] );
 					#add to paths
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$outvalue,$engine,$protocol);
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$outvalue,$engine,$protocol,$port);
 					$i++;
 				}
 			}
@@ -173,12 +177,12 @@ sub create_midiosc_paths {
 
 			if ($project->{mixers}{$mixername}->is_nonmixer) {
 				# Add gain control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0,$engine,$protocol);
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0,$engine,$protocol,$port);
 				# Add pan control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0,$engine,$protocol);
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0,$engine,$protocol,$port);
 				#add aux routes
 				foreach my $aux (@auxes) {
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0,$engine,$protocol) unless $channelstrip->is_hardware_out;
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
 				}
 			}
 		}
@@ -192,6 +196,7 @@ sub add_midioscpaths {
 	my $val = shift;
 	my $engine = shift;
 	my $protocol = shift;
+	my $port = shift;
 
 	#get a new midi CC/channel
 	my ($midiCC,$midichannel) = &getnextCC();
@@ -200,6 +205,7 @@ sub add_midioscpaths {
 	$bridge->{OSC}{paths}{$oscpath}{type} = $type;
 	$bridge->{OSC}{paths}{$oscpath}{target} = $engine;
 	$bridge->{OSC}{paths}{$oscpath}{protocol} = $protocol;
+	$bridge->{OSC}{paths}{$oscpath}{port} = $port;
 	$bridge->{OSC}{paths}{$oscpath}{message} = "";
 	$bridge->{MIDI}{paths}{"$midichannel,$midiCC"} = $oscpath;
 	$bridge->{current_values}{$oscpath} = $val;
@@ -207,6 +213,7 @@ sub add_midioscpaths {
 
 sub translate_osc_paths_to_target {
 	my $project = shift;
+	#TODO make generic commands in EcaEngine and NonEngine for : get_mute_command, get_volume_command ...etc
 
 	foreach my $oscpath (sort keys %{$project->{bridge}{OSC}{paths}}) {
 	
@@ -238,8 +245,8 @@ sub translate_osc_paths_to_target {
 			elsif ($el3 eq 'solo') {
 				#TODO nonmixer osc solo command
 			}
-			elsif ($el3 eq 'bypass') {
-				#TODO nonmixer osc bypass command
+			elsif ($el3 eq 'fxbypass') {
+				#TODO nonmixer osc fxbypass command
 			}
 			elsif ($el3 eq 'panvol') {
 				# element 4 = fx parameter
@@ -284,8 +291,15 @@ sub translate_osc_paths_to_target {
 			#dependin on the third element
 			if ($el3 eq 'mute') {
 				#channel mute
-				$project->{bridge}{OSC}{paths}{$oscpath}{message} = '$project->{mixers}{$mixername}{engine}->mute_channel($trackname)';
+				my @messages = ("c-select $trackname","c-muting");
+				$project->{bridge}{OSC}{paths}{$oscpath}{message} = \@messages;
 			}		
+			elsif ($el3 eq 'solo') {
+				#TODO ecasound osc solo command
+			}
+			elsif ($el3 eq 'fxbypass') {
+				#TODO ecasound osc fxbypass command
+			}
 			elsif ($el3 eq 'aux_to') {
 				#element 4 = channel destination
 				my $destination = shift @pathelements;
@@ -294,7 +308,8 @@ sub translate_osc_paths_to_target {
 				my $param = shift @pathelements;
 				next unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
 				my $position = 1; # this is ok for aux_route
-				$project->{bridge}{OSC}{paths}{$oscpath}{message} = '$project->{mixers}{$mixername}{engine}->update_auxroutefx_value($trackname,$destination,$position,$index,$realvalue)';
+				my @messages = ("c-select $trackname"."_to_"."$destination","cop-set $position,$index,\$realvalue");
+				$project->{bridge}{OSC}{paths}{$oscpath}{message} = \@messages;
 			}
 			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
 				#fx change
@@ -303,7 +318,9 @@ sub translate_osc_paths_to_target {
 				my $insertparam = shift @pathelements;
 				next unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
 				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-				$project->{bridge}{OSC}{paths}{$oscpath}{message} = '$project->{mixers}{$mixername}{engine}->update_trackfx_value($trackname,$position,$index,$realvalue)';
+				$trackname = "bus_$trackname" if $project->{mixers}{$mixername}{channels}{$trackname}->is_hardware_out;
+				my @messages = ("c-select $trackname","cop-select $position","copp-select $index","copp-set \$realvalue");
+				$project->{bridge}{OSC}{paths}{$oscpath}{message} = \@messages;
 			}
 		} #endif ecasound
 	} #end foreach $oscpath
@@ -446,14 +463,15 @@ sub init_osc_server {
 		Type	  =>  SOCK_DGRAM) || die $!;
 	warn "cannot create socket $!\n" unless $osc_in;
 	#create the anyevent watcher on this socket
-	$bridge->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	# $bridge->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
+	$bridge->{OSC}{events} = AE::io( $osc_in, 0, \&process_incoming_osc );
 	#init an osc object
 	$bridge->{OSC}{object} = Protocol::OSC->new;
 }
 
-sub process_osc_command {
+sub process_incoming_osc {
 	use Socket qw(getnameinfo NI_NUMERICHOST);
-	my $debug = 1;
+	my $debug = 0;
 
 	# verify socket
 	#-----------------------------------------
@@ -479,171 +497,45 @@ sub process_osc_command {
 	if ($debug){print "$_," for @args};
 	print "\n" if $debug;
 
-	#verify how many arguments we have
+	#verify if the osc message is in our list
 	#-----------------------------------------
-	warn "Bridge warning: ignored osc message without arguments\n", return if ( length($argtypes) == 0 );
-	warn "Bridge warning: ignored osc message with multiple arguments\n", return if ( length($argtypes) > 1 );
+	if (defined $project->{bridge}{OSC}{paths}{$oscpath}) {
 
-	#go on with a single argument osc message
-	#-----------------------------------------
+		# verify how many arguments we have
+		# -----------------------------------------
+		warn "Bridge warning: ignored osc message without arguments\n", return if ( length($argtypes) == 0 );
+		warn "Bridge warning: ignored osc message with multiple arguments\n", return if ( length($argtypes) > 1 );
 
-	#cleanup path
-	$oscpath =~ s(^/)();
-	
-	#split path elements
-	my @pathelements = split '/',$oscpath;
-
-	#element 1 = mixername OR system command
-	my $mixername = shift @pathelements;
-	if ($mixername eq "astrux") {
-		my $command = '';
-		$command .= (shift @pathelements)." " while @pathelements;
-		print "will send command $command\n" if $debug;
-		print $project->execute_command($command);
-		return;
-	}
-
-	#verify that incoming value is within (0,1) range
-	#------------------------------------------------
-	my $value = shift @args;
-	warn "Bridge warning: ignored message without value\n", return if (!defined $value);
-	warn "Bridge warning: OSC values must be within [0,1]\n", $value = 0 if ($value < 0);
-	warn "Bridge warning: OSC values must be within [0,1]\n", $value = 1 if ($value > 1);
-
-	#element 2 = trackname
-	my $trackname = shift @pathelements;
-	
-	if ((exists $project->{mixers}{$mixername}) and (exists $project->{mixers}{$mixername}{channels}{$trackname})) {
-		
-		#element 3 = fx name OR 'aux_to' OR special command
-		my $el3 = shift @pathelements;
-		print " el3 $el3\n" if $debug;
-
-		# if mixer is NONMIXER
-		#-----------------------------------------
-		#osc message must be translated and passed to nonmixer osc port
-		if ($project->{mixers}{$mixername}->is_nonmixer) {
-			#get osc port
-			my $nonoscport = $project->{mixers}{$mixername}{engine}{osc_port};
-
-			if ($el3 eq 'mute') {
-				return unless (($value eq 0)or($value eq 1));
-				&OSC_send("/strip/$trackname/Gain/Mute f $value","localhost",$nonoscport);
-			}
-			elsif ($el3 eq 'solo') {
-				#TODO nonmixer osc solo command
-			}
-			elsif ($el3 eq 'bypass') {
-				#TODO nonmixer osc bypass command
-			}
-			elsif ($el3 eq 'panvol') {
-				# element 4 = fx parameter
-				my $el4 = shift @pathelements;
-				#associate with value
-				print "effect $el3 change param $el4 with value $value on track $trackname\n" if $debug;
-				&OSC_send("/strip/$trackname/Gain/Gain%20(dB) f $value","localhost",$nonoscport) if ($el4 eq 'vol');
-				if ($el4 eq 'pan') {
-					&OSC_send("/strip/$trackname/Mono%20Pan/Pan f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_mono;
-					&OSC_send("/strip/$trackname/Stereo%20balance%20and%20panner/Balance f $value","localhost",$nonoscport) if $project->{mixers}{$mixername}{channels}{$trackname}->is_stereo;
-				}
-				#update current value
-				$project->{bridge}{current_values}{$oscpath} = $value;
-			}
-			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
-				#fx change (LADSPA ID)
-				my $insertID = $el3;
-				#element 4 = fx parameter
-				my $insertparam = shift @pathelements;
-				return unless $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}->is_param_ok($insertparam);
-				#associate with value
-				#get insertname
-				my $insertname = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertID}{name};
-				print "effect $insertID/$insertname change param $insertparam with value $value on track $trackname\n" if $debug;
-				#replace non aplhanum characters with %ascii code
-				$insertname = Utils::encode_my_ascii($insertname);
-				$insertparam = Utils::encode_my_ascii($insertparam);
-				#send osc command to nonmixer
-				&OSC_send("/strip/$trackname/$insertname/$insertparam f $value","localhost",$nonoscport);
-			}
-			elsif ($el3 eq 'aux_to') {
-				# element 4 = auxname
-				my $auxname = shift @pathelements;
-				return unless exists $project->{mixers}{$mixername}{channels}{$auxname};
-				my $letter = $project->{mixers}{$mixername}{channels}{$auxname}{aux_letter};
-				return unless $letter;
-				# element 5 = command
-				my $command = shift @pathelements;
-				return unless $command eq 'vol'; #TODO for now only volume command on track aux send to monitor
-				#send osc command to nonmixer
-				&OSC_send("/strip/$trackname/Aux%20\($letter\)/Gain%20\(dB\) f $value","localhost",$nonoscport);
-			}
+		if ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") {
+			#send osc message if it exists
+			&OSC_send($project->{bridge}{OSC}{paths}{$oscpath}{message},"localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port}) if $project->{bridge}{OSC}{paths}{$oscpath}{message};
 		}
-
-		# if mixer is ECASOUND
-		#-----------------------------------------
-		if ($project->{mixers}{$mixername}->is_ecasound) {
-			#dependin on the third element
-			if ($el3 eq 'mute') {
-				#channel mute
-				print "mute track $trackname\n" if $debug;
-				#send ecasound command
-				$project->{mixers}{$mixername}{engine}->mute_channel($trackname);
-				#update current status in structure
-				$project->{bridge}{current_values}{$oscpath} = $value;
-			}		
-			elsif ($el3 eq 'aux_to') {
-				#channel aux send
-				print "track $trackname aux_to\n" if $debug;
-				#element 4 = channel destination
-				my $destination = shift @pathelements;
-				return unless exists $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination};
-				#element 5 = parameter (pan or volume)
-				my $param = shift @pathelements;
-				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol}->is_param_ok($param);
-				#associate with value
-				warn "empty value on param $param!\n" unless defined $value;
-				print "sending $trackname to $destination with $param $value\n" if $debug;
-				my $position = 1; # this is ok for aux_route
-				#scale to real value
-				my $insert = $project->{mixers}{$mixername}{channels}{$trackname}{aux_route}{$destination}{inserts}{panvol};
-				my $realvalue = $value * ( $insert->{highvalues}[$index-1] - $insert->{lowvalues}[$index-1] ) + $insert->{lowvalues}[$index-1];
-				$project->{mixers}{$mixername}{engine}->update_auxroutefx_value($trackname,$destination,$position,$index,$realvalue);
-				#update current value
-				$project->{bridge}{current_values}{$oscpath} = $value;
-			}
-			elsif (exists $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$el3} ) {
-				#fx change
-				my $insertname = $el3;
-				#element 4 = fx parameter
-				my $insertparam = shift @pathelements;
-				return unless my $index = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}->is_param_ok($insertparam);
-				#associate with value
-				warn "empty value on param $insertparam!\n" unless defined $value;
-				print "effect $insertname change param $insertparam with value $value on track $trackname\n" if $debug;
-				#send ecasound command to EcaFx
-				my $position = $project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname}{nb};
-				#scale to real value
-				my $insert =$project->{mixers}{$mixername}{channels}{$trackname}{inserts}{$insertname};
-				my $realvalue = $value * ( $insert->{highvalues}[$index-1] - $insert->{lowvalues}[$index-1] ) + $insert->{lowvalues}[$index-1];
-				$project->{mixers}{$mixername}{engine}->update_trackfx_value($trackname,$position,$index,$realvalue);
-				#update current value (scaled to real value)
-				$project->{bridge}{current_values}{$oscpath} = $value;
-			}
-			else {
-				warn "unknown osc parameter $el3\n";
-			}
-		} #endif ecasound
-	} #endif mixer and channel is ok
-	else 
-	{
-		print "could not find corresponding info from $oscpath\n"
+		elsif ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") {
+			print "will send $project->{bridge}{OSC}{paths}{$oscpath}{message} via port $project->{bridge}{OSC}{paths}{$oscpath}{port}\n";
+		}
+		elsif ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "midi") {
+			
+		}
 	}
+	else
+	#verify if the osc message is an astrux command
+	#-----------------------------------------
+	{
+		#cleanup path
+		$oscpath =~ s(^/)();
+		
+		#split path elements
+		my @pathelements = split '/',$oscpath;
 
-	#check if we send back information
-	if ($project->{bridge}{OSC}{sendback}) {
-		print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
-		#send back OSC info
-		&OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+		#element 1 = mixername OR system command
+		my $mixername = shift @pathelements;
+		if ($mixername eq "astrux") {
+			my $command = '';
+			$command .= (shift @pathelements)." " while @pathelements;
+			print "will send command $command\n" if $debug;
+			# print $project->execute_command($command);
+			return;
+		}	
 	}
 }
 
