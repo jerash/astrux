@@ -506,25 +506,42 @@ sub process_incoming_osc {
 		warn "Bridge warning: ignored osc message without arguments\n", return if ( length($argtypes) == 0 );
 		warn "Bridge warning: ignored osc message with multiple arguments\n", return if ( length($argtypes) > 1 );
 
-		if ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") {
+		#verify that incoming value is within (0,1) range
+		#------------------------------------------------
+		my $value = shift @args;
+		warn "Bridge warning: ignored message without value\n", return if (!defined $value);
+		warn "Bridge warning: OSC values must be within [0,1]\n", $value = 0 if ($value < 0);
+		warn "Bridge warning: OSC values must be within [0,1]\n", $value = 1 if ($value > 1);
+
+		# send the corresponding message
+		#------------------------------------------------
+		if (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#send osc message if it exists
-			&OSC_send($project->{bridge}{OSC}{paths}{$oscpath}{message},"localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port}) if $project->{bridge}{OSC}{paths}{$oscpath}{message};
+			&OSC_send("$project->{bridge}{OSC}{paths}{$oscpath}{message} f $value","localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port});
 		}
-		elsif ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") {
-			print "will send $project->{bridge}{OSC}{paths}{$oscpath}{message} via port $project->{bridge}{OSC}{paths}{$oscpath}{port}\n";
+		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
+			# send tcp commands one after the other
+			#TODO deal with how to send tcp command and do some eval for the $value/$realvalue
+			print "will send $_ via port $project->{bridge}{OSC}{paths}{$oscpath}{port}\n" for @{$project->{bridge}{OSC}{paths}{$oscpath}{message}};
 		}
-		elsif ($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "midi") {
-			
+		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "midi") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
+			#TODO send midi data on osc receive
 		}
+
+        #check if we send back information
+		#------------------------------------------------
+        if ($project->{bridge}{OSC}{sendback}) {
+                print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
+                #send back OSC info
+                &OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+        }
 	}
 	else
 	#verify if the osc message is an astrux command
 	#-----------------------------------------
-	{
-		#cleanup path
-		$oscpath =~ s(^/)();
-		
+	{		
 		#split path elements
+		$oscpath =~ s(^/)();
 		my @pathelements = split '/',$oscpath;
 
 		#element 1 = mixername OR system command
@@ -533,6 +550,7 @@ sub process_incoming_osc {
 			my $command = '';
 			$command .= (shift @pathelements)." " while @pathelements;
 			print "will send command $command\n" if $debug;
+			#TODO actually send the command on osc receive
 			# print $project->execute_command($command);
 			return;
 		}	
