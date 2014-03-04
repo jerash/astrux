@@ -239,7 +239,7 @@ sub get_plumbing_rules {
 				elsif ($mixer->{$channelname}->is_bus_out or $mixer->{$channelname}->is_send) {
 					my @table;
 					#get the table of hardware output connections
-					if ($mixer->{$channelname}{mode} eq "mono") {
+					if ((defined $mixer->{$channelname}{mode}) and ($mixer->{$channelname}{mode} eq "mono")) {
 						#internal buses are stereo so we want to route both bus outputs to a single hardware port
 						for (1..2) { push @table , $mixer->{$channelname}{connect}[0]; }
 					}
