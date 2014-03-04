@@ -486,7 +486,7 @@ sub process_incoming_osc {
 	my($err, $sender_hostname, $servicename) = getnameinfo($sender, NI_NUMERICHOST);
 	if ($err) { warn "Cannot resolve name - $err"; }
 	#add sender address to known clients
-	else { $project->{bridge}{OSC}{clients}{$sender_hostname} = 1; }
+	elsif (!defined $project->{bridge}{OSC}{clients}{$sender_hostname}) { $project->{bridge}{OSC}{clients}{$sender_hostname} = 1; }
 
 	#parse the osc packet
 	#-----------------------------------------
@@ -534,6 +534,7 @@ sub process_incoming_osc {
                 print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
                 #send back OSC info
                 &OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+                #TODO sendback for each registered client &OSC_send("/$oscpath f $value",$_,$project->{bridge}{OSC}{outport}) for @{keys $project->{bridge}{OSC}{clients}};
         }
 	}
 	else
