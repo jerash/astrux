@@ -270,9 +270,8 @@ sub GenerateFiles {
 		$project->AddMIDIOSCPaths;
 		print " |_Project: creating OSC paths file $project->{bridge}{OSC}{file}\n";
 		
-		#TODO bridge : check for MIDI input memo
-
-		#TODO bridge : check for ecasound
+		#TODO translate osc paths
+		$project->Bridge::translate_osc_paths_to_target;
 
 		#now generate the file
 		$project->{bridge}->save_osc_file;
