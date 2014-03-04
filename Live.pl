@@ -39,11 +39,11 @@ print "Opening : $infile\n";
 Load::LoadStoredProject($infile);
 our $project;
 
-#TODO verify if Project is valid
-
 print "--------- Init Project $project->{globals}{name} ---------\n";
 
-#verify services and servers
+#----------------------------------------------------------------
+# verify services and servers
+#----------------------------------------------------------------
 
 #JACK
 #---------------------------------
@@ -102,6 +102,7 @@ if ($project->{'jack-osc'}{enable}) {
 	print "jack-osc server running with PID $pid_jackosc";
 	$project->{'jack-osc'}{PID} = $pid_jackosc;
 }
+
 #JPMIDI << TODO problem in server mode can't load new midi file....
 #---------------------------------
 # my $pid_jpmidi = qx(pgrep jpmidi);
@@ -135,13 +136,15 @@ if ($project->{a2jmidid}{enable}) {
 	$project->{a2jmidid}{PID} = $pid_a2jmidid;
 }
 
+#----------------------------------------------------------------
 # start mixers
-#---------------------------------
+#----------------------------------------------------------------
 print "Starting mixers engines\n"; 
 $project->StartEngines;
 
+#----------------------------------------------------------------
 # load song chainsetups + dummy
-#--------------------------------
+#----------------------------------------------------------------
 my @songkeys = sort keys %{$project->{songs}};
 print "SONGS :\n";
 foreach my $song (@songkeys) {
@@ -152,7 +155,8 @@ foreach my $song (@songkeys) {
 #load dummy song chainsetup
 $project->{mixers}{players}{engine}->SelectAndConnectChainsetup("players");
 
+#----------------------------------------------------------------
 # Start bridge > wait loop
-#--------------------------------------
+#----------------------------------------------------------------
 print "\n--------- Project $project->{globals}{name} Running---------\n";
 $project->{bridge}->start;
