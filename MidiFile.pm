@@ -88,9 +88,9 @@ sub get_timed_events {
 
   #add first values to array output
   my @absolute_events;
-  my @init1 = (0,"set_tempo",$BPM);
+  my @init1 = (0,"0:0:0","set_tempo",$BPM);
   push @absolute_events , \@init1;
-  my @init2 = (0,"time_signature","$time_numerator/$time_denominator");
+  my @init2 = (0,"0:0:0","time_signature","$time_numerator/$time_denominator");
   push @absolute_events , \@init2;
 
   #now we have only needed elements, we can calculate position in seconds and bars/beats
