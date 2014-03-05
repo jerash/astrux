@@ -551,12 +551,8 @@ sub process_incoming_osc {
 
 		#element 1 = system command
 		my $element1 = shift @pathelements;
-		if ($element1 eq "astrux") {
-			my $command = '';
-			$command .= (shift @pathelements)." " while @pathelements;
-			print "will send command $command\n" if $debug;
-			#TODO actually send the command on osc receive
-			# print $project->execute_command($command);
+		if ($element1 eq "ping") {
+			&OSC_send("/pong f 0",$sender_hostname,$project->{bridge}{OSC}{outport});
 			return;
 		}
 		elsif ($element1 eq "start") {
@@ -573,8 +569,37 @@ sub process_incoming_osc {
 		}
 		elsif ($element1 eq "locate") {
 			return unless $argtypes =~ /^(f|i)$/;
-			my $value = shift @args || shift @pathelements;
+			my $value = shift @args;
 			&OSC_send("/locate f $value","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			return;
+		}
+		elsif ($element1 eq "save") { 
+			$project->SaveTofile("$project->{globals}{name}");
+			return;
+		}
+		elsif ($element1 =~ "status") { 
+			#TODO what to reply on status ?
+			return;
+		}
+		elsif ($element1 =~ "song") { 
+			return unless $argtypes =~ /^(s)$/;
+			my $songname = shift @args;
+			return unless exists $project->{songs}{$songname};
+			#TODO maybe fisrt save previous song state before starting new song
+			print "Starting song $songname";
+			#stop and Goto 0
+			&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port});
+			&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port});
+			#loading players
+			print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($songname);
+			#loading midifile
+			#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
+			#autostart ?
+			&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{songs}{$songname}{song_globals}{autostart};
+			return;
+		}
+		elsif ($element1 =~ "eval") { 
+			eval shift @args;
 			return;
 		}
 	}
