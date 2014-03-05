@@ -599,6 +599,7 @@ sub process_incoming_osc {
 			return;
 		}
 		elsif ($element1 =~ "eval") { 
+			return unless $argtypes =~ /^(s)$/;
 			eval shift @args;
 			return;
 		}
