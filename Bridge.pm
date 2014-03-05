@@ -518,24 +518,28 @@ sub process_incoming_osc {
 		if (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#send osc message if it exists
 			&OSC_send("$project->{bridge}{OSC}{paths}{$oscpath}{message} f $value","localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port});
+			return;
 		}
 		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			# send tcp commands one after the other
 			#TODO deal with how to send tcp command and do some eval for the $value/$realvalue
 			print "will send $_ via port $project->{bridge}{OSC}{paths}{$oscpath}{port}\n" for @{$project->{bridge}{OSC}{paths}{$oscpath}{message}};
+			return;
 		}
 		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "midi") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#TODO send midi data on osc receive
+			return;
 		}
 
-        #check if we send back information
+		#check if we send back information
 		#------------------------------------------------
-        if ($project->{bridge}{OSC}{sendback}) {
-                print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
-                #send back OSC info
-                &OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
-                #TODO sendback for each registered client &OSC_send("/$oscpath f $value",$_,$project->{bridge}{OSC}{outport}) for @{keys $project->{bridge}{OSC}{clients}};
-        }
+		if ($project->{bridge}{OSC}{sendback}) {
+			print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
+			#send back OSC info
+			&OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+			#TODO sendback for each registered client &OSC_send("/$oscpath f $value",$_,$project->{bridge}{OSC}{outport}) for @{keys $project->{bridge}{OSC}{clients}};
+			return;
+		}
 	}
 	else
 	#verify if the osc message is an astrux command
@@ -545,16 +549,34 @@ sub process_incoming_osc {
 		$oscpath =~ s(^/)();
 		my @pathelements = split '/',$oscpath;
 
-		#element 1 = mixername OR system command
-		my $mixername = shift @pathelements;
-		if ($mixername eq "astrux") {
+		#element 1 = system command
+		my $element1 = shift @pathelements;
+		if ($element1 eq "astrux") {
 			my $command = '';
 			$command .= (shift @pathelements)." " while @pathelements;
 			print "will send command $command\n" if $debug;
 			#TODO actually send the command on osc receive
 			# print $project->execute_command($command);
 			return;
-		}	
+		}
+		elsif ($element1 eq "start") {
+			&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			return;
+		}
+		elsif ($element1 eq "stop") {
+			&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			return;
+		}
+		elsif ($element1 eq "zero") {
+			&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			return;
+		}
+		elsif ($element1 eq "locate") {
+			return unless $argtypes =~ /^(f|i)$/;
+			my $value = shift @args || shift @pathelements;
+			&OSC_send("/locate f $value","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			return;
+		}
 	}
 }
 
