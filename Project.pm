@@ -270,7 +270,7 @@ sub GenerateFiles {
 		$project->AddMIDIOSCPaths;
 		print " |_Project: creating OSC paths file $project->{bridge}{OSC}{file}\n";
 		
-		#TODO translate osc paths
+		# translate osc paths
 		$project->Bridge::translate_osc_paths_to_target;
 
 		#now generate the file
