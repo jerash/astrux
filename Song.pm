@@ -103,7 +103,7 @@ sub create_markers_file {
 	$song->{markers_file} = $output_path . "/markers.csv";
 	print " |_Song: creating markers file $song->{markers_file}\n";
 	open FILE,">$song->{markers_file}" or die "$!";
-	print FILE "$_->[0];$_->[1];$_->[2]\n" for @{$song->{markers}};
+	print FILE "$_->[0];$_->[1];$_->[2];$_->[3]\n" for @{$song->{markers}};
 	close FILE;
 }
 

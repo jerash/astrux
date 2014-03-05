@@ -87,47 +87,70 @@ sub get_timed_events {
   print "Song ticks is $TPQN\nStart tempo is $BPM\nStart Time signature is $time_numerator/$time_denominator\n" if $debug;
 
   #add first values to array output
-  my @absolute_seconds_events;
+  my @absolute_events;
   my @init1 = (0,"set_tempo",$BPM);
-  push @absolute_seconds_events , \@init1;
+  push @absolute_events , \@init1;
   my @init2 = (0,"time_signature","$time_numerator/$time_denominator");
-  push @absolute_seconds_events , \@init2;
+  push @absolute_events , \@init2;
 
-  #now we have only needed elements, we can calculate position in seconds
+  #now we have only needed elements, we can calculate position in seconds and bars/beats
   my $current_seconds_position = 0;
-  my $last_tick_change = 0;
-  my $last_seconds_counter = 0;
+  my $last_tempo_tick_change = 0;
+  my $last_tempo_seconds_counter = 0;
+
+  my ($current_ts_bars,$current_ts_beats,$current_ts_ticks) = (0,0,0);
+  my $last_timesignature_tick_change = 0;
+  my ($last_ts_bars,$last_ts_beats,$last_ts_ticks) = (0,0,0);
+
   foreach my $event (@absolute_tick_events) {
     my @info;
+    
     #get current position in seconds
-    ($last_seconds_counter eq 0) ? $current_seconds_position = $event->[1] * $tick_duration : 
-          $current_seconds_position = $last_seconds_counter + (($event->[1] - $last_tick_change) * $tick_duration);
+    ($last_tempo_seconds_counter eq 0) ? $current_seconds_position = $event->[1] * $tick_duration : 
+          $current_seconds_position = $last_tempo_seconds_counter + (($event->[1] - $last_tempo_tick_change) * $tick_duration);
+    
+    #get current position in bar/beats
+      # calculate number of quarter notes since last timesignature change
+      my ($nb_qn, $nb_ticks) = (int (($event->[1] - $last_timesignature_tick_change) / $TPQN), ($event->[1] - $last_timesignature_tick_change) % $TPQN);
+      #from previous time signature, calculate number of bars/beats
+      my ($nb_bars, $nb_beats) = ( int (($nb_qn*($time_denominator / 4)) / $time_numerator) , ($nb_qn*($time_denominator / 4)) % $time_numerator );
+      $current_ts_bars = $last_ts_bars + $nb_bars;
+      $current_ts_beats = $last_ts_beats + $nb_beats;
+      $current_ts_ticks = $last_ts_ticks + $nb_ticks;
+
     #update tick duration and last second counter if we have a new tempo
     if ($event->[0] eq "set_tempo") {
-      $last_tick_change = $event->[1];
-      $last_seconds_counter = $current_seconds_position;
+      #store last change position
+      $last_tempo_tick_change = $event->[1];
+      $last_tempo_seconds_counter = $current_seconds_position;
       #get new tick duration
       $MicrosecondsPerQuarterNote = $event->[2];
       $tick_duration = &get_tick_duration($TPQN,$MicrosecondsPerQuarterNote);  
       $BPM = sprintf "%.1f", ( 60000000 / $MicrosecondsPerQuarterNote ) * ( $time_denominator / 4 );
-      @info = ($current_seconds_position,$event->[0],$BPM);
+      @info = ($current_seconds_position,"$current_ts_bars:$current_ts_beats:$current_ts_ticks",$event->[0],$BPM);
     }
+
     #export marker
     elsif ($event->[0] eq "marker") {
-      @info = ($current_seconds_position,$event->[0],$event->[2]);
+      @info = ($current_seconds_position,"$current_ts_bars:$current_ts_beats:$current_ts_ticks",$event->[0],$event->[2]);
     }
+
     #update time signature
     elsif ($event->[0] eq "time_signature") {
+      #store last change position
+      $last_timesignature_tick_change = $event->[1];
+      ($last_ts_bars,$last_ts_beats,$last_ts_ticks) = ($current_ts_bars,$current_ts_beats,$current_ts_ticks);
+      #get new time signature
       $time_numerator = $event->[2];
       $time_denominator = 2**($event->[3]);
-      @info = ($current_seconds_position,$event->[0],"$time_numerator/$time_denominator");
+      @info = ($current_seconds_position,"$current_ts_bars:$current_ts_beats:$current_ts_ticks",$event->[0],"$time_numerator/$time_denominator");
     }
     else {
       die "oups what is $event->[0] doing here ?";
     }
-    push @absolute_seconds_events , \@info;
+    push @absolute_events , \@info;
   }
-  return @absolute_seconds_events;
+  return @absolute_events;
 }
 
 sub dump_timed_events {
