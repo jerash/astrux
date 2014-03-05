@@ -243,6 +243,7 @@ sub GenerateFiles {
 		#create tempo/timebase/markers file
 		my $output_path = $project->{globals}{base_path}."/songs/$songname";
 		$song->create_markers_file($output_path);
+		$song->create_tempomap_file($output_path);
 	}
 
 	#----------------PLUMBING FILE------------------------

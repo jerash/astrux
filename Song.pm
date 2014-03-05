@@ -107,6 +107,53 @@ sub create_markers_file {
 	close FILE;
 }
 
+sub create_tempomap_file {
+	my $song = shift;
+	my $output_path = shift;
+
+	my @file_lines = ();
+	my ($last_change,$nb_bars) = (0,0);
+	my ($current_tempo,$current_timesignature);
+	foreach my $line (@{$song->{markers}}) {
+		# print "---$line";
+		my @parts = @{$line};
+		my @times = split(":",$parts[1]);
+		if ($parts[2] eq "set_tempo") {
+			warn "SONG WARNING: tempo changes outside beginning of measure is incompatible with klick, may be inaccurate\n"
+				if (($times[1] ne 0)or($times[2] ne 0));
+			$current_tempo = $parts[3] if $times[0] eq 0;
+			$nb_bars = $times[0] - $last_change;
+			push @file_lines , "$nb_bars $current_tempo" if $times[0] ne 0;
+			$current_tempo = $parts[3] if $times[0] ne 0;
+			$last_change = $times[0];
+		}
+		elsif ($parts[2] eq "time_signature") {
+			warn "SONG WARNING: time signature changes outside beginning of measure is incompatible with klick, may be inaccurate\n"
+				if (($times[1] ne 0)or($times[2] ne 0));
+			$current_timesignature = $parts[3] if $times[0] eq 0;
+			$nb_bars = $times[0] - $last_change;
+			push @file_lines , "$nb_bars $current_timesignature $current_tempo" if $times[0] ne 0;
+			$current_timesignature = $parts[3] if $times[0] ne 0;
+			$last_change = $times[0];
+		}
+	}
+	#TODO change klick to simple if we don't have bars (add new property)
+	if (defined $current_tempo and defined $current_timesignature and $#file_lines eq -1) {
+		#we're missing song length in bars, try to get it from any last event
+		my $last_nb = $#{$song->{markers}};
+		my $last = ${$song->{markers}}[$last_nb];
+		my @bars = split(":",$last->[1]);
+		push @file_lines , "$bars[0] $current_timesignature $current_tempo" if $bars[0] ne 0;
+	}
+	return unless $#file_lines ge 0; 
+
+	$song->{klick_file} = $output_path . "/tempo.map";
+	print " |_Song: creating tempomap(klick) file $song->{klick_file}\n";
+	open FILE,">$song->{klick_file}" or die "$!";
+	print FILE "$_\n" for @file_lines;
+	close FILE;
+}
+
 ###########################################################
 #
 #			ECASOUND functions
