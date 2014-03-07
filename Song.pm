@@ -100,6 +100,7 @@ sub create_markers_file {
 	my $song = shift;
 	my $output_path = shift;
 
+	return unless exists $song->{markers};
 	$song->{markers_file} = $output_path . "/markers.csv";
 	print " |_Song: creating markers file $song->{markers_file}\n";
 	open FILE,">$song->{markers_file}" or die "$!";

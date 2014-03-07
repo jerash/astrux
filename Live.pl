@@ -99,6 +99,7 @@ if ($project->{'jack-osc'}{enable}) {
 		sleep 1;
 		$pid_jackosc = qx(pgrep jack-osc);
 	}
+	#TODO verify jack-osc is running on the expected port
 	print "jack-osc server running with PID $pid_jackosc";
 	$project->{'jack-osc'}{PID} = $pid_jackosc;
 }
@@ -109,7 +110,7 @@ my $pid_klick = qx(pgrep klick);
 if ($project->{klick}{enable}) {
 	if (!$pid_klick) {
 		print "klick is not running, starting it\n";
-		my $command = "klick -n klick -o $project->{klick}{osc_port} -t -T 2>&1 &";
+		my $command = "klick -o $project->{klick}{osc_port} -t -T 2>&1 &";
 		system ($command);
 		sleep 1;
 		$pid_klick = qx(pgrep klick);
