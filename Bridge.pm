@@ -337,11 +337,8 @@ sub save_osc_file {
 
 	my $filepath = $bridge->{OSC}{file};
 	open FILE, ">$filepath" or die $!;
-	
 	#add lines
-	foreach my $oscpath (sort keys %{$bridge->{OSC}{paths}}) {
-		print FILE "$oscpath;$bridge->{OSC}{paths}{$oscpath}\n";
-	}
+	print FILE "$_\n" for (sort keys %{$bridge->{OSC}{paths}});
 	close FILE;
 }
 
@@ -441,6 +438,42 @@ sub ScaleToMidiValue {
 sub SendMidiCC {
 	my $outCC = shift;
 	return MIDI::ALSA::output(MIDI::ALSA::SND_SEQ_EVENT_CONTROLLER,'','',MIDI::ALSA::SND_SEQ_QUEUE_DIRECT,0.0,\@alsa_output,0,$outCC);
+}
+
+###########################################################
+#
+#		 BRIDGE functions
+#
+###########################################################
+
+sub load_new_song {
+	my $song = shift;
+
+	# TODO maybe fisrt save previous song state before starting new song
+	print "Starting song $song->{friendly_name}\n";
+	
+	# stop and Goto 0
+	&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port});
+	&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port});
+	# &OSC_send("/klick/metro/stop i 0","localhost",$project->{klick}{osc_port});
+	
+	# reconfigure klick
+	&OSC_send("/klick/metro/set_type s $song->{metronome_type}","localhost",$project->{klick}{osc_port});
+	&OSC_send("/klick/map/load_file s $song->{klick_file}","localhost",$project->{klick}{osc_port}) if $song->{metronome_type} eq "map";
+	if ($song->{metronome_type} eq "simple") {
+		&OSC_send("/klick/simple/set_tempo f $song->{metronome_tempo}","localhost",$project->{klick}{osc_port});
+		my @meters = split '/' , $song->{metronome_timesignature};
+		&OSC_send("/klick/simple/set_meter ii $meters[0] $meters[1]","localhost",$project->{klick}{osc_port});
+	}
+
+	# load players
+	print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($song->{name});
+	
+	# load midifile
+	# TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
+	
+	#autostart ?
+	&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $song->{autostart};
 }
 
 ###########################################################
@@ -585,17 +618,7 @@ sub process_incoming_osc {
 			return unless $argtypes =~ /^(s)$/;
 			my $songname = shift @args;
 			return unless exists $project->{songs}{$songname};
-			#TODO maybe fisrt save previous song state before starting new song
-			print "Starting song $songname";
-			#stop and Goto 0
-			&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port});
-			&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port});
-			#loading players
-			print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($songname);
-			#loading midifile
-			#TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
-			#autostart ?
-			&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{songs}{$songname}{song_globals}{autostart};
+			&load_new_song($project->{songs}{$songname});
 			return;
 		}
 		elsif ($element1 =~ "eval") { 
