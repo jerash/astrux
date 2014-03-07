@@ -332,7 +332,7 @@ sub SaveToFile {
 		$hash{TCP}{socket} = delete $project->{bridge}{TCP}{socket};
 		$hash{TCP}{events} = delete $project->{bridge}{TCP}{events};
 	}
-	if (defined $project->{OSC}{socket}) {
+	if (defined $project->{bridge}{OSC}{socket}) {
 		$hash{OSC}{socket} = delete $project->{bridge}{OSC}{socket};
 		$hash{OSC}{object} = delete $project->{bridge}{OSC}{object};
 		$hash{OSC}{events} = delete $project->{bridge}{OSC}{events};
