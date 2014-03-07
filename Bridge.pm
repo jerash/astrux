@@ -565,25 +565,26 @@ sub process_incoming_osc {
 		if (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#send osc message if it exists
 			&OSC_send("$project->{bridge}{OSC}{paths}{$oscpath}{message} f $value","localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port});
-			return;
 		}
 		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			# send tcp commands one after the other
 			#TODO deal with how to send tcp command and do some eval for the $value/$realvalue
 			print "will send $_ via port $project->{bridge}{OSC}{paths}{$oscpath}{port}\n" for @{$project->{bridge}{OSC}{paths}{$oscpath}{message}};
-			return;
 		}
 		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "midi") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#TODO send midi data on osc receive
-			return;
 		}
 
-		#check if we send back information
+		# update current value
+		#------------------------------------------------
+		$project->{bridge}{current_values}{$oscpath} = $value;
+
+		# check if we send back information
 		#------------------------------------------------
 		if ($project->{bridge}{OSC}{sendback}) {
 			print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
 			#send back OSC info
-			&OSC_send("/$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport});
+			&OSC_send("$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport}) unless $sender_hostname eq $project->{bridge}{OSC}{ip};
 			#TODO sendback for each registered client &OSC_send("/$oscpath f $value",$_,$project->{bridge}{OSC}{outport}) for @{keys $project->{bridge}{OSC}{clients}};
 			return;
 		}
@@ -668,7 +669,7 @@ sub OSC_send {
     #my $oscpacket $osc->bundle(time, [@specs], [@specs2], ...);
 	my @specs = split(' ',$data);
 	my $oscpacket = $osc->message(@specs);
-	print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
+	# print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
 
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
