@@ -73,7 +73,7 @@ print "
 #------------Create project files------------------------
 
 $project->GenerateFiles;
-$project->SaveTofile;
+$project->SaveToFile;
 
 print " 
 ---------------------------
