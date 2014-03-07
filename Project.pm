@@ -315,7 +315,7 @@ sub SaveDumperFile {
 	print " |_Project: creating dumper file $outfile\n";
 }
 
-sub SaveTofile {
+sub SaveToFile {
 	my $project = shift;
 
 	print "Project: saving project\n";
@@ -326,16 +326,16 @@ sub SaveTofile {
 	$outfile = $project->{globals}{base_path}."/".$outfile . ".cfg";
 
 	# remove all filehandles from structure (storable limitation)
-	#TODO also remove AE containing sub (CODE)
+	# also remove AE containing sub (CODE)
 	my %hash;
-	if (defined $project->{TCP}{socket}) {
-		$hash{TCP}{socket} = delete $project->{TCP}{socket};
-		$hash{TCP}{events} = delete $project->{TCP}{events};
+	if (defined $project->{bridge}{TCP}{socket}) {
+		$hash{TCP}{socket} = delete $project->{bridge}{TCP}{socket};
+		$hash{TCP}{events} = delete $project->{bridge}{TCP}{events};
 	}
 	if (defined $project->{OSC}{socket}) {
-		$hash{OSC}{socket} = delete $project->{OSC}{socket};
-		$hash{OSC}{object} = delete $project->{OSC}{object};
-		$hash{OSC}{events} = delete $project->{OSC}{events};
+		$hash{OSC}{socket} = delete $project->{bridge}{OSC}{socket};
+		$hash{OSC}{object} = delete $project->{bridge}{OSC}{object};
+		$hash{OSC}{events} = delete $project->{bridge}{OSC}{events};
 	}
 	foreach my $mixer (keys $project->{mixers}) {
 		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{engine}{socket}; 
@@ -343,6 +343,7 @@ sub SaveTofile {
 
 	#Storable : create a project file, not working with opened sockets
 	use Storable;
+	# $Storable::forgive_me = 1; #the fatal message is turned in a warning and some meaningless string is stored instead
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $project, $outfile;
 
@@ -350,13 +351,13 @@ sub SaveTofile {
 
 	# store values back
 	if (defined $hash{TCP}{socket}) {
-		$project->{TCP}{socket} = delete $hash{TCP}{socket};
-		$project->{TCP}{events} = delete $hash{TCP}{events};
+		$project->{bridge}{TCP}{socket} = delete $hash{TCP}{socket};
+		$project->{bridge}{TCP}{events} = delete $hash{TCP}{events};
 	}
 	if (defined $hash{OSC}{socket}) {
-		$project->{OSC}{socket} = delete $hash{OSC}{socket};
-		$project->{OSC}{object} = delete $hash{OSC}{object};
-		$project->{OSC}{events} = delete $hash{OSC}{events};
+		$project->{bridge}{OSC}{socket} = delete $hash{OSC}{socket};
+		$project->{bridge}{OSC}{object} = delete $hash{OSC}{object};
+		$project->{bridge}{OSC}{events} = delete $hash{OSC}{events};
 	}
 	foreach my $mixer (keys $hash{mixers}) {
 		$project->{mixers}{$mixer}{engine}{socket} = delete $hash{mixers}{$mixer}; 
