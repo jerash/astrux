@@ -237,17 +237,11 @@ sub get_plumbing_rules {
 				# --- BUS OUTPUT --- SEND AUXES ---
 
 				elsif ($mixer->{$channelname}->is_bus_out or $mixer->{$channelname}->is_send) {
-					my @table;
 					#get the table of hardware output connections
-					if ((defined $mixer->{$channelname}{mode}) and ($mixer->{$channelname}{mode} eq "mono")) {
-						#internal buses are stereo so we want to route both bus outputs to a single hardware port
-						for (1..2) { push @table , $mixer->{$channelname}{connect}[0]; }
-					}
-					else {
-						#get the normal table
-						@table = @{$mixer->{$channelname}{connect}};
-					}
-					#add the route to master
+					my @table = @{$mixer->{$channelname}{connect}};
+					#specific case for monowed outputs, force only 1 output channel for correct plumbing
+					$channels = 1 if ((defined $mixer->{$channelname}{mode}) and ($mixer->{$channelname}{mode} eq "mono"));
+					#add the routes to outputs
 					for my $i (1..$channels) {
 						my $plumbout;
 						$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"

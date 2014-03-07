@@ -319,7 +319,9 @@ sub is_stereo {
 sub is_summed_mono {
 	#applicable to outputs only
 	my $io = shift;
-	return 1 if (($io->{channels} eq "2")and($io->{mode} eq "mono"));
+	if (defined $io->{mode}) {
+		return 1 if (($io->{channels} eq "2")and($io->{mode} eq "mono"));
+	}
 	return 0;	
 }
 

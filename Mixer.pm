@@ -362,7 +362,6 @@ sub BuildEcaMainMixer {
 	$mixer->{current}{channel} = $mixer->{engine}->get_selected_channel;
 	#udpate mixer info with curretly selected effect
 	$mixer->{current}{effect} = $mixer->{engine}->get_selected_effect;
-
 }
 
 sub BuildEcaSubmix {
@@ -402,7 +401,6 @@ sub BuildEcaSubmix {
 
 	#add output chains to ecasound info
 	$mixer->{engine}{o_chains} = \@o_chaintab if @o_chaintab;
-
 }
 
 sub CreateEcaPlayers {
@@ -646,6 +644,15 @@ sub CreateNonFiles {
 			$id = &get_next_non_id;
 			#Meter_Module 0x5 create :is_default 1 :chain 0x2 :active 1
 			$line = "\tMeter_Module $id create :is_default 1 :chain $chainid{$channelname} :active 1";
+			push @snapshot,$line;
+		}
+
+		if ($channel->is_summed_mono) {
+			#Stereo to mono plugin module
+			#generate a 0x id
+			$id = &get_next_non_id;
+			# Plugin_Module 0x91 create :plugin_id 1071 :plugin_ins 2 :plugin_outs 1 :is_default 0 :chain 0x5F :active 1
+			$line = "\tPlugin_Module $id create :plugin_id 1071 :plugin_ins 2 :plugin_outs 1 :is_default 0 :chain $chainid{$channelname} :active 1";
 			push @snapshot,$line;
 		}
 

@@ -374,6 +374,17 @@ sub LoadFromFile {
 	$project = retrieve($infile);
 }
 
+sub RemoveOldFiles {
+	my $project = shift;
+
+	my $old_statefile = $project->{globals}{base_path} ."/". $project->{globals}{output_path} . "/$project->{globals}{name}.state";
+	if (-e $old_statefile) {
+		print "deleting old state file $old_statefile\n";
+		unlink $old_statefile;
+	}
+	warn "Old state file $old_statefile could not be deleted\n" if -e $old_statefile;	
+}
+
 ###########################################################
 #
 #		 PROJECT LIVE functions

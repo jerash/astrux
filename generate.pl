@@ -70,6 +70,10 @@ print "
    Project Generation OK
 ---------------------------\n\n";
 
+#----------Remove old project files------------------
+
+$project->RemoveOldFiles;
+
 #------------Create project files------------------------
 
 $project->GenerateFiles;
