@@ -82,14 +82,18 @@ sub start {
 	#catch signals
 	#--------------------------------------
 	$SIG{INT} = sub { 
-		print "\nSIGINT, saving state\n";
+		print "\nSIGINT, saving state file\n";
 		$bridge->save_state_file($project->{bridge}{statefile});
 		exit(0);
 	};
 
 	#reload state
-	$bridge->reload_state_file($project->{bridge}{statefile});
-
+	if (-e $project->{bridge}{statefile}){
+		$bridge->reload_state_file($project->{bridge}{statefile});
+	}
+	else {
+		$bridge->reload_current_state;
+	}
 	#main loop waiting
 	#--------------------------------------
 	my $cv = AE::cv;
@@ -177,12 +181,12 @@ sub create_midiosc_paths {
 
 			if ($project->{mixers}{$mixername}->is_nonmixer) {
 				# Add gain control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0,$engine,$protocol,$port);
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0.921,$engine,$protocol,$port);
 				# Add pan control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0,$engine,$protocol,$port);
+				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0.5,$engine,$protocol,$port);
 				#add aux routes
 				foreach my $aux (@auxes) {
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
+					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0.921,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
 				}
 			}
 		}
@@ -244,9 +248,11 @@ sub translate_osc_paths_to_target {
 			}
 			elsif ($el3 eq 'solo') {
 				#TODO nonmixer osc solo command
+				$project->{bridge}{OSC}{paths}{$oscpath}{message} = "/dummy";
 			}
 			elsif ($el3 eq 'fxbypass') {
 				#TODO nonmixer osc fxbypass command
+				$project->{bridge}{OSC}{paths}{$oscpath}{message} = "/dummy";
 			}
 			elsif ($el3 eq 'panvol') {
 				# element 4 = fx parameter
@@ -368,10 +374,18 @@ sub reload_state_file {
 	my $infile = shift;
 	return unless defined $infile;	
 	return unless -e $infile;
-	print "Loading previous state\n";
+	print "Loading previous state from file $infile\n";
 	use Storable;
 	#load state file
 	$bridge->{current_values} = retrieve($infile);
+	#send values to services/servers
+	foreach my $oscpath (keys %{$bridge->{current_values}}){
+		&OSC_send("$oscpath f $bridge->{current_values}{$oscpath}",$bridge->{OSC}{ip},$bridge->{OSC}{inport});
+	}
+}
+sub reload_current_state {
+	my $bridge = shift;
+	print "Sending current state\n";
 	#send values to services/servers
 	foreach my $oscval (keys %{$bridge->{current_values}}){
 		&OSC_send("$oscval f $bridge->{current_values}{$oscval}",$bridge->{OSC}{ip},$bridge->{OSC}{inport});
@@ -607,7 +621,11 @@ sub process_incoming_osc {
 			return;
 		}
 		elsif ($element1 eq "save") { 
-			$project->SaveTofile("$project->{globals}{name}");
+			my $element2 = shift @pathelements;
+			return unless $element2;
+			$project->SaveDumperFile(".live") if ($element2 =~ /^dumper|all$/);
+			$project->SaveToFile if ($element2 =~ /^project|all$/);
+			$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($element2 =~ /^state|all$/);
 			return;
 		}
 		elsif ($element1 =~ "status") { 
@@ -619,6 +637,13 @@ sub process_incoming_osc {
 			my $songname = shift @args;
 			return unless exists $project->{songs}{$songname};
 			&load_new_song($project->{songs}{$songname});
+			return;
+		}
+		elsif ($element1 =~ "reload") { 
+			my $element2 = shift @pathelements;
+			return unless $element2;
+			$project->{bridge}->reload_current_state if $element2 eq "state";
+			$project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $element2 eq "statefile";
 			return;
 		}
 		elsif ($element1 =~ "eval") { 
@@ -643,7 +668,7 @@ sub OSC_send {
     #my $oscpacket $osc->bundle(time, [@specs], [@specs2], ...);
 	my @specs = split(' ',$data);
 	my $oscpacket = $osc->message(@specs);
-	# print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
+	print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
 
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
