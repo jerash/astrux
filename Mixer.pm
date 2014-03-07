@@ -575,7 +575,7 @@ sub CreateNonFiles {
 			if ($channel->is_stereo);
 		push @snapshot,$line;
 		
-		if ($mixer->{engine}{addpregain}) {
+		if ((defined $mixer->{engine}{addpregain}) and ($mixer->{engine}{addpregain})) {
 			#Gain module (default)
 			#generate a 0x id
 			$id = &get_next_non_id;
