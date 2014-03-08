@@ -92,19 +92,19 @@ sub get_plumbing_rules {
 					$main_out = $channelname;
 				}
 			}
-			# then all submix inputs strips need connect to submix output strip
+			# then create routes
 			foreach my $channelname (keys %{$mixer}) {
 				if ( $mixer->{$channelname}->is_submix_in ) {
 
+					#get number of channels
 					my $channels = $mixer->{$channelname}{channels};
 					#for each channel
 					for my $i (1..$channels) {
 						
 						my $plumbin;
 						my $plumbout;
-						
+						# all submix inputs strips need connect to submix output strip
 						if ($project->{mixers}{$mixername}->is_nonmixer) {
-
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}."/$channelname:out-$i"
 								if ($mixer->{$channelname}{group} eq '');
 							$plumbin = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/out-$i"
@@ -120,6 +120,19 @@ sub get_plumbing_rules {
 						}
 						#add rule
 						push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+
+						#get the table of hardware input connections
+						my @table = @{$mixer->{$channelname}{connect}};
+						# connect submix inputs if they are mentioned
+						if (@table){ 
+							$plumbin = $table[$i-1];
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}."/$channelname:in-$i"
+								if ($mixer->{$channelname}{group} eq '');
+							$plumbout = $project->{mixers}{$mixername}{engine}{name}." \\(".$mixer->{$channelname}{group}."\\):$channelname/in-$i"
+								if ($mixer->{$channelname}{group} ne '');
+							#add rule
+							push (@rules , "(connect \"$plumbin\" \"$plumbout\")") if $plumbin;
+						}
 					}
 				}
 				# elsif ( $mixer->{$channelname}->is_submix_out ) {
