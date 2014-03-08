@@ -240,6 +240,30 @@ type = sampler
 filename = drums.lscp
 ```
 
+OSC server commands
+======
+
+/ping
+/start
+/stop
+/zero
+/locate f|i [position in seconds]
+/save/dumper
+/save/project
+/save/state
+/save/all
+/status (do nothing)
+/song s [songname]
+/reload/state
+/reload/statefile
+/clic/start
+/clic/stop
+/clic/sound i [0..3]
+/clic/sound ss [filename1] [filename2]
+/clic/tempo f|i [tempo]
+/eval s [perl code]
+
+
 Goals
 ======
 
@@ -275,16 +299,16 @@ V0.1 (12/02/2014)
 - PLAYERS : with ecasound
 - MIXERS : with ecasound or non-mixer
 
-V0.2
+V0.2 (currently running)
 -----
 - MIDI/OSC/TCP bridge live control
 - optionally generated touchosc presets
-- SAMPLER : clic, drums
+- Metronome : klick with timebase master mode and jack control
+- SAMPLER : drums
 - MIDIPLAY : jpmidi v0.3
 
 V0.3
 -----
-- jpmidi with master mode (jack control tempo/meters), or klick
 - video player (xjadeo)
 - automate fx rack / plugin host
 - realtime cpu/memory check (trigger alarms)
