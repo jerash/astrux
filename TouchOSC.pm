@@ -111,13 +111,12 @@ sub save_touchosc_files {
 	my $options = \%{$project->{touchosc}};
 
 	foreach my $mixername (keys $project->{mixers}) {
-		print " |_Project: creating TouchOSC presets for mixer $mixername\n";
 
 		#get the touchosc presets
 		my $touchoscpresets = TouchOSC::get_touchosc_presets($project->{mixers}{$mixername},$options);
 
-		#save temporary xml file
 		foreach my $presetname (keys %{$touchoscpresets}) {
+			#save temporary xml file
 			my $preset = $touchoscpresets->{$presetname};
 			open FILE , ">/tmp/index.xml";
 			print FILE $preset->{header};
@@ -160,13 +159,15 @@ sub save_touchosc_files {
 
 # TODO if not exist plugin preset, make default
 
+# rules pack = monitormix, monitorfx, main, song, markers, livescreen, system
+
 # --- monitor layout for iphone size ---
-# { volume mix pages } { fx  pages        }
-# { auxnam pagenam  M} { fxname pagenam   }
-# { | | | | | | | | P} {  O  O  O  O    B }
-# { | | | | | | | | |} {  O  O  O  O    G }
-# { | | | | | | | | |} {  O  O  O  O    G }
-# { - - - - - - - - -} {  -  -  -  -      }
+# [ monitormix pages ] [ monitorfx pages  ] [ song      pages  ] [ markers  pages   ] [ livescreen pages ]
+# { auxnam pagenam  M} { fxname pagenam   } { -- B -- B  start } {                  } { start stop zero  }
+# { | | | | | | | | P} {  O  O  O  O    B } { -- B -- B  stop  } {   vertical       } { time bars/beats  }
+# { | | | | | | | | |} {  O  O  O  O    G } { -- B -- B  zero  } {   list of        } {  markers name    }
+# { | | | | | | | | |} {  O  O  O  O    G } { -- B -- B  time  } {    markers       } { - - - - - - -    }
+# { - - - - - - - - -} {  -  -  -  -      } { -- B -- B  bars  } {                  } { ________________ }
 
 # --- main layout for ipad size ---
 #	
@@ -176,120 +177,155 @@ sub get_touchosc_presets {
 	my $options = shift; #hashref containing layout options
 
 	my %monitor_presets;
-	my @inputnames;
-	my @auxnames;
-	my $mainout;
-	my $submixout;
 	
 	# --- GET INPUTS, AUXES, and MAIN OUT ---
-	@inputnames = $mixer->get_inputs_list; #main hardware in + submix ins
-	@auxnames = $mixer->get_auxes_list; #will build preset for each aux (hardware out + fx send loop)
-	$mainout = $mixer->get_main_out if $mixer->is_main; #will build preset for mainout (hardware out)
-	$submixout = $mixer->get_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
+	my @inputnames = $mixer->get_inputs_list; #main hardware in + submix ins
+	my @auxnames = $mixer->get_auxes_list; #will build preset for each aux (hardware out + fx send loop)
+	my $mainout = $mixer->get_main_out if $mixer->is_main; #will build preset for mainout (hardware out)
+	my $submixout = $mixer->get_submix_out if $mixer->is_submix; #will build preset for submixout (submix out)
 
-	# get layout dimensions
-	my @size = $layouts->{$options->{layout_size}};
-	my $max_channels_faders_per_page = int (($size[0] - 53) / 53);
-	use POSIX qw(ceil);
-	my $mix_pages_number = ceil( $#inputnames/$max_channels_faders_per_page );
-
-	#build mix preset for each aux
+	#build presets for each aux
 	#------------------------------
 	foreach my $auxname (@auxnames) {
-		# create the hashref 
+		
+		if ( (!defined $mixer->{channels}{$auxname}{touchosc_pages}) or ($mixer->{channels}{$auxname}{touchosc_pages} eq '') ) {
+			warn "TouchOSC error : could not find necessary info for channel $auxname";
+			next;
+		}
+
+		print " |_TouchOSC: creating preset for aux $auxname in mixer $mixer->{engine}{name}\n";
+
+		# add aux preset in the hashref 
 		$monitor_presets{$auxname} = TouchOSC->new($options);
+
+		# get layout dimensions # TODO move this to each channel
+		my @layout_size = $layouts->{$options->{layout_size}};
+		use POSIX qw(ceil);
 
 		my $control;
 		my $color;
 		my $control_index = 0;
-		#create the mix pages with volumes control
-		for my $pagenumber (1..$mix_pages_number) {
-			#add volume faders page(s)
-			$monitor_presets{$auxname}->add_page("Mix$pagenumber");
-			print " | |_adding page Mix$pagenumber for aux output $auxname\n";
-	
-			#for each input channel, add a volume control
-			for my $nb (0..($max_channels_faders_per_page-1)) {
-				#get inputname from list of inputs
-				my $inputname = $inputnames[$control_index];
-				#get input's mixer group
-				$color = &get_group_color($mixer->{channels}{$inputname}{group});
-				# add input volume control fader
-				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$inputname");
-				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),20);
+
+		if ($mixer->{channels}{$auxname}{touchosc_pages} =~ "monitormix") {
+
+			# create the mix pages with volume control
+			#------------------------------------------
+			my $max_channels_faders_per_page = int (($layout_size[0] - 53) / 53);
+			my $mix_pages_number = ceil( $#inputnames/$max_channels_faders_per_page );
+
+			for my $pagenumber (1..$mix_pages_number) {
+				#add volume faders page(s)
+				$monitor_presets{$auxname}->add_page("Mix$pagenumber");
+				print " | |_adding page Mix$pagenumber\n";
+		
+				#for each input channel, add a volume control
+				for my $nb (0..($max_channels_faders_per_page-1)) {
+					#get inputname from list of inputs
+					my $inputname = $inputnames[$control_index];
+					#get input's mixer group
+					$color = &get_group_color($mixer->{channels}{$inputname}{group});
+					# add input volume control fader
+					$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","vol_fader","vol_$inputname");
+					$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),20);
+					$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
+					$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
+					$control->set_control_name("vol_$inputname");
+					$control->set_control_color($color);
+					$control->set_control_oscpath("/$mixer->{engine}{name}/$inputname/aux_to/$auxname/vol");
+					#add input label
+					$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","label_$inputname");
+					$control->set_control_name("label_$inputname");
+					$control->set_control_color($color);
+					$control->set_label_text("$inputname");
+					$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),0);
+					$control->set_control_oscpath("/dummy");
+					#stop if we have done all inputs
+					last if ++$control_index > $#inputnames;
+				}
+				#add aux master volume fader
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
+				$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,20);
 				$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 				$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
-				$control->set_control_name("vol_$inputname");
-				$control->set_control_color($color);
-				$control->set_control_oscpath("/$mixer->{engine}{name}/$inputname/aux_to/$auxname/vol");
-				#add input label
-				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","track_label","label_$inputname");
-				$control->set_control_name("label_$inputname");
-				$control->set_control_color($color);
-				$control->set_label_text("$inputname");
-				$control->set_control_position(2+53*($control_index-(($pagenumber-1)*$max_channels_faders_per_page)),0);
+				$control->set_control_name("vol_$auxname");
+				$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/vol");
+				#add aux master input label
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","label_$auxname");
+				$control->set_control_name("label_$auxname");
+				$control->set_label_text("Volume");
+				$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,0);
 				$control->set_control_oscpath("/dummy");
-				#stop if we have done all inputs
-				last if ++$control_index > $#inputnames;
+				#add aux master pan rotary
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
+				$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,176);
+				$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
+				$control->set_control_minmax(0,100) if $mixer->is_ecasound;
+				$control->set_control_name("pan_$auxname");
+				$control->set_control_color("orange");
+				$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/pan");
+				#add aux master mute label
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
+				$control->set_control_name("mutel_$auxname");
+				$control->set_label_text("mute");
+				$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,243);
+				$control->set_control_oscpath("/dummy");
+				#add aux master mute button
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
+				$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,227);
+				$control->set_control_minmax(0,1);
+				$control->set_control_name("mute_$auxname");
+				$control->set_control_color("orange");
+				$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/mute");
+				#add page label
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","monitor_label","label1_$auxname");
+				$control->set_control_name("label1_$auxname");
+				$control->set_label_text("$auxname");
+				$control->set_control_position(0,230);
+				$control->set_control_oscpath("/dummy");
+				#add page name
+				$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","group_label","label2_$auxname");
+				$control->set_control_name("label2_$auxname");
+				$control->set_label_text("Mix$pagenumber/$mix_pages_number");
+				$control->set_control_position(190,230);
+				$control->set_control_oscpath("/dummy");
 			}
-			#add aux master volume fader
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
-			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,20);
-			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
-			$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
-			$control->set_control_name("vol_$auxname");
-			$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/vol");
-			#add aux master input label
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","label_$auxname");
-			$control->set_control_name("label_$auxname");
-			$control->set_label_text("Volume");
-			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,0);
-			$control->set_control_oscpath("/dummy");
-			#add aux master pan rotary
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
-			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,176);
-			$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
-			$control->set_control_minmax(0,100) if $mixer->is_ecasound;
-			$control->set_control_name("pan_$auxname");
-			$control->set_control_color("orange");
-			$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/panvol/pan");
-			#add aux master mute label
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
-			$control->set_control_name("mutel_$auxname");
-			$control->set_label_text("mute");
-			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,243);
-			$control->set_control_oscpath("/dummy");
-			#add aux master mute button
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
-			$control->set_control_position($layouts->{$monitor_presets{$auxname}{layout_size}}-53,227);
-			$control->set_control_minmax(0,1);
-			$control->set_control_name("mute_$auxname");
-			$control->set_control_color("orange");
-			$control->set_control_oscpath("/$mixer->{engine}{name}/$auxname/mute");
-			#add page label
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","monitor_label","label1_$auxname");
-			$control->set_control_name("label1_$auxname");
-			$control->set_label_text("$auxname");
-			$control->set_control_position(0,230);
-			$control->set_control_oscpath("/dummy");
-			#add page name
-			$control = $monitor_presets{$auxname}->add_control("Mix$pagenumber","group_label","label2_$auxname");
-			$control->set_control_name("label2_$auxname");
-			$control->set_label_text("Mix$pagenumber/$mix_pages_number");
-			$control->set_control_position(190,230);
-			$control->set_control_oscpath("/dummy");
 		}
-		#add fx inserts page(s) # TODO
+
+		# create the fx page(s) # TODO
+		if ($mixer->{channels}{$auxname}{touchosc_pages} =~ "monitorfx") {
+		}
+
+		# create the song page(s) # TODO
+		if ($mixer->{channels}{$auxname}{touchosc_pages} =~ "song") {
+
+			# # get songs
+			# my @songs = .... can't access
+
+			# # create the mix pages with volume control
+			# #------------------------------------------
+			# my $max_songs_per_page = int (($layout_size[1] - 53) / 53) * 2;
+			# my $song_pages_number = ceil( $#songs/$max_songs_per_page );
+
+			# for my $pagenumber (1..$song_pages_number) {
+			# 	#add songs page(s)
+			# 	$monitor_presets{$auxname}->add_page("Songs$pagenumber");
+			# 	print " | |_adding page Songs$pagenumber\n";
+
+			# }
+		}
 	}
+
 	#build preset for main out
 	#-------------------------
 	if ($mainout) {
 		# create the hashref
 		# $monitor_presets{$mainout} = TouchOSC->new($options); # TODO
 	}
+
 	elsif ($submixout) {
 		# $monitor_presets{$submixout} = TouchOSC->new($options); # TODO
 	}
+
 	return \%monitor_presets;
 }
 

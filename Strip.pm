@@ -55,6 +55,7 @@ sub init {
 	$strip->{return} = $IOsection->{return} if $IOsection->{return};
 	$strip->{channels} = $IOsection->{channels} if $IOsection->{channels};
 	$strip->{mode} = $IOsection->{mode} if defined $IOsection->{mode};
+	$strip->{touchosc_pages} = $IOsection->{touchosc_pages} if defined $IOsection->{touchosc_pages};
 	
 	print "   |_adding channel ".$strip->{friendly_name}."\n";
 	
