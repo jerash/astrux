@@ -190,10 +190,12 @@ sub build_songfile_chain {
 		#create path to file
 		my $filename = $path . "/" . $song->{audio_files}{$section}{filename};
 		#create ecs line for mono file
-		push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 1;
+		# push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 1;
 		#create ecs line for stereo file
-		push @chains , "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 2;
+		# push @chains , "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 2;
 
+		# we create an autoconnect output because jackplumbing sometimes can't see that the port has changed
+		push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack_multi,$song->{audio_files}{$section}{connect_1},$song->{audio_files}{$section}{connect_2}";
 	}
 	#add chains to song
 	$song->{ecasound}{io_chains} = \@chains;
