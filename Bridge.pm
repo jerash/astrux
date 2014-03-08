@@ -380,7 +380,7 @@ sub reload_state_file {
 	$bridge->{current_values} = retrieve($infile);
 	#send values to services/servers
 	foreach my $oscpath (keys %{$bridge->{current_values}}){
-		&OSC_send("$oscpath f $bridge->{current_values}{$oscpath}",$bridge->{OSC}{ip},$bridge->{OSC}{inport});
+		&OSC_send($bridge->{OSC}{ip},$bridge->{OSC}{inport},"$oscpath","f","$bridge->{current_values}{$oscpath}");
 	}
 }
 sub reload_current_state {
@@ -388,7 +388,7 @@ sub reload_current_state {
 	print "Sending current state\n";
 	#send values to services/servers
 	foreach my $oscval (keys %{$bridge->{current_values}}){
-		&OSC_send("$oscval f $bridge->{current_values}{$oscval}",$bridge->{OSC}{ip},$bridge->{OSC}{inport});
+		&OSC_send($bridge->{OSC}{ip},$bridge->{OSC}{inport},"$oscval","f","$bridge->{current_values}{$oscval}");
 	}
 }
 
@@ -467,20 +467,19 @@ sub load_new_song {
 	print "Starting song $song->{friendly_name}\n";
 	
 	# stop and Goto 0
-	&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port});
-	&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port});
-	# &OSC_send("/klick/metro/stop i 0","localhost",$project->{klick}{osc_port});
+	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop");
+	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0");
 	
 	# reconfigure klick
-	&OSC_send("/klick/metro/set_type s $song->{metronome_type}","localhost",$project->{klick}{osc_port});
-	&OSC_send("/klick/map/load_file s $song->{klick_file}","localhost",$project->{klick}{osc_port}) if $song->{metronome_type} eq "map";
+	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","$song->{metronome_type}");
+	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/map/load_file","s","$song->{klick_file}") if $song->{metronome_type} eq "map";
 	#TODO fix klick simple mode won't unregistrer current tempo map
 	if ($song->{metronome_type} eq "simple") {
-		&OSC_send("/klick/simple/set_tempo f $song->{metronome_tempo}","localhost",$project->{klick}{osc_port});
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f","$song->{metronome_tempo}");
 		my @meters = split '/' , $song->{metronome_timesignature};
-		&OSC_send("/klick/simple/set_meter ii $meters[0] $meters[1]","localhost",$project->{klick}{osc_port});
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_meter","ii",@meters);
 	}
-	&OSC_send("/klick/metro/start i 1","localhost",$project->{klick}{osc_port});
+	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start");
 
 	# load players
 	print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($song->{name});
@@ -489,7 +488,7 @@ sub load_new_song {
 	# TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
 	
 	#autostart ?
-	&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $song->{autostart};
+	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start","f","0") if $song->{autostart};
 }
 
 ###########################################################
@@ -566,7 +565,7 @@ sub process_incoming_osc {
 		#------------------------------------------------
 		if (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "osc") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			#send osc message if it exists
-			&OSC_send("$project->{bridge}{OSC}{paths}{$oscpath}{message} f $value","localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port});
+			&OSC_send("localhost",$project->{bridge}{OSC}{paths}{$oscpath}{port},"$project->{bridge}{OSC}{paths}{$oscpath}{message}","f","$value");
 		}
 		elsif (($project->{bridge}{OSC}{paths}{$oscpath}{protocol} eq "tcp") and ($project->{bridge}{OSC}{paths}{$oscpath}{message})) {
 			# send tcp commands one after the other
@@ -586,8 +585,8 @@ sub process_incoming_osc {
 		if ($project->{bridge}{OSC}{sendback}) {
 			print "we send back osc message \"/$oscpath f $value\" to $sender_hostname\n" if $debug;
 			#send back OSC info
-			&OSC_send("$oscpath f $value",$sender_hostname,$project->{bridge}{OSC}{outport}) unless $sender_hostname eq $project->{bridge}{OSC}{ip};
-			#TODO sendback for each registered client &OSC_send("/$oscpath f $value",$_,$project->{bridge}{OSC}{outport}) for @{keys $project->{bridge}{OSC}{clients}};
+			&OSC_send($sender_hostname,$project->{bridge}{OSC}{outport},"$oscpath","f","$value") unless $sender_hostname eq $project->{bridge}{OSC}{ip};
+			#TODO sendback for each registered client &OSC_send($_,$project->{bridge}{OSC}{outport}",/$oscpath","f","$value") for @{keys $project->{bridge}{OSC}{clients}};
 			return;
 		}
 	}
@@ -602,25 +601,25 @@ sub process_incoming_osc {
 		#element 1 = system command
 		my $element1 = shift @pathelements;
 		if ($element1 eq "ping") {
-			&OSC_send("/pong f 0",$sender_hostname,$project->{bridge}{OSC}{outport});
+			&OSC_send($sender_hostname,$project->{bridge}{OSC}{outport},"/pong");
 			return;
 		}
 		elsif ($element1 eq "start") {
-			&OSC_send("/start f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable};
 			return;
 		}
 		elsif ($element1 eq "stop") {
-			&OSC_send("/stop f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable};
 			return;
 		}
 		elsif ($element1 eq "zero") {
-			&OSC_send("/locate f 0","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable};
 			return;
 		}
 		elsif ($element1 eq "locate") {
 			return unless $argtypes =~ /^(f|i)$/;
 			my $value = shift @args;
-			&OSC_send("/locate f $value","localhost",$project->{"jack-osc"}{osc_port}) if $project->{"jack-osc"}{enable};
+			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
 			return;
 		}
 		elsif ($element1 eq "save") { 
@@ -652,17 +651,16 @@ sub process_incoming_osc {
 		elsif ($element1 =~ "clic") { 
 			my $element2 = shift @pathelements;
 			return unless $element2;
-print "I'm in\n";
-			&OSC_send("/klick/metro/start i 1","localhost",$project->{klick}{osc_port}) if $element2 eq "start";
-			&OSC_send("/klick/metro/stop i 1","localhost",$project->{klick}{osc_port}) if $element2 eq "stop";
+			&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start") if $element2 eq "start";
+			&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/stop") if $element2 eq "stop";
 			if ($element2 eq "tempo") {
 				return unless $argtypes =~ /^(f|i)$/;
-				&OSC_send("/klick/metro/set_type s simple","localhost",$project->{klick}{osc_port});
-				&OSC_send("/klick/simple/set_tempo f $args[0]","localhost",$project->{klick}{osc_port});
+				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","simple");
+				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f",@args);
 			}
 			elsif ($element2 eq "sound") {
-				&OSC_send("/klick/config/set_sound i $args[0]","localhost",$project->{klick}{osc_port}) if ($argtypes =~ /^(i)$/);
-				&OSC_send("/klick/config/set_sound ss \'$args[0]\' \'$args[1]\'","localhost",$project->{klick}{osc_port}) if ($argtypes =~ /^(ss)$/);
+				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","i",@args) if ($argtypes =~ /^(i)$/);
+				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","ss",@args) if ($argtypes =~ /^(ss)$/);
 			}
 			return;
 		}
@@ -675,20 +673,28 @@ print "I'm in\n";
 }
 
 sub OSC_send {
-	my $data = shift;
 	my $destination = shift;
 	my $port = shift;
 	return unless $port;
+	my $oscpath = shift;
+	return unless $oscpath;
+	my $types = shift;
+	my $arguments = shift;
+
+	my @specs;
+	push @specs , $oscpath;
+	push @specs , $types if $types;
+	#TODO verify @values number equals types
+	# return unless ... ne $#{$arguments}+1
+	if (ref($arguments) eq "ARRAY") {
+		push @specs , $_ for @{$arguments};
+	}
+	else {
+		push @specs , $arguments;
+	}
 
 	my $osc = Protocol::OSC->new;
-	#make packet
-	# my $oscpacket = $osc->message(my @specs = qw(/refresh i 1));
-    # or
-    #use Time::HiRes 'time';
-    #my $oscpacket $osc->bundle(time, [@specs], [@specs2], ...);
-	my @specs = split(' ',$data);
 	my $oscpacket = $osc->message(@specs);
-	# print "oscpacket to send= 0=$specs[0] , 1=$specs[1] , 2=$specs[2]\n";	
 
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
