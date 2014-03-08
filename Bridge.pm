@@ -474,11 +474,13 @@ sub load_new_song {
 	# reconfigure klick
 	&OSC_send("/klick/metro/set_type s $song->{metronome_type}","localhost",$project->{klick}{osc_port});
 	&OSC_send("/klick/map/load_file s $song->{klick_file}","localhost",$project->{klick}{osc_port}) if $song->{metronome_type} eq "map";
+	#TODO fix klick simple mode won't unregistrer current tempo map
 	if ($song->{metronome_type} eq "simple") {
 		&OSC_send("/klick/simple/set_tempo f $song->{metronome_tempo}","localhost",$project->{klick}{osc_port});
 		my @meters = split '/' , $song->{metronome_timesignature};
 		&OSC_send("/klick/simple/set_meter ii $meters[0] $meters[1]","localhost",$project->{klick}{osc_port});
 	}
+	&OSC_send("/klick/metro/start i 1","localhost",$project->{klick}{osc_port});
 
 	# load players
 	print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($song->{name});
@@ -624,9 +626,9 @@ sub process_incoming_osc {
 		elsif ($element1 eq "save") { 
 			my $element2 = shift @pathelements;
 			return unless $element2;
-			$project->SaveDumperFile(".live") if ($element2 =~ /^dumper|all$/);
-			$project->SaveToFile if ($element2 =~ /^project|all$/);
-			$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($element2 =~ /^state|all$/);
+			$project->SaveDumperFile(".live") if ($element2 =~ /^(dumper|all)$/);
+			$project->SaveToFile if ($element2 =~ /^(project|all)$/);
+			$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($element2 =~ /^(state|all)$/);
 			return;
 		}
 		elsif ($element1 =~ "status") { 
@@ -645,6 +647,23 @@ sub process_incoming_osc {
 			return unless $element2;
 			$project->{bridge}->reload_current_state if $element2 eq "state";
 			$project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $element2 eq "statefile";
+			return;
+		}
+		elsif ($element1 =~ "clic") { 
+			my $element2 = shift @pathelements;
+			return unless $element2;
+print "I'm in\n";
+			&OSC_send("/klick/metro/start i 1","localhost",$project->{klick}{osc_port}) if $element2 eq "start";
+			&OSC_send("/klick/metro/stop i 1","localhost",$project->{klick}{osc_port}) if $element2 eq "stop";
+			if ($element2 eq "tempo") {
+				return unless $argtypes =~ /^(f|i)$/;
+				&OSC_send("/klick/metro/set_type s simple","localhost",$project->{klick}{osc_port});
+				&OSC_send("/klick/simple/set_tempo f $args[0]","localhost",$project->{klick}{osc_port});
+			}
+			elsif ($element2 eq "sound") {
+				&OSC_send("/klick/config/set_sound i $args[0]","localhost",$project->{klick}{osc_port}) if ($argtypes =~ /^(i)$/);
+				&OSC_send("/klick/config/set_sound ss \'$args[0]\' \'$args[1]\'","localhost",$project->{klick}{osc_port}) if ($argtypes =~ /^(ss)$/);
+			}
 			return;
 		}
 		elsif ($element1 =~ "eval") { 
