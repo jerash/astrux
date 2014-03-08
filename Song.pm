@@ -115,6 +115,8 @@ sub create_tempomap_file {
 	my @file_lines = ();
 	my ($last_change,$nb_bars) = (0,0);
 	my ($current_tempo,$current_timesignature);
+
+	# get tempomap infos from stored meta events
 	foreach my $line (@{$song->{markers}}) {
 		# print "---$line";
 		my @parts = @{$line};
@@ -138,16 +140,26 @@ sub create_tempomap_file {
 			$last_change = $times[0];
 		}
 	}
-	#TODO change klick to simple if we don't have bars (add new property)
+
+	# if we have found necessary info in meta events
 	if (defined $current_tempo and defined $current_timesignature and $#file_lines eq -1) {
-		#we're missing song length in bars, try to get it from any last event
+		# we're missing song length in bars, try to get it from any last event
 		my $last_nb = $#{$song->{markers}};
 		my $last = ${$song->{markers}}[$last_nb];
 		my @bars = split(":",$last->[1]);
-		push @file_lines , "$bars[0] $current_timesignature $current_tempo" if $bars[0] ne 0;
+		# if we don't have other event, then force 999 bars
+		($bars[0] eq 0) ? push @file_lines , "999 $current_timesignature $current_tempo" :
+						push @file_lines , "$bars[0] $current_timesignature $current_tempo";
 	}
-	return unless $#file_lines ge 0; 
+	# else check if we have static tempomap information in song 
+	elsif ((defined $song->{metronome_tempo}) and (defined $song->{metronome_timesignature})) {
+		push @file_lines , "999 $song->{metronome_timesignature} $song->{metronome_tempo}";
+	}
 
+	# dont create file if we have nothing to write
+	return unless $#file_lines ge 0;
+
+	# or generate a tempomap file when we have info from any manner
 	$song->{klick_file} = $output_path . "/tempo.map";
 	print " |_Song: creating tempomap(klick) file $song->{klick_file}\n";
 	open FILE,">$song->{klick_file}" or die "$!";
