@@ -635,6 +635,14 @@ sub process_incoming_osc {
 			return;
 		}
 		elsif ($element1 =~ "song") { 
+			my $element2 = shift @pathelements;
+			if (defined $element2) {
+				return unless $argtypes =~ /^(f|i)$/;
+				my $val = shift @args;
+				return unless ($val == 1);
+				&load_new_song($project->{songs}{$element2});
+				return;
+			}
 			return unless $argtypes =~ /^(s)$/;
 			my $songname = shift @args;
 			return unless exists $project->{songs}{$songname};
