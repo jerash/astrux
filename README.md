@@ -142,6 +142,7 @@ many error checks are done so the script will most probably die on missing or ba
 - /save/all
 - /status (do nothing)
 - /song s [songname]
+- /song/songname f 1
 - /reload/state
 - /reload/statefile
 - /clic/start
