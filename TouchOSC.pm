@@ -63,7 +63,9 @@ my $astrux_controls = {
 	aux_label => &create_label(20,50,"orange",13),
 	monitor_label => &create_label(30,190,'gray',20),
 	group_label => &create_label(30,155,"$colors[$default_color]",20),
-	song_label => &create_label(50,145,"$colors[$default_color]",13)
+	song_label => &create_label(50,145,"$colors[$default_color]",13),
+	small_time => &create_label(50,75,"$colors[$default_color]",13),
+	small_bbt => &create_label(50,75,"$colors[$default_color]",13)
 };
 
 ###########################################################
@@ -252,7 +254,7 @@ sub get_touchosc_presets {
 					}
 					#add aux master volume fader
 					$control = $presets{$mixername}{$auxname}->add_control("Mix$pagenumber","aux_fader","vol_$auxname");
-					$control->set_control_position($layouts->{$presets{$mixername}{$auxname}{layout_size}}-53,20);
+					$control->set_control_position($layout_size->[0]-53,20);
 					$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 					$control->set_control_minmax(-60,6) if $mixer->is_ecasound;
 					$control->set_control_name("vol_$auxname");
@@ -261,11 +263,11 @@ sub get_touchosc_presets {
 					$control = $presets{$mixername}{$auxname}->add_control("Mix$pagenumber","aux_label","label_$auxname");
 					$control->set_control_name("label_$auxname");
 					$control->set_label_text("Volume");
-					$control->set_control_position($layouts->{$presets{$mixername}{$auxname}{layout_size}}-53,0);
+					$control->set_control_position($layout_size->[0]-53,0);
 					$control->set_control_oscpath("/dummy");
 					#add aux master pan rotary
 					$control = $presets{$mixername}{$auxname}->add_control("Mix$pagenumber","small_pot","pan_$auxname");
-					$control->set_control_position($layouts->{$presets{$mixername}{$auxname}{layout_size}}-53,176);
+					$control->set_control_position($layout_size->[0]-53,176);
 					$control->set_control_minmax(0,1) if $mixer->is_nonmixer;
 					$control->set_control_minmax(0,100) if $mixer->is_ecasound;
 					$control->set_control_name("pan_$auxname");
@@ -275,11 +277,11 @@ sub get_touchosc_presets {
 					$control = $presets{$mixername}{$auxname}->add_control("Mix$pagenumber","aux_label","mutel_$auxname");
 					$control->set_control_name("mutel_$auxname");
 					$control->set_label_text("mute");
-					$control->set_control_position($layouts->{$presets{$mixername}{$auxname}{layout_size}}-53,243);
+					$control->set_control_position($layout_size->[0]-53,243);
 					$control->set_control_oscpath("/dummy");
 					#add aux master mute button
 					$control = $presets{$mixername}{$auxname}->add_control("Mix$pagenumber","small_button","mute_$auxname");
-					$control->set_control_position($layouts->{$presets{$mixername}{$auxname}{layout_size}}-53,227);
+					$control->set_control_position($layout_size->[0]-53,227);
 					$control->set_control_minmax(0,1);
 					$control->set_control_name("mute_$auxname");
 					$control->set_control_color("orange");
@@ -343,11 +345,43 @@ sub get_touchosc_presets {
 						#stop if we have done all inputs
 						last if ++$control_index > $#songs;
 					}
-					#TODO add start push button
-					#TODO add stop push button
-					#TODO add zero push button
-					#TODO add bars/beat display
-					#TODO add time display
+					# add start push button
+					$control = $presets{$mixername}{$auxname}->add_control("Songs$pagenumber","small_push","song_start");
+					$control->set_control_position( $layout_size->[0]-68 , 4+53*(($max_songs_per_page / 2)-1) );
+					$control->set_control_minmax(0,1);
+					$control->set_control_name("song_start");
+					$control->set_control_color("green");
+					$control->set_control_oscpath("/start");
+					# add stop push button
+					$control = $presets{$mixername}{$auxname}->add_control("Songs$pagenumber","small_push","song_stop");
+					$control->set_control_position( $layout_size->[0]-68 , 4+53*(($max_songs_per_page / 2)-2) );
+					$control->set_control_minmax(0,1);
+					$control->set_control_name("song_stop");
+					$control->set_control_color("red");
+					$control->set_control_oscpath("/stop");
+					# add zero push button
+					$control = $presets{$mixername}{$auxname}->add_control("Songs$pagenumber","small_push","song_zero");
+					$control->set_control_position( $layout_size->[0]-68 , 4+53*(($max_songs_per_page / 2)-3) );
+					$control->set_control_minmax(0,1);
+					$control->set_control_name("song_zero");
+					$control->set_control_color("gray");
+					$control->set_control_oscpath("/zero");
+					# add bars/beat display
+					$control = $presets{$mixername}{$auxname}->add_control("Songs$pagenumber","small_bbt","song_BBT");
+					$control->set_control_name("song_BBT");
+					$control->set_control_color("blue");
+					$control->set_label_text("BBT");
+					$control->set_label_outline("true");
+					$control->set_control_position( $layout_size->[0]-80 , 4+53*(($max_songs_per_page / 2)-4) );
+					$control->set_control_oscpath("/print/BBT");
+					# add time display
+					$control = $presets{$mixername}{$auxname}->add_control("Songs$pagenumber","small_time","song_time");
+					$control->set_control_name("song_time");
+					$control->set_control_color("blue");
+					$control->set_label_text("Time");
+					$control->set_label_outline("true");
+					$control->set_control_position( $layout_size->[0]-80 , 4+53*(($max_songs_per_page / 2)-5) );
+					$control->set_control_oscpath("/print/time");
 				}
 			}
 		}
