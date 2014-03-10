@@ -149,7 +149,7 @@ sub SanitizeLADSPAFx {
 					$result = floor($result);
 				}
 				print "$result\n";
-				$values[$i] = $result; #update value
+				$fxhash->{$ref}[$i] = $result; #update value
 			}
 		}
 	}
