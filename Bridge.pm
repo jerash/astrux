@@ -128,9 +128,9 @@ sub create_midiosc_paths {
 			my $channelstrip = $mixer->{channels}{$channelname};
 			
 			#add generic channelstrip options
-			$bridge->add_midioscpaths("/$mixername/$channelname/mute","toggle",0,$engine,$protocol,$port);
-			$bridge->add_midioscpaths("/$mixername/$channelname/solo","toggle",0,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
-			$bridge->add_midioscpaths("/$mixername/$channelname/fxbypass","toggle",0,$engine,$protocol,$port);
+			$bridge->insert_midioscpaths("/$mixername/$channelname/mute","toggle",0,$engine,$protocol,$port);
+			$bridge->insert_midioscpaths("/$mixername/$channelname/solo","toggle",0,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
+			$bridge->insert_midioscpaths("/$mixername/$channelname/fxbypass","toggle",0,$engine,$protocol,$port);
 			
 			# --- LOOP THROUGH INSERTS ---
 	
@@ -149,9 +149,9 @@ sub create_midiosc_paths {
 					#scale value to [0,1] range
 					my $outvalue = ( $insert->{defaultvalues}[$i]-$insert->{lowvalues}[$i] ) / ( $insert->{highvalues}[$i] - $insert->{lowvalues}[$i] );
 					#add to paths
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$outvalue,$engine,$protocol,$port)
+					$bridge->insert_midioscpaths("/$mixername/$channelname/$insertname/$paramname","linear",$outvalue,$engine,$protocol,$port)
 						if $mixer->is_ecasound;
-					$bridge->add_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$outvalue,$engine,$protocol,$port)
+					$bridge->insert_midioscpaths("/$mixername/$channelname/$insert->{fxname}/$insert->{paramnames}[$i]","linear",$outvalue,$engine,$protocol,$port)
 						if $mixer->is_nonmixer;
 					$i++;
 				}
@@ -172,7 +172,7 @@ sub create_midiosc_paths {
 					#scale value to [0,1] range
 					my $outvalue = ( $route->{defaultvalues}[$i]-$route->{lowvalues}[$i] ) / ( $route->{highvalues}[$i] - $route->{lowvalues}[$i] );
 					#add to paths
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$outvalue,$engine,$protocol,$port);
+					$bridge->insert_midioscpaths("/$mixername/$channelname/aux_to/$auxroute/$paramname","linear",$outvalue,$engine,$protocol,$port);
 					$i++;
 				}
 			}
@@ -181,19 +181,19 @@ sub create_midiosc_paths {
 
 			if ($project->{mixers}{$mixername}->is_nonmixer) {
 				# Add gain control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0.921,$engine,$protocol,$port);
+				$bridge->insert_midioscpaths("/$mixername/$channelname/panvol/vol","linear",0.921,$engine,$protocol,$port);
 				# Add pan control
-				$bridge->add_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0.5,$engine,$protocol,$port);
+				$bridge->insert_midioscpaths("/$mixername/$channelname/panvol/pan","linear",0.5,$engine,$protocol,$port);
 				#add aux routes
 				foreach my $aux (@auxes) {
-					$bridge->add_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0.921,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
+					$bridge->insert_midioscpaths("/$mixername/$channelname/aux_to/$aux/vol","linear",0.921,$engine,$protocol,$port) unless $channelstrip->is_hardware_out;
 				}
 			}
 		}
 	}
 }
 
-sub add_midioscpaths {
+sub insert_midioscpaths {
 	my $bridge = shift;
 	my $oscpath = shift;
 	my $type = shift;
