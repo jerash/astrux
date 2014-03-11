@@ -41,8 +41,4 @@ sub get_jack_io_list_by_type {
 	return $io_list;
 }
 
-
-# use Data::Dumper;
-# print Dumper &get_jack_io_list_by_type;
-
 1;
