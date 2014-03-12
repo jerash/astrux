@@ -8,17 +8,13 @@ use warnings;
 # From jack, we're able to have meters for :
 #-------------------------------------------
 # INPUTS
-#	channel_in (from hardware_input)
-#	players_out
-#	submix_out
+#	channel_in (main/submix mixer channel from hardware_input/players_out/submix_out/instrument_out)
 # OUTPUTS
-#	monitor_out (aux out to hardware out port)
-#	send_out (aux out to hardware out port)
-#	main_out (main out to hardware out port)
+#	aux_out (main mixer aux out to hardware out port)
+#	main_out (main mixer out to hardware out port)
 # ROUTINGS
-#	channel_out (non-mixer channel to main out)
-#	channel_aux (non-mixer channel to aux monitor)
-#	submix_channel_out (nonmixer submix channel to submix out)
+#	channel_out (main/submix mixer channel to main_out/submix_out)
+#	channel_aux (main mixer channel to aux monitor)
 
 # Meters project structure
 #-------------------------------------------
@@ -28,24 +24,132 @@ use warnings;
 #			backend
 #			port
 #			PID
-#		{values}
-#		 	{jack_port_name}	< TODO in project channel strip add meter_ref pointing here
-# 				channel_path	/main/mic_1/
+#		@{values}
+#			{jack_port_name}
 # 				current_value	[0..1]
 # 				current_peak	[0..1]
 # 				clip_count 		(may be used as accumulator to trigger clip led if > 3)
 
 # Corresponding osc paths 
 #-------------------------------------------
-# /mixer/channel/_in_meter_						(channel_in,players_out,submix_out,monitor_out,send_out,main_out,submix_channel_out)
+# /mixer/channel/_in_meter_						(channel_in,aux_out,main_out)
 # /mixer/channel/_in_peak_
 # /mixer/channel/_in_clip_
-# /mixer/channel/_out_meter_					(channel_out)
+# /mixer/channel/_out_meter_					(channel_out,aux_out,main_out)
 # /mixer/channel/_out_peak_
 # /mixer/channel/_out_clip_
 # /mixer/channel/aux_to/auxname/_send_meter_			(channel_aux)
 # /mixer/channel/aux_to/auxname/_send_peak_
 # /mixer/channel/aux_to/auxname/_send_clip_
+
+###########################################################
+#
+#		 METERS object functions
+#
+###########################################################
+
+sub new {
+	my $class = shift;
+	my $options = shift;
+	die "Meters Error: can't create meters without options\n" unless $options;
+
+	#init structure
+	my $meters = {
+		"options" => $options
+	};
+	bless $meters,$class;
+
+	return $meters; 
+}
+
+###########################################################
+#
+#		 METERS functions
+#
+###########################################################
+
+sub create_meters {
+	my $project = shift;
+
+	#the rule set
+	my @meter_values;
+
+	# --- LOOP THROUGH MIXERs ---
+
+	foreach my $mixername (keys %{$project->{mixers}}) {
+
+		#ignore players mixer, we'll get the ports on main mixer player tracks
+		next if $project->{mixers}{$mixername}{engine}{name} eq "players";
+
+		# get engine type
+		my $engine = $project->{mixers}{$mixername}{engine}{engine};
+
+		#create mixer reference
+		my $mixer = $project->{mixers}{$mixername}{channels};
+
+		foreach my $channelname (keys %{$mixer}) {
+
+			if (($mixer->{$channelname}->is_submix_in)
+				or ($mixer->{$channelname}->is_main_in) ) { 
+
+			# --- channel_in ---
+				#get the table of input connections
+				my @table = @{$mixer->{$channelname}{connect}};
+				foreach my $connect_portname (@table) {
+					my $meter_port;
+					$meter_port->{type} = "channel_in";
+					$meter_port->{jack_port_name} = $connect_portname;
+					$meter_port->{current_value} = 0;
+					$meter_port->{current_peak} = 0;
+					$meter_port->{clip_count} = 0;
+					#add meter value
+					push @meter_values , $meter_port;
+				}
+			}
+
+			if (($mixer->{$channelname}->is_submix_in)
+				or ($mixer->{$channelname}->is_main_in)
+				or ($mixer->{$channelname}->is_hardware_out) ) { 
+
+			# --- channel_out, aux_out, main_out---
+				my @table = $project->{mixers}{$mixername}->get_channel_out_jackportnames($channelname);
+				foreach my $connect_portname (@table) {
+					my $meter_port;
+					$meter_port->{type} = "channel_out" if $mixer->{$channelname}->is_main_in;
+					$meter_port->{type} = "aux_out" if $mixer->{$channelname}->is_aux;
+					$meter_port->{type} = "main_out" if $mixer->{$channelname}->is_main_out;
+					$meter_port->{jack_port_name} = $connect_portname;
+					$meter_port->{current_value} = 0;
+					$meter_port->{current_peak} = 0;
+					$meter_port->{clip_count} = 0;
+					#add meter value
+					push @meter_values , $meter_port;
+				}
+			}
+
+			if ($project->{mixers}{$mixername}->is_main) {
+
+			# --- channel_aux ---
+
+				#ignore aux channel themselves and mainout
+				next if (($mixer->{$channelname}->is_aux) or ($mixer->{$channelname}->is_main_out));
+
+				my @table = $project->{mixers}{$mixername}->get_channel_aux_jackportnames($channelname);
+				foreach my $connect_portname (@table) {
+					my $meter_port;
+					$meter_port->{type} = "channel_aux";
+					$meter_port->{jack_port_name} = $connect_portname;
+					$meter_port->{current_value} = 0;
+					$meter_port->{current_peak} = 0;
+					$meter_port->{clip_count} = 0;
+					#add meter value
+					push @meter_values , $meter_port;
+				}
+			}
+		}
+	}
+	return \@meter_values;
+}
 
 ###########################################################
 #
