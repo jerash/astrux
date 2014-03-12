@@ -191,6 +191,13 @@ foreach my $song (@songkeys) {
 $project->{mixers}{players}{engine}->SelectAndConnectChainsetup("players");
 
 #----------------------------------------------------------------
+# Start meters
+#----------------------------------------------------------------
+
+#TODO make sure all jack ports are active before starting meters
+$project->{meters}->start;
+
+#----------------------------------------------------------------
 # Start bridge > wait loop
 #----------------------------------------------------------------
 print "\n--------- Project $project->{globals}{name} Running---------\n";
