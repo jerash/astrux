@@ -25,10 +25,11 @@ use warnings;
 #			port
 #			PID
 #		@{values}
-#			{jack_port_name}
-# 				current_value	[0..1]
-# 				current_peak	[0..1]
-# 				clip_count 		(may be used as accumulator to trigger clip led if > 3)
+#			jack_port_name	"..."
+#			type			channel_in, aux_out ...etc
+# 			current_value	[0..1]
+# 			current_peak	[0..1]
+# 			clip_count 		(may be used as accumulator to trigger clip led if > 3)
 
 # Corresponding osc paths 
 #-------------------------------------------
@@ -153,13 +154,26 @@ sub create_meters {
 	return \@meter_values;
 }
 
+sub start {
+	my $meters_hash = shift;
+	return unless $meters_hash->{options}{enable};
+
+	if ($meters_hash->{options}{backend} =~ "jack-peak") {
+		# build the array of jack ports
+		my @ports;
+		push @ports , $_->{jack_port_name} for (@{$meters_hash->{values}});
+		return unless @ports;
+		&launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks});
+	}
+}
+
 ###########################################################
 #
 #		 meters with JACK-PEAK
 #
 ###########################################################
 
-sub start_jackpeak_meters {
+sub launch_jackpeak_fifo {
 	my $ports = shift; # an arrayref containing a list of ports you want to meter
 	return unless $#{$ports} >= 0; # return if ports list is empty
 
@@ -180,24 +194,14 @@ sub start_jackpeak_meters {
 
 	# TODO fork&exec to get pid so we can stop it later
 	# TODO check return code / error messages
+	print "Starting Meters with jack-peak\n";
 	system($command);
 }
 
 sub stop_jackpeak_meters {
 	# by PID or by fifo(port)
-}
-
-use Fcntl;
-sub read_jackpeak_meters {
-	my $fifofile = shift;
-	return unless $fifofile;
-	$| = 1;
-	my $fifo_fh;
-	# open in non-blocking mode if nothing is to be read in the fifo
-	sysopen($fifo_fh, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
-	while (<$fifo_fh>) { return "$_";};
-	#we'll never reach here unless the fifo is empty
-	close $fifo_fh;
+	my $blob = `killall jack-peak2`;
+	print "-----\n$blob\n----\n";
 }
 
 ###########################################################
