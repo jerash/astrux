@@ -75,6 +75,9 @@ sub start {
 	#	command line interface
 	&init_cli_server if $bridge->{CLI}{enable};	
 
+	#	meters
+	&init_meters if $project->{meters}{options}{enable};
+
 	#	gui actions (from tcp commands)
 
 	#	front panel actions (from tcp commands)
@@ -84,6 +87,8 @@ sub start {
 	$SIG{INT} = sub { 
 		print "\nSIGINT, saving state file\n";
 		$bridge->save_state_file($project->{bridge}{statefile});
+		print "stopping jack-peak\n";
+		$project->{meters}->stop_jackpeak_meters;
 		exit(0);
 	};
 
@@ -502,7 +507,7 @@ sub init_osc_server {
 
 	my $oscip = $bridge->{OSC}{ip} || 'localhost';
 	my $oscport = $bridge->{OSC}{inport} || '8000';
-	print ("Starting OSC listener on port $oscport\n");
+	print ("Starting OSC listener on ip $oscip and port $oscport\n");
 	#init socket on osc port
 	my $osc_in = $bridge->{OSC}{socket} = IO::Socket::INET->new(
 		LocalAddr => $oscip, #default is localhost
@@ -511,7 +516,6 @@ sub init_osc_server {
 		Type	  =>  SOCK_DGRAM) || die $!;
 	warn "cannot create socket $!\n" unless $osc_in;
 	#create the anyevent watcher on this socket
-	# $bridge->{OSC}{events} = AE::io( $osc_in, 0, \&process_osc_command );
 	$bridge->{OSC}{events} = AE::io( $osc_in, 0, \&process_incoming_osc );
 	#init an osc object
 	$bridge->{OSC}{object} = Protocol::OSC->new;
@@ -784,5 +788,46 @@ sub process_cli {
 	return 1;
 }
 
+###########################################################
+#
+#		 BRIDGE METERS functions
+#
+###########################################################
+
+sub init_meters {
+	my $fifo = $project->{meters}{options}{port};
+	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{options}{port};
+	#create the anyevent timer @100ms on the meters fifo
+	$project->{meters}{events} = AE::timer( 1, 0.1, \&process_meters );
+}
+sub process_meters {
+	my $fifofile = $project->{meters}{options}{port};
+	use Fcntl;
+	$| = 1;
+	my $fifo_fh;
+	# open in non-blocking mode if nothing is to be read in the fifo
+	sysopen($fifo_fh, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
+	while (<$fifo_fh>) {
+		my (@meters,@peaks);
+		if ($project->{meters}{options}{peaks}) {
+			my @duo = split (/\|/);
+			@meters = split ' ', $duo[0];
+			@peaks = split ' ', $duo[1];
+		}
+		else {
+			@meters = split ' ';
+		}
+		#upate project meters with current value 
+		for my $i (0..$#meters) {
+			$project->{meters}{values}[$i]->{current_value} = $meters[$i];
+			$project->{meters}{values}[$i]->{current_peak} = $peaks[$i] if @peaks;
+		}
+		use Data::Dumper;
+		print Dumper $project->{meters}{values};
+		#force exit
+		last;
+	}
+	close $fifo_fh;
+}
 
 1;
