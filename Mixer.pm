@@ -316,7 +316,7 @@ sub get_channel_aux_jackportnames {
 			if ($mixer->is_nonmixer) {
 				push @jackportnames , $mixer->{engine}{name}."/$channelname:aux-".$auxletter."/out-$i"
 					if ($mixer->{channels}{$channelname}{group} eq '');
-				push @jackportnames , $mixer->{engine}{name}." \\(".$mixer->{channels}{$channelname}{group}."\\):$channelname/aux-".$auxletter."/out-$i"
+				push @jackportnames , $mixer->{engine}{name}."\\ \\(".$mixer->{channels}{$channelname}{group}."\\):$channelname/aux-".$auxletter."/out-$i"
 					if ($mixer->{channels}{$channelname}{group} ne '');
 			}
 			elsif ($mixer->is_ecasound) {
