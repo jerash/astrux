@@ -89,6 +89,8 @@ sub create_meters {
 
 		foreach my $channelname (keys %{$mixer}) {
 
+			print " |_Meters: create meters for channel $channelname\n";
+
 			if (($mixer->{$channelname}->is_submix_in)
 				or ($mixer->{$channelname}->is_main_in) ) { 
 

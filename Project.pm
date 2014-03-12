@@ -183,6 +183,8 @@ sub AddMIDIOSCPaths {
 sub AddMeters {
 	my $project = shift;
 
+	print "Project: Creating meters\n";
+
 	#create object
 	$project->{meters} = Meters->new($project->{meters});
 
