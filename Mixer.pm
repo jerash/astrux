@@ -251,6 +251,82 @@ sub get_submix_out {
 	}
 	return $submixout;
 }
+sub get_channel_out_jackportnames {
+	my $mixer = shift;
+	my $channelname = shift;
+	my @jackportnames;
+	my $channels = $mixer->{channels}{$channelname}{channels};
+
+	# force channels to 2, as main mixer mono tracks have been converted to stereo
+	$channels = 2 if $mixer->{channels}{$channelname}->is_main_in;
+	# force channels to 1, if the bus_outputs has been converted to mono
+	$channels = 1 if $mixer->{channels}{$channelname}->is_summed_mono;
+
+	#for each channel
+	for my $i (1..$channels) {
+		if ($mixer->is_nonmixer) {
+			push @jackportnames , $mixer->{engine}{name}."/$channelname:out-$i"
+				if ($mixer->{channels}{$channelname}{group} eq '');
+			push @jackportnames , $mixer->{engine}{name}."\\ \\(".$mixer->{channels}{$channelname}{group}."\\):$channelname/out-$i"
+				if ($mixer->{channels}{$channelname}{group} ne '');
+		}
+		elsif ($mixer->is_ecasound) {
+			push @jackportnames , $mixer->{engine}{name}.":$channelname"."_$i";
+		}
+	}
+	return @jackportnames;
+}
+sub get_channel_in_jackportnames {
+	my $mixer = shift;
+	my $channelname = shift;
+	my @jackportnames;
+	my $channels = $mixer->{channels}{$channelname}{channels};
+
+	#for each channel
+	for my $i (1..$channels) {
+		if ($mixer->is_nonmixer) {
+			push @jackportnames , $mixer->{engine}{name}."/$channelname:in-$i"
+				if ($mixer->{channels}{$channelname}{group} eq '');
+			push @jackportnames , $mixer->{engine}{name}."\\ \\(".$mixer->{channels}{$channelname}{group}."\\):$channelname/in-$i"
+				if ($mixer->{channels}{$channelname}{group} ne '');
+		}
+		elsif ($mixer->is_ecasound) {
+			push @jackportnames , $mixer->{engine}{name}.":$channelname"."_$i";
+		}
+	}
+	return @jackportnames;
+}
+sub get_channel_aux_jackportnames {
+	my $mixer = shift;
+	my $channelname = shift;
+	my @jackportnames;
+	my $channels = $mixer->{channels}{$channelname}{channels};
+	my @auxes = $mixer->get_auxes_list;
+
+	# force channels to 2, as main mixer mono tracks have been converted to stereo
+	$channels = 2 if $mixer->{channels}{$channelname}->is_main_in;
+
+	#force non-mixer AUX letter even if we don't know it already # TODO verify it works correctly
+	my $auxletter = 'A';
+
+	#loop through auxes
+	foreach my $aux (@auxes) {
+		next if ((defined $mixer->{channels}{$aux}{return}) and ($mixer->{channels}{$aux}{return} eq $channelname)); #don't monitor aux to myself
+		for my $i (1..$channels) {
+			if ($mixer->is_nonmixer) {
+				push @jackportnames , $mixer->{engine}{name}."/$channelname:aux-".$auxletter."/out-$i"
+					if ($mixer->{channels}{$channelname}{group} eq '');
+				push @jackportnames , $mixer->{engine}{name}." \\(".$mixer->{channels}{$channelname}{group}."\\):$channelname/aux-".$auxletter."/out-$i"
+					if ($mixer->{channels}{$channelname}{group} ne '');
+			}
+			elsif ($mixer->is_ecasound) {
+				#TODO check if we come here for ecasound, or only use non-mixer to be decided
+			}
+		}
+		$auxletter++;
+	}
+	return @jackportnames;
+}
 
 ###########################################################
 #
