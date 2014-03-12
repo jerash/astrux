@@ -62,9 +62,10 @@ sub start_jackpeak_meters {
 
 	my $with_peaks = shift; # logical value to create peak hold values
 
- 	if ( !-e $fifo ) {
+ 	unless ( -p $fifo ) {
  		use POSIX qw(mkfifo);
 		mkfifo($fifo, 0644) or die "Meters error : could not create fifo $fifo : $!\n";
+		print "Meters: FIFO $fifo created\n"
 	}
 	my $list_of_ports = join ' ' , @{$ports};
 	my $command = "jack-peak2 " . $list_of_ports;
@@ -80,7 +81,17 @@ sub stop_jackpeak_meters {
 	# by PID or by fifo(port)
 }
 
+use Fcntl;
 sub read_jackpeak_meters {
+	my $fifofile = shift;
+	return unless $fifofile;
+	$| = 1;
+	my $fifo_fh;
+	# open in non-blocking mode if nothing is to be read in the fifo
+	sysopen($fifo_fh, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
+	while (<$fifo_fh>) { return "$_";};
+	#we'll never reach here unless the fifo is empty
+	close $fifo_fh;
 }
 
 ###########################################################
@@ -95,8 +106,5 @@ sub stop_ecasound_meters {
 }
 sub read_ecasound_meters {
 }
-
-my @tt = ("system:capture_1","system:capture_32");
-&start_jackpeak_meters(\@tt,"/tmp/newfifo",1);
 
 1;

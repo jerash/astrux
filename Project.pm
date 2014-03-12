@@ -176,6 +176,11 @@ sub AddMIDIOSCPaths {
 	$project->Bridge::create_midiosc_paths;
 }
 
+sub AddMeters {
+	my $project = shift;
+	
+}
+
 ###########################################################
 #
 #		 PROJECT functions
