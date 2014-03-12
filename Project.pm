@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Mixer;
+use Meters;
 use Song;
 use Plumbing;
 use Bridge;
@@ -47,6 +48,9 @@ sub init {
 
 	# sanitize effects values, need SAMPLERATE
 	$project->Sanitize;
+
+	#------------------Add meters------------------------------
+	$project->AddMeters if $project->{meters}{enable};
 
 	#------------------Add songs------------------------------
 	$project->AddSongs;	
@@ -178,7 +182,15 @@ sub AddMIDIOSCPaths {
 
 sub AddMeters {
 	my $project = shift;
-	
+
+	#create object
+	$project->{meters} = Meters->new($project->{meters});
+
+	#get rules
+	my $meters = $project->Meters::create_meters;
+
+	#insert into project
+	$project->{meters}{values} = $meters;
 }
 
 ###########################################################
