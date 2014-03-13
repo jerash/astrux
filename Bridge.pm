@@ -84,7 +84,7 @@ sub start {
 
 	#catch signals
 	#--------------------------------------
-	$SIG{INT} = \&ExitBridge;
+	$SIG{INT} = \&cmd_exit;
 
 	#reload state
 	if (-e $project->{bridge}{statefile}){
@@ -459,7 +459,7 @@ sub SendMidiCC {
 #
 ###########################################################
 
-sub load_new_song {
+sub cmd_song {
 	my $song = shift;
 
 	# TODO maybe fisrt save previous song state before starting new song
@@ -489,8 +489,54 @@ sub load_new_song {
 	#autostart ?
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start","f","0") if $song->{autostart};
 }
+sub cmd_start { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable}; }
+sub cmd_stop { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable}; }
+sub cmd_zero { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable}; }
+sub cmd_locate {
+	my $value = shift;
+	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
+}
+sub cmd_save {
+	my $what = shift;
+	$project->SaveDumperFile(".live") if ($what =~ /^(dumper|all)$/);
+	$project->SaveToFile if ($what =~ /^(project|all)$/);
+	$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($what =~ /^(state|all)$/);
+}
+sub cmd_status {
+	# TODO print/reply status
+}
+sub cmd_reload {
+	my $what = shift;
+	$project->{bridge}->reload_current_state if $what eq "state";
+	$project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $what eq "statefile";
+}
+sub cmd_clic {
+	my $command = shift;
+	my $args = shift; # arrayref
 
-sub ExitBridge {
+	if ($command eq "start") { 
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start");
+		return;
+	}
+	elsif ($command eq "stop") {
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/stop");
+		return;
+	}
+	elsif ($command eq "tempo") {
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","simple");
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f",$args->[0]);
+		return;
+	}
+	elsif ($command eq "inbuilt_sound") {
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","i",$args->[0]);
+		return;
+	}
+	elsif ($command eq "custom_sounds") {
+		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","ss",@{$args});
+		return;
+	}
+}
+sub cmd_exit {
 		print "\nSIGINT, Exiting...\n";
 
 		print "Saving state file\n";
@@ -498,6 +544,8 @@ sub ExitBridge {
 
 		print "Stopping jack-peak\n";
 		$project->{meters}->stop_jackpeak_meters if $project->{meters}{enable};
+
+		# TODO finish to close everything on exit
 
 		exit(0);
 }
@@ -555,8 +603,8 @@ sub process_incoming_osc {
 	if ($debug){print "$_," for @args};
 	print "\n" if $debug;
 
-	#verify if the osc message is in our list
-	#-----------------------------------------
+	# verify if the osc message is in our list of known paths
+	#--------------------------------------------------------
 	if (defined $project->{bridge}{OSC}{paths}{$oscpath}) {
 
 		# verify how many arguments we have
@@ -601,12 +649,14 @@ sub process_incoming_osc {
 		}
 	}
 	else
-	#verify if the osc message is an astrux command
-	#-----------------------------------------
-	{		
+	# else verify if the osc message is an astrux command
+	#-----------------------------------------------------
+	{
 		#split path elements
 		$oscpath =~ s(^/)();
 		my @pathelements = split '/',$oscpath;
+
+		# TODO should we add /astrux/ to prevent mixername can't be start/stop...etc and would need to check on create
 
 		#element 1 = system command
 		my $element1 = shift @pathelements;
@@ -614,78 +664,59 @@ sub process_incoming_osc {
 			&OSC_send($sender_hostname,$project->{bridge}{OSC}{outport},"/pong");
 			return;
 		}
-		elsif ($element1 eq "start") {
-			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable};
-			return;
-		}
-		elsif ($element1 eq "stop") {
-			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable};
-			return;
-		}
-		elsif ($element1 eq "zero") {
-			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable};
-			return;
-		}
+		elsif ($element1 eq "start") { &cmd_start; return; }
+		elsif ($element1 eq "stop") { &cmd_stop; return; }
+		elsif ($element1 eq "zero") { &cmd_zero; return; }
 		elsif ($element1 eq "locate") {
 			return unless $argtypes =~ /^(f|i)$/;
 			my $value = shift @args;
-			&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
+			&cmd_locate($value);
 			return;
 		}
-		elsif ($element1 eq "save") { 
+		elsif ($element1 eq "save") {
 			my $element2 = shift @pathelements;
 			return unless $element2;
-			$project->SaveDumperFile(".live") if ($element2 =~ /^(dumper|all)$/);
-			$project->SaveToFile if ($element2 =~ /^(project|all)$/);
-			$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($element2 =~ /^(state|all)$/);
+			&cmd_save($element2);
 			return;
 		}
-		elsif ($element1 =~ "status") { 
-			#TODO what to reply on status ?
+		elsif ($element1 eq "status") {
+			&cmd_status;
 			return;
 		}
-		elsif ($element1 =~ "song") { 
+		elsif ($element1 eq "song") {
 			my $element2 = shift @pathelements;
 			if (defined $element2) {
 				return unless $argtypes =~ /^(f|i)$/;
 				my $val = shift @args;
 				return unless ($val == 1);
-				&load_new_song($project->{songs}{$element2});
+				&cmd_song($project->{songs}{$element2});
 				return;
 			}
 			return unless $argtypes =~ /^(s)$/;
 			my $songname = shift @args;
 			return unless exists $project->{songs}{$songname};
-			&load_new_song($project->{songs}{$songname});
+			&cmd_song($project->{songs}{$songname});
 			return;
 		}
-		elsif ($element1 =~ "reload") { 
+		elsif ($element1 eq "reload") {
 			my $element2 = shift @pathelements;
 			return unless $element2;
-			$project->{bridge}->reload_current_state if $element2 eq "state";
-			$project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $element2 eq "statefile";
+			&cmd_reload($element2);
 			return;
 		}
-		elsif ($element1 =~ "clic") { 
+		elsif ($element1 eq "clic") {
 			my $element2 = shift @pathelements;
 			return unless $element2;
-			&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start") if $element2 eq "start";
-			&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/stop") if $element2 eq "stop";
-			if ($element2 eq "tempo") {
-				return unless $argtypes =~ /^(f|i)$/;
-				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","simple");
-				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f",@args);
-			}
-			elsif ($element2 eq "sound") {
-				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","i",@args) if ($argtypes =~ /^(i)$/);
-				&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","ss",@args) if ($argtypes =~ /^(ss)$/);
-			}
+			&cmd_clic("start") if $element2 eq "start";
+			&cmd_clic("stop") if $element2 eq "stop";
+			return unless @args;
+			&cmd_clic("tempo",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(f|i)$/);
+			&cmd_clic("inbuilt_sound",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(i)$/);
+			&cmd_clic("custom_sounds",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(ss)$/);
 			return;
 		}
-		elsif ($element1 =~ "eval") { 
-			return unless $argtypes =~ /^(s)$/;
-			eval shift @args;
-			return;
+		elsif ($element1 eq "exit") {
+			&cmd_exit;
 		}
 	}
 }
@@ -832,8 +863,6 @@ sub process_meters {
 			$project->{meters}{values}[$i]->{current_value} = $meters[$i];
 			$project->{meters}{values}[$i]->{current_peak} = $peaks[$i] if @peaks;
 		}
-# use Data::Dumper;
-# print Dumper $project->{meters}{values};
 		#force exit
 		last;
 	}
