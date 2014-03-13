@@ -459,6 +459,60 @@ sub SendMidiCC {
 #
 ###########################################################
 
+sub parse_cmd {
+	my $command = shift;
+
+	use Scalar::Util qw(looks_like_number);
+
+	# split command line in usable parts
+	my @pathelements = split ' ', $command;
+	my $element1 = shift @pathelements;
+	my $element2 = shift @pathelements;
+	my @args = @pathelements;
+
+	# check elements
+	if ($element1 eq "start") { &cmd_start; return; }
+	elsif ($element1 eq "stop") { &cmd_stop; return; }
+	elsif ($element1 eq "zero") { &cmd_zero; return; }
+	elsif ($element1 eq "locate") {
+		my $value = shift @args;
+		return unless looks_like_number($value);
+		&cmd_locate($value);
+		return;
+	}
+	elsif ($element1 eq "save") {
+		return unless $element2;
+		&cmd_save($element2);
+		return;
+	}
+	elsif ($element1 eq "status") {
+		&cmd_status;
+		return;
+	}
+	elsif ($element1 eq "song") {
+		return unless exists $project->{songs}{$element2};
+		&cmd_song($project->{songs}{$element2});
+		return;
+	}
+	elsif ($element1 eq "reload") {
+		return unless $element2;
+		&cmd_reload($element2);
+		return;
+	}
+	elsif ($element1 eq "clic") {
+		return unless $element2;
+		&cmd_clic("start") if $element2 eq "start";
+		&cmd_clic("stop") if $element2 eq "stop";
+		return unless @args;
+		&cmd_clic("tempo",\@args) if ($element2 eq "tempo") and looks_like_number($args[0]);
+		&cmd_clic("inbuilt_sound",\@args) if ($element2 eq "tempo") and looks_like_number($args[0]);
+		&cmd_clic("custom_sounds",\@args) if ($element2 eq "tempo") and ($#args == 1); #need two files
+		return;
+	}
+	elsif ($element1 eq "exit") {
+		&cmd_exit;
+	}
+}
 sub cmd_song {
 	my $song = shift;
 
@@ -532,6 +586,8 @@ sub cmd_clic {
 		return;
 	}
 	elsif ($command eq "custom_sounds") {
+		return unless -e $args->[0];
+		return unless -e $args->[1];
 		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","ss",@{$args});
 		return;
 	}
@@ -786,7 +842,7 @@ sub process_tcp_command {
     # get information about a newly connected client
     my $client_address = $client_socket->peerhost();
     my $client_port = $client_socket->peerport();
-    #print "connection from $client_address:$client_port\n";
+    print "connection from $client_address:$client_port\n";
  
     # read up to 256 characters from the connected client
     my $data = "";
@@ -794,7 +850,7 @@ sub process_tcp_command {
     print "received data: $data\n";
 
     chomp($data);
-	my $reply = $project->execute_command($data);
+	my $reply = &parse_cmd($data);
 
     # write response data to the connected client
     $data .= " : $reply\n" if $reply;
@@ -821,7 +877,7 @@ sub init_cli_server {
 sub process_cli {
 	my $command = shift;
 	die "User asked to exit\n" if ($command =~ /exit|x|quit/);
-	print $project->execute_command($command);
+	print &parse_cmd($command);
 	return 1;
 }
 
