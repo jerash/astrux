@@ -491,10 +491,14 @@ sub load_new_song {
 }
 
 sub ExitBridge {
-		print "\nSIGINT, saving state file\n";
+		print "\nSIGINT, Exiting...\n";
+
+		print "Saving state file\n";
 		$project->{bridge}->save_state_file($project->{bridge}{statefile});
-		print "stopping jack-peak\n";
-		$project->{meters}->stop_jackpeak_meters;
+
+		print "Stopping jack-peak\n";
+		$project->{meters}->stop_jackpeak_meters if $project->{meters}{enable};
+
 		exit(0);
 }
 
