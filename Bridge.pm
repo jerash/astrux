@@ -797,8 +797,10 @@ sub process_cli {
 sub init_meters {
 	my $fifo = $project->{meters}{options}{port};
 	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{options}{port};
+	my $speed = $project->{meters}{options}{speed} || 100;
+	$speed = $speed/100;
 	#create the anyevent timer @100ms on the meters fifo
-	$project->{meters}{events} = AE::timer( 1, 0.1, \&process_meters );
+	$project->{meters}{events} = AE::timer( 0, $speed, \&process_meters );
 }
 sub process_meters {
 	my $fifofile = $project->{meters}{options}{port};
