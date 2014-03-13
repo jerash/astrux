@@ -90,13 +90,13 @@ sub add_markers {
 		next unless ((defined $song->{midi_files}{$midifilename}{time_master}) and ($song->{midi_files}{$midifilename}{time_master} eq 1));
 		my $midifile = $output_path . "/$song->{midi_files}{$midifilename}{filename}";
 		print " |_Song: adding midi markers from file $midifile\n";
-		my @songevents = MidiFile::get_timed_events($midifile);
+		my @songevents = MidiFile::get_timed_metaevents($midifile);
 		return unless @songevents;
 		$song->{markers} = \@songevents;
 	}
 }
 
-sub create_markers_file {
+sub save_markers_file {
 	my $song = shift;
 	my $output_path = shift;
 
@@ -108,7 +108,7 @@ sub create_markers_file {
 	close FILE;
 }
 
-sub create_tempomap_file {
+sub save_tempomap_file {
 	my $song = shift;
 	my $output_path = shift;
 
