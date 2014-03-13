@@ -12,7 +12,7 @@ use MIDI;
 
 my $debug = 0;
 
-sub get_timed_events {
+sub get_timed_metaevents {
   my $file = shift;
   die "missing file to read\n" unless $file;
 
@@ -153,7 +153,7 @@ sub get_timed_events {
   return @absolute_events;
 }
 
-sub dump_timed_events {
+sub dump_timed_metaevents {
   my $timed_events = shift;
 
   foreach my $event (@{$timed_events}) {
@@ -195,8 +195,8 @@ sub get_tick_duration {
 #------------use example---------------
 # die "No source File\n" unless $ARGV[0];
 # die "No destination File\n" unless $ARGV[1];
-# my @songevents = &get_timed_events($ARGV[0]);
-# &dump_timed_events(\@songevents);
+# my @songevents = &get_timed_metaevents($ARGV[0]);
+# &dump_timed_metaevents(\@songevents);
 # my @markers_list = &get_timed_markers(\@songevents);
 
 # open FILE,">$ARGV[1]" or die "$!";

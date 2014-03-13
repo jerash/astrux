@@ -51,7 +51,7 @@ sub init {
 	$project->Sanitize;
 
 	#------------------Add meters------------------------------
-	$project->AddMeters if $project->{meters}{enable};
+	$project->AddMeters;
 
 	#------------------Add songs------------------------------
 	$project->AddSongs;	
@@ -77,7 +77,6 @@ sub Start {
 	# jack-plumbing
 	#---------------------------------
 	$project->{plumbing}->Start;
-
 
 	#JACK-OSC (jack.clock)
 	#---------------------------------
@@ -284,6 +283,7 @@ sub AddMIDIOSCPaths {
 
 sub AddMeters {
 	my $project = shift;
+	return unless $project->{meters}{enable};
 
 	print "Project: Creating meters\n";
 
@@ -363,8 +363,8 @@ sub GenerateFiles {
 
 		#create tempo/timebase/markers file
 		my $output_path = $project->{globals}{base_path}."/songs/$songname";
-		$song->create_markers_file($output_path);
-		$song->create_tempomap_file($output_path);
+		$song->save_markers_file($output_path);
+		$song->save_tempomap_file($output_path);
 	}
 
 	#----------------PLUMBING FILE------------------------
