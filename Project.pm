@@ -356,6 +356,9 @@ sub SaveToFile {
 		$hash{OSC}{object} = delete $project->{bridge}{OSC}{object};
 		$hash{OSC}{events} = delete $project->{bridge}{OSC}{events};
 	}
+	if (defined $project->{meters}{events}) {
+		$hash{meters}{events} = delete $project->{meters}{events};	
+	}
 	foreach my $mixer (keys $project->{mixers}) {
 		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{engine}{socket}; 
 	}
@@ -378,11 +381,13 @@ sub SaveToFile {
 		$project->{bridge}{OSC}{object} = delete $hash{OSC}{object};
 		$project->{bridge}{OSC}{events} = delete $hash{OSC}{events};
 	}
+	if (defined $hash{meters}{events}) {
+		$project->{meters}{events} = delete $hash{meters}{events};	
+	}
 	foreach my $mixer (keys $hash{mixers}) {
 		$project->{mixers}{$mixer}{engine}{socket} = delete $hash{mixers}{$mixer}; 
 	}
 	undef %hash;
-
 }
 
 sub LoadFromFile {
@@ -401,7 +406,10 @@ sub RemoveOldFiles {
 		print "deleting old state file $old_statefile\n";
 		unlink $old_statefile;
 	}
-	warn "Old state file $old_statefile could not be deleted\n" if -e $old_statefile;	
+	warn "Old state file $old_statefile could not be deleted\n" if -e $old_statefile;
+
+	#TODO remove ... well everything in "output" folder
+	#TODO remove songs tempo.map / markers.csv / chainsetup.ecs
 }
 
 ###########################################################
