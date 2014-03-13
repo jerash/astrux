@@ -38,6 +38,51 @@ sub init {
 	$plumbing->{rules} = \@plumbing_rules;
 }
 
+sub Start {
+	my $project = shift;
+	#jack.plumbing (unused, replaced with jack-plumbing)
+	#---------------------------------
+	# copy jack plumbing file
+	# if ( $project->{plumbing}{enable} eq '1') {
+	# 	my $homedir = $ENV{HOME};
+	# 	warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
+	# 	use File::Copy;
+	# 	copy("$project->{plumbing}{file}","$homedir/.jack.plumbing") or die "jack.plumbing copy failed: $!";
+	# }
+	# # start jack.plumbing
+	# my $pid_jackplumbing = qx(pgrep jack.plumbing);
+	# if ($project->{plumbing}{enable}) {
+	# 	if (!$pid_jackplumbing) {
+	# 		print "jack.plumbing is not running. Starting it\n";
+	# 		my $command = "jack.plumbing > /dev/null 2>&1 &";
+	# 		system ($command);
+	# 		sleep 1;
+	# 		$pid_jackplumbing = qx(pgrep jack.plumbing);
+	# 	}
+	# 	print "jack.plumbing running with PID $pid_jackplumbing";
+	# }
+	# $project->{plumbing}{PID} = $pid_jackplumbing;
+
+	#jack-plumbing
+	#---------------------------------
+	# copy jack plumbing file
+	if ( $project->{plumbing}{enable} ) {
+		# start jack-plumbing
+		my $pid_jackplumbing = qx(pgrep jack-plumbing);
+		if (!$pid_jackplumbing) {
+			print "jack-plumbing is not running. Starting it\n";
+			my $plumbingfile = $project->{globals}{base_path}."/".$project->{globals}{output_path}."/"."jack.plumbing";
+			die "Could not find plumbing file $plumbingfile" unless -e $plumbingfile;
+			my $command = "jack-plumbing -q $plumbingfile >/dev/null 2>&1 &";
+			system ($command);
+			sleep 1;
+			$pid_jackplumbing = qx(pgrep jack-plumbing);
+		}
+		print "jack-plumbing running with PID $pid_jackplumbing";
+		$project->{plumbing}{PID} = $pid_jackplumbing;
+	}
+}
+
 ###########################################################
 #
 #		 PLUMBING FILE functions

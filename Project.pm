@@ -11,6 +11,7 @@ use Song;
 use Plumbing;
 use Bridge;
 use TouchOSC;
+use Jack;
 
 ###########################################################
 #
@@ -69,67 +70,14 @@ sub Start {
 	# verify services and servers
 	#----------------------------------------------------------------
 
-	#JACK
+	# JACK server
 	#---------------------------------
-	my $pid_jackd = qx(pgrep jackd);
-	if (!$pid_jackd) {
-		print "Strange ...JACK server is not running ?? Starting it\n";
-		my $command = "$project->{jack}{start} 2>&1 &";
-		system ($command) if $command;
-		sleep 1;
-		$pid_jackd = qx(pgrep jackd);
-	}
-	else {
-		print "JACK server running with PID $pid_jackd";
-		#verify jack parameters
-		my $params = qx(ps $pid_jackd);
-		die "JACK server doesn't have project parameters, please check.\nExpected : $project->{jack}{start}\nFound :\n$params"
-			unless $params =~ $project->{jack}{start};
-		print "JACK server parameters ok\n";
-	}
-	$project->{JACK}{PID} = $pid_jackd;
+	$project->Jack::Start_Jack_Server;
 
-	#jack.plumbing (unused, replaced with jack-plumbing)
+	# jack-plumbing
 	#---------------------------------
-	# copy jack plumbing file
-	# if ( $project->{plumbing}{enable} eq '1') {
-	# 	my $homedir = $ENV{HOME};
-	# 	warn "jack.plumbing already exists, file will be overwritten\n" if (-e "$homedir/.jack.plumbing");
-	# 	use File::Copy;
-	# 	copy("$project->{plumbing}{file}","$homedir/.jack.plumbing") or die "jack.plumbing copy failed: $!";
-	# }
-	# # start jack.plumbing
-	# my $pid_jackplumbing = qx(pgrep jack.plumbing);
-	# if ($project->{plumbing}{enable}) {
-	# 	if (!$pid_jackplumbing) {
-	# 		print "jack.plumbing is not running. Starting it\n";
-	# 		my $command = "jack.plumbing > /dev/null 2>&1 &";
-	# 		system ($command);
-	# 		sleep 1;
-	# 		$pid_jackplumbing = qx(pgrep jack.plumbing);
-	# 	}
-	# 	print "jack.plumbing running with PID $pid_jackplumbing";
-	# }
-	# $project->{plumbing}{PID} = $pid_jackplumbing;
+	$project->{plumbing}->Start;
 
-	#jack-plumbing
-	#---------------------------------
-	# copy jack plumbing file
-	if ( $project->{plumbing}{enable} ) {
-		# start jack-plumbing
-		my $pid_jackplumbing = qx(pgrep jack-plumbing);
-		if (!$pid_jackplumbing) {
-			print "jack-plumbing is not running. Starting it\n";
-			my $plumbingfile = $project->{globals}{base_path}."/".$project->{globals}{output_path}."/"."jack.plumbing";
-			die "Could not find plumbing file $plumbingfile" unless -e $plumbingfile;
-			my $command = "jack-plumbing -q $plumbingfile >/dev/null 2>&1 &";
-			system ($command);
-			sleep 1;
-			$pid_jackplumbing = qx(pgrep jack-plumbing);
-		}
-		print "jack-plumbing running with PID $pid_jackplumbing";
-		$project->{plumbing}{PID} = $pid_jackplumbing;
-	}
 
 	#JACK-OSC (jack.clock)
 	#---------------------------------

@@ -5,6 +5,30 @@ package Jack;
 use strict;
 use warnings;
 
+sub Start_Jack_Server {
+	my $project = shift;
+
+	# JACK server
+	#---------------------------------
+	my $pid_jackd = qx(pgrep jackd);
+	if (!$pid_jackd) {
+		print "Strange ...JACK server is not running ?? Starting it\n";
+		my $command = "$project->{jack}{start} 2>&1 &";
+		system ($command) if $command;
+		sleep 1;
+		$pid_jackd = qx(pgrep jackd);
+	}
+	else {
+		print "JACK server running with PID $pid_jackd";
+		#verify jack parameters
+		my $params = qx(ps $pid_jackd);
+		die "JACK server doesn't have project parameters, please check.\nExpected : $project->{jack}{start}\nFound :\n$params"
+			unless $params =~ $project->{jack}{start};
+		print "JACK server parameters ok\n";
+	}
+	$project->{JACK}{PID} = $pid_jackd;
+}
+
 sub get_jack_hardware_io_list {
 
 	my $hardware_io_list;
