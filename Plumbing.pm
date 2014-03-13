@@ -65,7 +65,6 @@ sub Start {
 
 	#jack-plumbing
 	#---------------------------------
-	# copy jack plumbing file
 	if ( $project->{plumbing}{enable} ) {
 		# start jack-plumbing
 		my $pid_jackplumbing = qx(pgrep jack-plumbing);
@@ -80,6 +79,9 @@ sub Start {
 		}
 		print "jack-plumbing running with PID $pid_jackplumbing";
 		$project->{plumbing}{PID} = $pid_jackplumbing;
+	}
+	else {
+		print "Plumbing disabled in project\n";
 	}
 }
 
