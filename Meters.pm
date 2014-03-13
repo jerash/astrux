@@ -162,8 +162,8 @@ sub start {
 		# build the array of jack ports
 		my @ports;
 		push @ports , $_->{jack_port_name} for (@{$meters_hash->{values}});
-		return unless @ports;
-		&launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks});
+		&launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks},
+			$meters_hash->{options}{speed},$meters_hash->{options}{scale});
 	}
 }
 
@@ -181,6 +181,8 @@ sub launch_jackpeak_fifo {
 	return unless $fifo; # return if fifo is empty
 
 	my $with_peaks = shift; # logical value to create peak hold values
+	my $speed = shift or 100 ; # output speed in milliseconds (default 100ms)
+	my $scale = shift or "linear" ; # linear or db scale
 
  	unless ( -p $fifo ) {
  		use POSIX qw(mkfifo);
@@ -188,8 +190,10 @@ sub launch_jackpeak_fifo {
 		print "Meters: FIFO $fifo created\n"
 	}
 	my $list_of_ports = join ' ' , @{$ports};
-	my $command = "jack-peak2 " . $list_of_ports;
+	my $command = "jack-peak2 -d $speed ";
+	$command .= " -i 1" if $$scale eq "db";
 	$command .= " -p" if $with_peaks;
+	$command .=  $list_of_ports;
 	$command .= " > " . $fifo . " 2>/dev/null &";
 
 	# TODO fork&exec to get pid so we can stop it later
