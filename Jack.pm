@@ -29,6 +29,26 @@ sub Start_Jack_Server {
 	$project->{JACK}{PID} = $pid_jackd;
 }
 
+sub Start_Jack_OSC {
+	my $project = shift;
+
+	# JACK OSC
+	#---------------------------------
+	my $pid_jackosc = qx(pgrep jack-osc);
+	if ($project->{'jack-osc'}{enable}) {
+		if (!$pid_jackosc) {
+			print "jack-osc server is not running, starting it\n";
+			my $command = "jack-osc -p $project->{'jack-osc'}{osc_port} >/dev/null 2>&1 &";
+			system ($command);
+			sleep 1;
+			$pid_jackosc = qx(pgrep jack-osc);
+		}
+		#TODO verify jack-osc is running on the expected port
+		print "jack-osc server running with PID $pid_jackosc";
+		$project->{'jack-osc'}{PID} = $pid_jackosc;
+	}
+}
+
 sub get_jack_hardware_io_list {
 
 	my $hardware_io_list;
