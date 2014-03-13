@@ -80,17 +80,11 @@ sub start {
 
 	#	gui actions (from tcp commands)
 
-	#	front panel actions (from tcp commands)
+	#	front panel actions (from rs232 port)
 
 	#catch signals
 	#--------------------------------------
-	$SIG{INT} = sub { 
-		print "\nSIGINT, saving state file\n";
-		$bridge->save_state_file($project->{bridge}{statefile});
-		print "stopping jack-peak\n";
-		$project->{meters}->stop_jackpeak_meters;
-		exit(0);
-	};
+	$SIG{INT} = \&ExitBridge;
 
 	#reload state
 	if (-e $project->{bridge}{statefile}){
@@ -496,6 +490,14 @@ sub load_new_song {
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start","f","0") if $song->{autostart};
 }
 
+sub ExitBridge {
+		print "\nSIGINT, saving state file\n";
+		$project->{bridge}->save_state_file($project->{bridge}{statefile});
+		print "stopping jack-peak\n";
+		$project->{meters}->stop_jackpeak_meters;
+		exit(0);
+}
+
 ###########################################################
 #
 #		 BRIDGE OSC functions
@@ -797,11 +799,13 @@ sub process_cli {
 sub init_meters {
 	my $fifo = $project->{meters}{options}{port};
 	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{options}{port};
-	my $speed = $project->{meters}{options}{speed} || 100;
-	$speed = $speed/100;
-	#create the anyevent timer @100ms on the meters fifo
+	my $speed = $project->{meters}{options}{speed} || "100";
+	print "Reading meters every $speed ms\n";
+	$speed = $speed/1000;
+	#create the anyevent timer @100ms by default on the meters fifo
 	$project->{meters}{events} = AE::timer( 0, $speed, \&process_meters );
 }
+
 sub process_meters {
 	my $fifofile = $project->{meters}{options}{port};
 	use Fcntl;
@@ -824,8 +828,8 @@ sub process_meters {
 			$project->{meters}{values}[$i]->{current_value} = $meters[$i];
 			$project->{meters}{values}[$i]->{current_peak} = $peaks[$i] if @peaks;
 		}
-		use Data::Dumper;
-		print Dumper $project->{meters}{values};
+# use Data::Dumper;
+# print Dumper $project->{meters}{values};
 		#force exit
 		last;
 	}

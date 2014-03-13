@@ -181,8 +181,8 @@ sub launch_jackpeak_fifo {
 	return unless $fifo; # return if fifo is empty
 
 	my $with_peaks = shift; # logical value to create peak hold values
-	my $speed = shift or 100 ; # output speed in milliseconds (default 100ms)
-	my $scale = shift or "linear" ; # linear or db scale
+	my $speed = shift || "100" ; # output speed in milliseconds (default 100ms)
+	my $scale = shift || "linear" ; # linear or db scale
 
  	unless ( -p $fifo ) {
  		use POSIX qw(mkfifo);
@@ -191,21 +191,21 @@ sub launch_jackpeak_fifo {
 	}
 	my $list_of_ports = join ' ' , @{$ports};
 	my $command = "jack-peak2 -d $speed ";
-	$command .= " -i 1" if $$scale eq "db";
-	$command .= " -p" if $with_peaks;
+	$command .= "-i 1 " if $scale eq "db";
+	$command .= "-p " if $with_peaks;
 	$command .=  $list_of_ports;
 	$command .= " > " . $fifo . " 2>/dev/null &";
 
 	# TODO fork&exec to get pid so we can stop it later
 	# TODO check return code / error messages
 	print "Starting Meters with jack-peak\n";
+	print $command;
 	system($command);
 }
 
 sub stop_jackpeak_meters {
 	# by PID or by fifo(port)
 	my $blob = `killall jack-peak2`;
-	print "-----\n$blob\n----\n";
 }
 
 ###########################################################
