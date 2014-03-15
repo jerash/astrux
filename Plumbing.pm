@@ -105,11 +105,16 @@ sub Start {
 sub Stop {
 	my $plumbing = shift;
 	return unless $plumbing->{enable};
-	print "Stopping jack-plumbing\n";
 	# by PID
-	if (defined $plumbing->{PID}) { kill $plumbing->{PID}; }
+	if (defined $plumbing->{PID}) {
+		print "Stopping jack-plumbing with PID $plumbing->{PID}\n";
+		kill 'KILL',$plumbing->{PID};
+	}
 	# or brute
-	else { my $blob = `killall jack-plumbing`; }
+	else {
+		print "Force killall jack-plumbing\n";
+		my $blob = `killall jack-plumbing`;
+	}
 }
 ###########################################################
 #

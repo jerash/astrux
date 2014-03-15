@@ -64,6 +64,22 @@ sub Start_Jack_OSC {
 	}
 }
 
+sub Stop_Jack_OSC {
+	my $project = shift;
+
+	return unless $project->{'jack-osc'}{enable};
+	# by PID
+	if (defined $project->{'jack-osc'}{PID}) {
+		print "Stopping jack-osc with PID $project->{'jack-osc'}{PID}\n";
+		kill 'KILL',$project->{'jack-osc'}{PID};
+	}
+	# or brute
+	else {
+		print "Force killall jack-osc\n";
+		my $blob = `killall jack-osc`;
+	}
+}
+
 sub get_jack_hardware_io_list {
 
 	my $hardware_io_list;

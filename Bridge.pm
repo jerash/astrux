@@ -362,7 +362,8 @@ sub save_midi_file {
 
 sub save_state_file {
 	my $bridge = shift;
-	return unless defined $outfile;
+	return unless defined $bridge->{statefile};
+	print "Saving state file\n";
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $bridge->{current_values}, $bridge->{statefile};
@@ -594,12 +595,10 @@ sub cmd_clic {
 sub cmd_exit {
 		print "\nSIGINT, Exiting...\n";
 
-		print "Saving state file\n";
 		$project->{bridge}->save_state_file;
-
-		print "Stopping services\n";
 		$project->{plumbing}->Stop;
 		$project->{meters}->stop_jackpeak_meters;
+		$project->Jack::Stop_Jack_OSC;
 
 		# TODO finish to close everything on exit
 

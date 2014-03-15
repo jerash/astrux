@@ -230,11 +230,16 @@ sub launch_jackpeak_fifo {
 sub stop_jackpeak_meters {
 	my $meters_hash = shift;
 	return unless $meters_hash->{options}{enable};
-	print "Stopping jack-peak\n";
 	# by PID
-	if (defined $meters_hash->{options}{PID}) { kill $meters_hash->{options}{PID}; }
+	if (defined $meters_hash->{options}{PID}) {
+		print "Stopping jack-peak with PID $meters_hash->{options}{PID}\n";
+		kill 'KILL',$meters_hash->{options}{PID};
+	}
 	# or brute
-	else { my $blob = `killall jack-peak2`; }
+	else {
+		print "Force killall jack-peak\n";
+		my $blob = `killall jack-peak2`;
+	}
 }
 
 ###########################################################
