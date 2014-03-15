@@ -102,6 +102,15 @@ sub Start {
 	}
 }
 
+sub Stop {
+	my $plumbing = shift;
+	return unless $plumbing->{enable};
+	print "Stopping jack-plumbing\n";
+	# by PID
+	if (defined $plumbing->{PID}) { kill $plumbing->{PID}; }
+	# or brute
+	else { my $blob = `killall jack-plumbing`; }
+}
 ###########################################################
 #
 #		 PLUMBING FILE functions

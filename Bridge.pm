@@ -597,6 +597,8 @@ sub cmd_exit {
 		print "Saving state file\n";
 		$project->{bridge}->save_state_file;
 
+		print "Stopping services\n";
+		$project->{plumbing}->Stop;
 		$project->{meters}->stop_jackpeak_meters;
 
 		# TODO finish to close everything on exit
