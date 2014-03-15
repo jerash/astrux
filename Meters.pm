@@ -210,7 +210,7 @@ sub launch_jackpeak_fifo {
 		$command .=  " > " . $fifo . " 2>/dev/null &";
 		system($command);
 		sleep 1;
-		$pid_jackpeak = qx(pgrep jack-osc);
+		$pid_jackpeak = qx(pgrep jack-peak);
 		chomp $pid_jackpeak;
 	}
 	elsif ($#lines == 0) {
@@ -220,7 +220,7 @@ sub launch_jackpeak_fifo {
 			print "jack-peak is already running with expected parameters\n";
 		}
 		else {
-			die "jack-peak doesn\'t have expected parameters : $lines[0]\n----\n$pid_jackpeak $command";
+			die "jack-peak doesn\'t have expected parameters,found :\n $lines[0] ----wanted :\n$command";
 		}
 	}
 	print "jack-peak running with PID $pid_jackpeak\n";
