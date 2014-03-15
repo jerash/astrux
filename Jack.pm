@@ -34,17 +34,31 @@ sub Start_Jack_OSC {
 
 	# JACK OSC
 	#---------------------------------
-	my $pid_jackosc = qx(pgrep jack-osc);
+	my $pid_jackosc;
+	my $port_jackosc;
+	my @lines = qx(pgrep -a jack-osc);
 	if ($project->{'jack-osc'}{enable}) {
-		if (!$pid_jackosc) {
-			print "jack-osc server is not running, starting it\n";
+		if ($#lines > 0) {
+			die "Error: multiple jack-osc instances found\n";
+		}
+		elsif ($#lines == -1) {
+			print "jack-osc server is not running, starting it on oscport $project->{'jack-osc'}{osc_port}\n";
 			my $command = "jack-osc -p $project->{'jack-osc'}{osc_port} >/dev/null 2>&1 &";
 			system ($command);
 			sleep 1;
 			$pid_jackosc = qx(pgrep jack-osc);
 		}
-		#TODO verify jack-osc is running on the expected port
-		print "jack-osc server running with PID $pid_jackosc";
+		elsif ($#lines == 0) {
+			if ( $lines[0] =~ /(\d+?) jack-osc -p (\d+?)$/ ) {
+				$pid_jackosc = $1;
+				$port_jackosc = $2;
+				die "jack-osc is not running on the expected oscport : $lines[0]\n" unless $port_jackosc eq $project->{'jack-osc'}{osc_port};
+			}
+			else {
+				die "jack-osc doesn\'t have expected parameters : $lines[0]\n";
+			}
+		}
+		print "jack-osc server running with PID $pid_jackosc on oscport $port_jackosc\n";
 		$project->{'jack-osc'}{PID} = $pid_jackosc;
 	}
 }
