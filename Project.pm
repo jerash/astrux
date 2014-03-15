@@ -290,11 +290,8 @@ sub AddMeters {
 	#create object
 	$project->{meters} = Meters->new($project->{meters});
 
-	#get rules
-	my $meters = $project->Meters::create_meters;
-
-	#insert into project
-	$project->{meters}{values} = $meters;
+	#insert meters info into project
+	$project->{meters}{values} = $project->Meters::get_meters_hash;
 }
 
 ###########################################################

@@ -69,7 +69,7 @@ sub new {
 #
 ###########################################################
 
-sub create_meters {
+sub get_meters_hash {
 	my $project = shift;
 
 	#the rule set
