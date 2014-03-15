@@ -598,8 +598,7 @@ sub cmd_exit {
 		print "Saving state file\n";
 		$project->{bridge}->save_state_file($project->{bridge}{statefile});
 
-		print "Stopping jack-peak\n";
-		$project->{meters}->stop_jackpeak_meters if $project->{meters}{enable};
+		$project->{meters}->stop_jackpeak_meters;
 
 		# TODO finish to close everything on exit
 

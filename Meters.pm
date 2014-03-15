@@ -162,7 +162,7 @@ sub start {
 		# build the array of jack ports
 		my @ports;
 		push @ports , $_->{jack_port_name} for (@{$meters_hash->{values}});
-		&launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks},
+		$meters_hash->{options}{PID} = &launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks},
 			$meters_hash->{options}{speed},$meters_hash->{options}{scale});
 	}
 }
@@ -183,29 +183,58 @@ sub launch_jackpeak_fifo {
 	my $with_peaks = shift; # logical value to create peak hold values
 	my $speed = shift || "100" ; # output speed in milliseconds (default 100ms)
 	my $scale = shift || "linear" ; # linear or db scale
-
- 	unless ( -p $fifo ) {
- 		use POSIX qw(mkfifo);
-		mkfifo($fifo, 0644) or die "Meters error : could not create fifo $fifo : $!\n";
-		print "Meters: FIFO $fifo created\n"
-	}
 	my $list_of_ports = join ' ' , @{$ports};
+	#building command line
 	my $command = "jack-peak2 -d $speed ";
 	$command .= "-i 1 " if $scale eq "db";
 	$command .= "-p " if $with_peaks;
 	$command .=  $list_of_ports;
-	$command .= " > " . $fifo . " 2>/dev/null &";
 
-	# TODO fork&exec to get pid so we can stop it later
-	# TODO check return code / error messages
-	print "Starting Meters with jack-peak\n";
-	print $command;
-	system($command);
+	#verify if another instance is running
+	my $pid_jackpeak;
+	my @lines = qx(pgrep -a jack-peak2);
+	if ($#lines > 0) {
+		die "Error: multiple jack-peak instances found\n";
+	}
+	elsif ($#lines == -1) {
+		print "jack-peak is not running, starting it\n";
+
+		# create fifo if necessary
+	 	unless ( -p $fifo ) {
+	 		use POSIX qw(mkfifo);
+			mkfifo($fifo, 0644) or die "Meters error : could not create fifo $fifo : $!\n";
+			print "Meters: FIFO $fifo created\n"
+		}
+
+		#starting jack-peak
+		$command .=  " > " . $fifo . " 2>/dev/null &";
+		system($command);
+		sleep 1;
+		$pid_jackpeak = qx(pgrep jack-osc);
+		chomp $pid_jackpeak;
+	}
+	elsif ($#lines == 0) {
+		$command =~ s/[\\]//g; #remove backslashes from command for correct comparison
+		if ((index($lines[0], $command) != -1) and ( $lines[0] =~ /(\d+?) / )) {
+			$pid_jackpeak = $1;
+			print "jack-peak is already running with expected parameters\n";
+		}
+		else {
+			die "jack-peak doesn\'t have expected parameters : $lines[0]\n----\n$pid_jackpeak $command";
+		}
+	}
+	print "jack-peak running with PID $pid_jackpeak\n";
+	return $pid_jackpeak;
 }
 
 sub stop_jackpeak_meters {
-	# by PID or by fifo(port)
-	my $blob = `killall jack-peak2`;
+	my $meters_hash = shift;
+	return unless $meters_hash->{options}{enable};
+	print "Stopping jack-peak\n";
+	# by PID
+	if (defined $meters_hash->{options}{PID}) { kill $meters_hash->{options}{PID}; }
+	# or brute
+	else { my $blob = `killall jack-peak2`; }
 }
 
 ###########################################################
