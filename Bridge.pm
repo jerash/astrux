@@ -362,11 +362,10 @@ sub save_midi_file {
 
 sub save_state_file {
 	my $bridge = shift;
-	my $outfile = shift;
 	return unless defined $outfile;
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
-	store $bridge->{current_values}, $outfile;
+	store $bridge->{current_values}, $bridge->{statefile};
 }
 sub reload_state_file {
 	my $bridge = shift;
@@ -554,7 +553,7 @@ sub cmd_save {
 	my $what = shift;
 	$project->SaveDumperFile(".live") if ($what =~ /^(dumper|all)$/);
 	$project->SaveToFile if ($what =~ /^(project|all)$/);
-	$project->{bridge}->save_state_file($project->{bridge}{statefile}) if ($what =~ /^(state|all)$/);
+	$project->{bridge}->save_state_file if ($what =~ /^(state|all)$/);
 }
 sub cmd_status {
 	# TODO print/reply status
@@ -596,7 +595,7 @@ sub cmd_exit {
 		print "\nSIGINT, Exiting...\n";
 
 		print "Saving state file\n";
-		$project->{bridge}->save_state_file($project->{bridge}{statefile});
+		$project->{bridge}->save_state_file;
 
 		$project->{meters}->stop_jackpeak_meters;
 
