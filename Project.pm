@@ -12,6 +12,7 @@ use Plumbing;
 use Bridge;
 use TouchOSC;
 use Jack;
+use Metronome;
 
 ###########################################################
 #
@@ -53,6 +54,9 @@ sub init {
 	#------------------Add meters------------------------------
 	$project->AddMeters;
 
+	#------------------Add meters------------------------------
+	$project->AddMetronome;
+
 	#------------------Add songs------------------------------
 	$project->AddSongs;	
 
@@ -84,18 +88,7 @@ sub Start {
 
 	#klick
 	#---------------------------------
-	my $pid_klick = qx(pgrep klick);
-	if ($project->{klick}{enable}) {
-		if (!$pid_klick) {
-			print "klick is not running, starting it\n";
-			my $command = "klick -o $project->{klick}{osc_port} -t -T >/dev/null 2>&1 &";
-			system ($command);
-			sleep 1;
-			$pid_klick = qx(pgrep klick);
-		}
-		print "klick running with PID $pid_klick";
-		$project->{klick}{PID} = $pid_klick;
-	}
+	$project->{metronome}->Start;
 
 	#JPMIDI << TODO problem in server mode can't load new midi file....
 	#---------------------------------
@@ -219,7 +212,7 @@ sub AddSongs {
 						$project->{songfiles}{$_};
 		die "Bad song ini reference $songfile in project.ini\n" unless (-e $songfile);
 
-	 	print "Project: Creating songs from $songfile\n";
+	 	print "Project: Creating song from $songfile\n";
 
 		#crete a song object
 		my $song = Song->new($songfile);
@@ -294,6 +287,16 @@ sub AddMeters {
 	$project->{meters}{values} = $project->Meters::get_meters_hash;
 }
 
+sub AddMetronome {
+	my $project = shift;
+	return unless $project->{metronome}{enable};
+
+	print "Project: Creating metronome\n";
+
+	#create object
+	$project->{metronome} = Metronome->new($project->{metronome});
+}
+
 ###########################################################
 #
 #		 PROJECT functions
@@ -361,7 +364,7 @@ sub GenerateFiles {
 		#create tempo/timebase/markers file
 		my $output_path = $project->{globals}{base_path}."/songs/$songname";
 		$song->save_markers_file($output_path);
-		$song->save_tempomap_file($output_path);
+		$song->save_klick_tempomap_file($output_path) if ($project->{metronome}{enable}) and ($project->{metronome}{engine} eq "klick");
 	}
 
 	#----------------PLUMBING FILE------------------------

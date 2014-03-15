@@ -524,15 +524,15 @@ sub cmd_song {
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0");
 	
 	# reconfigure klick
-	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","$song->{metronome_type}");
-	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/map/load_file","s","$song->{klick_file}") if $song->{metronome_type} eq "map";
+	&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/set_type","s","$song->{metronome_type}");
+	&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/map/load_file","s","$song->{klick_file}") if $song->{metronome_type} eq "map";
 	#TODO fix klick simple mode won't unregistrer current tempo map
 	if ($song->{metronome_type} eq "simple") {
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f","$song->{metronome_tempo}");
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/simple/set_tempo","f","$song->{metronome_tempo}");
 		my @meters = split '/' , $song->{metronome_timesignature};
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_meter","ii",@meters);
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/simple/set_meter","ii",@meters);
 	}
-	&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start");
+	&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/start");
 
 	# load players
 	print $project->{mixers}{players}{engine}->SelectAndConnectChainsetup($song->{name});
@@ -569,26 +569,26 @@ sub cmd_clic {
 	my $args = shift; # arrayref
 
 	if ($command eq "start") { 
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/start");
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/start");
 		return;
 	}
 	elsif ($command eq "stop") {
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/stop");
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/stop");
 		return;
 	}
 	elsif ($command eq "tempo") {
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/metro/set_type","s","simple");
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/simple/set_tempo","f",$args->[0]);
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/set_type","s","simple");
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/simple/set_tempo","f",$args->[0]);
 		return;
 	}
 	elsif ($command eq "inbuilt_sound") {
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","i",$args->[0]);
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","i",$args->[0]);
 		return;
 	}
 	elsif ($command eq "custom_sounds") {
 		return unless -e $args->[0];
 		return unless -e $args->[1];
-		&OSC_send("localhost",$project->{klick}{osc_port},"/klick/config/set_sound","ss",@{$args});
+		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","ss",@{$args});
 		return;
 	}
 }

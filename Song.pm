@@ -5,7 +5,7 @@ package Song;
 use strict;
 use warnings;
 
-use MidiFile;
+use Midifile;
 
 ###########################################################
 #
@@ -71,7 +71,7 @@ sub init {
 		# match sampler
 		if ($songinfo_ref->{$section}{type} eq "sampler") {
 			$song->{sampler_files}{$section} = $songinfo_ref->{$section};
-			print " |_Song: sampler file $songinfo_ref->{$section}{filename}\n";
+			print " |_Song: adding sampler file $songinfo_ref->{$section}{filename}\n";
 		}
 	}
 }
@@ -108,9 +108,10 @@ sub save_markers_file {
 	close FILE;
 }
 
-sub save_tempomap_file {
+sub save_klick_tempomap_file {
 	my $song = shift;
 	my $output_path = shift;
+	return unless $output_path;
 
 	my @file_lines = ();
 	my ($last_change,$nb_bars) = (0,0);
