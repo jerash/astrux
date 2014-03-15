@@ -47,6 +47,7 @@ sub Start_Jack_OSC {
 			system ($command);
 			sleep 1;
 			$pid_jackosc = qx(pgrep jack-osc);
+			chomp $pid_jackosc;
 		}
 		elsif ($#lines == 0) {
 			if ( $lines[0] =~ /(\d+?) jack-osc -p (\d+?)$/ ) {
@@ -58,7 +59,7 @@ sub Start_Jack_OSC {
 				die "jack-osc doesn\'t have expected parameters : $lines[0]\n";
 			}
 		}
-		print "jack-osc server running with PID $pid_jackosc on oscport $port_jackosc\n";
+		print "jack-osc server running with PID $pid_jackosc on oscport $project->{'jack-osc'}{osc_port}\n";
 		$project->{'jack-osc'}{PID} = $pid_jackosc;
 	}
 }
