@@ -67,16 +67,34 @@ sub Start {
 	#---------------------------------
 	if ( $project_plumbing->{enable} ) {
 		# start jack-plumbing
-		my $pid_jackplumbing = qx(pgrep jack-plumbing);
-		if (!$pid_jackplumbing) {
+		my $pid_jackplumbing;
+		my $file_jackplumbing,
+		my @lines = qx(pgrep -a jack-plumbing);
+
+		if ($#lines > 0) {
+			die "Error: multiple jack-plumbing instances found\n";
+		}
+		elsif ($#lines == -1) {
 			print "jack-plumbing is not running. Starting it with file $project_plumbing->{file}\n";
 			die "Could not find plumbing file $project_plumbing->{file}" unless -e $project_plumbing->{file};
 			my $command = "jack-plumbing -q $project_plumbing->{file} >/dev/null 2>&1 &";
 			system ($command);
 			sleep 1;
 			$pid_jackplumbing = qx(pgrep jack-plumbing);
+			chomp $pid_jackplumbing;
 		}
-		print "jack-plumbing running with PID $pid_jackplumbing";
+		elsif ($#lines == 0) {
+			if ( $lines[0] =~ /(\d+?) jack-plumbing -q (.*)/ ) {
+				$pid_jackplumbing = $1;
+				$file_jackplumbing = $2;
+				die "found jack-plumbing instance using another rule file : $lines[0]\n" 
+					unless $file_jackplumbing eq $project_plumbing->{file};
+			}
+			else {
+				die "jack-plumbing doesn\'t have expected parameters : $lines[0]\n";
+			}
+		}
+		print "jack-plumbing running with PID $pid_jackplumbing and file $file_jackplumbing\n";
 		$project_plumbing->{PID} = $pid_jackplumbing;
 	}
 	else {
