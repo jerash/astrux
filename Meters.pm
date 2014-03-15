@@ -194,10 +194,10 @@ sub launch_jackpeak_fifo {
 	my $pid_jackpeak;
 	my @lines = qx(pgrep -a jack-peak2);
 	if ($#lines > 0) {
-		die "Error: multiple jack-peak instances found\n";
+		die "Error: multiple jack-peak2 instances found\n";
 	}
 	elsif ($#lines == -1) {
-		print "jack-peak is not running, starting it\n";
+		print "jack-peak2 is not running, starting it\n";
 
 		# create fifo if necessary
 	 	unless ( -p $fifo ) {
@@ -210,20 +210,20 @@ sub launch_jackpeak_fifo {
 		$command .=  " > " . $fifo . " 2>/dev/null &";
 		system($command);
 		sleep 1;
-		$pid_jackpeak = qx(pgrep jack-peak);
+		$pid_jackpeak = qx(pgrep jack-peak2);
 		chomp $pid_jackpeak;
 	}
 	elsif ($#lines == 0) {
 		$command =~ s/[\\]//g; #remove backslashes from command for correct comparison
 		if ((index($lines[0], $command) != -1) and ( $lines[0] =~ /(\d+?) / )) {
 			$pid_jackpeak = $1;
-			print "jack-peak is already running with expected parameters\n";
+			print "jack-peak2 is already running with expected parameters\n";
 		}
 		else {
-			die "jack-peak doesn\'t have expected parameters,found :\n $lines[0] ----wanted :\n$command";
+			die "jack-peak2 doesn\'t have expected parameters,found :\n $lines[0] ----wanted :\n$command";
 		}
 	}
-	print "jack-peak running with PID $pid_jackpeak\n";
+	print "jack-peak2 running with PID $pid_jackpeak\n";
 	return $pid_jackpeak;
 }
 
@@ -232,7 +232,7 @@ sub stop_jackpeak_meters {
 	return unless $meters_hash->{options}{enable};
 	# by PID
 	if (defined $meters_hash->{options}{PID}) {
-		print "Stopping jack-peak with PID $meters_hash->{options}{PID}\n";
+		print "Stopping jack-peak2 with PID $meters_hash->{options}{PID}\n";
 		kill 'KILL',$meters_hash->{options}{PID};
 	}
 	# or brute
