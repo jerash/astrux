@@ -142,8 +142,8 @@ sub get_meters_hash {
 					my $meter_port;
 					$meter_port->{type} = "channel_aux";
 					$meter_port->{jack_port_name} = $connect_portname;
-					$meter_port->{current_value} = 0;
-					$meter_port->{current_peak} = 0;
+					$meter_port->{current_value} = undef;
+					$meter_port->{current_peak} = undef;
 					$meter_port->{clip_count} = 0;
 					#add meter value
 					push @meter_values , $meter_port;
