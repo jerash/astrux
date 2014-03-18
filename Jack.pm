@@ -93,6 +93,39 @@ sub Stop_Jack_OSC {
 	}
 }
 
+sub Start_a2jmidid {
+	my $project = shift;
+	#a2jmidid
+	#---------------------------------
+	if ($project->{a2jmidid}{enable}) {
+		my $pid_a2jmidid = qx(pgrep -f a2jmidid);
+		if (!$pid_a2jmidid) {
+			system('a2jmidid -e > /dev/null 2>&1 &');
+			sleep 1;
+			$pid_a2jmidid = qx(pgrep -f a2jmidid);
+			die "Jack error: could not start a2jmidid\n" unless $pid_a2jmidid;
+		}
+		print "a2jmidid running with PID $pid_a2jmidid";
+		$project->{a2jmidid}{PID} = $pid_a2jmidid;
+	}
+}
+
+sub Stop_a2jmidid {
+	my $project = shift;
+
+	return unless $project->{a2jmidid}{enable};
+	# by PID
+	if (defined $project->{a2jmidid}{PID}) {
+		print "Stopping a2jmidid with PID $project->{a2jmidid}{PID}\n";
+		kill 'KILL',$project->{a2jmidid}{PID};
+	}
+	# or brute
+	else {
+		print "Force killall a2jmidid\n";
+		my $blob = `killall a2jmidid`;
+	}
+}
+
 sub get_jack_hardware_io_list {
 
 	my $hardware_io_list;

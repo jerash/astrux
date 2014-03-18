@@ -86,6 +86,10 @@ sub Start {
 	#---------------------------------
 	$project->Jack::Start_Jack_OSC;
 
+	# alsa to jack MIDI bridge (a2jmidid)
+	#---------------------------------
+	$project->Jack::Start_a2jmidid;
+
 	#klick
 	#---------------------------------
 	$project->{metronome}->Start;
@@ -107,20 +111,6 @@ sub Start {
 		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
 		print "LINUXSAMPLER running with PID $pid_linuxsampler";
 		$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
-	}
-
-	#a2jmidid
-	#---------------------------------
-	my $pid_a2jmidid = qx(pgrep -f a2jmidid);
-	#die "alsa to jack midi bridge is not running" unless $pid_a2jmidid;
-	if ($project->{a2jmidid}{enable}) {
-		if (!$pid_a2jmidid) {
-			system('a2jmidid -e > /dev/null 2>&1 &');
-			sleep 1;
-			$pid_a2jmidid = qx(pgrep -f a2jmidid);
-		}
-		print "a2jmidid running with PID $pid_a2jmidid";
-		$project->{a2jmidid}{PID} = $pid_a2jmidid;
 	}
 
 	#----------------------------------------------------------------
