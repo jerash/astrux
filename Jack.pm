@@ -95,6 +95,7 @@ sub Stop_Jack_OSC {
 
 sub Start_a2jmidid {
 	my $project = shift;
+	return unless $project->{a2jmidid}{enable};
 	#a2jmidid
 	#---------------------------------
 	if ($project->{a2jmidid}{enable}) {
@@ -112,7 +113,6 @@ sub Start_a2jmidid {
 
 sub Stop_a2jmidid {
 	my $project = shift;
-
 	return unless $project->{a2jmidid}{enable};
 	# by PID
 	if (defined $project->{a2jmidid}{PID}) {
