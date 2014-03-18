@@ -78,10 +78,6 @@ sub Start {
 	#---------------------------------
 	$project->Jack::Start_Jack_Server;
 
-	# jack-plumbing
-	#---------------------------------
-	$project->{plumbing}->Start;
-
 	#JACK-OSC (jack.clock)
 	#---------------------------------
 	$project->Jack::Start_Jack_OSC;
@@ -90,9 +86,17 @@ sub Start {
 	#---------------------------------
 	$project->Jack::Start_a2jmidid;
 
+	# jack-plumbing
+	#---------------------------------
+	$project->{plumbing}->Start if ($project->{plumbing}{enable});
+
 	#klick
 	#---------------------------------
-	$project->{metronome}->Start;
+	$project->{metronome}->Start if ($project->{metronome}{enable});
+
+	#SAMPLER
+	#---------------------------------
+	$project->{linuxsampler}->Start if ($project->{linuxsampler}{enable});
 
 	#JPMIDI << TODO problem in server mode can't load new midi file....
 	#---------------------------------
@@ -102,16 +106,6 @@ sub Start {
 	# 	print "JPMIDI server running with PID $pid_jpmidi";
 	# }
 	# $project->{midi_player}{PID} = $pid_jpmidi;
-
-	#SAMPLER
-	#---------------------------------
-	my $pid_linuxsampler = qx(pgrep linuxsampler);
-	#TODO check linuxsampler is running on the expected port
-	if ($project->{linuxsampler}{enable}) {
-		die "LINUXSAMPLER is not running" unless $pid_linuxsampler;
-		print "LINUXSAMPLER running with PID $pid_linuxsampler";
-		$project->{LINUXSAMPLER}{PID} = $pid_linuxsampler;
-	}
 
 	#----------------------------------------------------------------
 	# start mixers
