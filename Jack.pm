@@ -5,6 +5,18 @@ package Jack;
 use strict;
 use warnings;
 
+sub Start {
+	my $project = shift;
+	$project->Start_Jack_Server;
+	$project->Start_Jack_OSC;
+}
+
+sub Stop {
+	my $project = shift;
+	$project->Stop_Jack_Server;
+	$project->Stop_Jack_OSC;
+}
+
 sub Start_Jack_Server {
 	my $project = shift;
 

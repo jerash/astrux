@@ -150,7 +150,7 @@ sub get_meters_hash {
 	return \@meter_values;
 }
 
-sub start {
+sub Start {
 	my $meters_hash = shift;
 	return unless $meters_hash->{enable};
 
@@ -161,6 +161,12 @@ sub start {
 		$meters_hash->{PID} = &launch_jackpeak_fifo(\@ports,$meters_hash->{port},$meters_hash->{peaks},
 			$meters_hash->{speed},$meters_hash->{scale});
 	}
+}
+
+sub Stop {
+	my $meters_hash = shift;
+	return unless $meters_hash->{enable};
+	$meters_hash->stop_jackpeak_meters if ($meters_hash->{backend} =~ "jack-peak");
 }
 
 ###########################################################
@@ -232,7 +238,12 @@ sub launch_jackpeak_fifo {
 sub stop_jackpeak_meters {
 	my $meters_hash = shift;
 	return unless $meters_hash->{enable};
-	# by PID
+
+	# close opened handles
+	close $meters_hash->{pipefh} if defined $meters_hash->{pipefh};
+	undef $meters_hash->{events} if defined $meters_hash->{events};
+
+	# kill process by PID
 	if (defined $meters_hash->{PID}) {
 		print "Stopping jack-peak2 with PID $meters_hash->{PID}\n";
 		kill 'KILL',$meters_hash->{PID};

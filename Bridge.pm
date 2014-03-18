@@ -59,33 +59,26 @@ sub init {
 	$bridge->{$_} = $bridgeinfo{$_} foreach (keys %bridgeinfo);
 }
 
-sub start {
+sub Start {
 	my $bridge = shift;
 
-	#Start the global parser accepting many things like:
-
-	#	tcp commands
-	$bridge->init_tcp_server if $bridge->{TCP}{enable};
-	
-	#	OSC messages
+	#Start the global parser accepting :
+	#--------------------------------------
+	# tcp commands (user or TODO GUI)
+	$bridge->init_tcp_server if $bridge->{TCP}{enable};	
+	# OSC messages
 	$bridge->init_osc_server if $bridge->{OSC}{enable};
-
-	#   MIDI messages
+	# MIDI messages
 	$bridge->create_midi_ports if $bridge->{MIDI}{enable};
-
-	#	command line interface
+	# command line interface
 	$bridge->init_cli_server if $bridge->{CLI}{enable};
-
-	#	meters
+	# meters
 	$bridge->init_meters if $project->{meters}{enable};
-
-	#	gui actions (from tcp commands)
-
-	#	front panel actions (from rs232 port)
+	# TODO front panel actions (from rs232 port)
 
 	#catch signals
 	#--------------------------------------
-	$SIG{INT} = \&cmd_exit;
+	$SIG{INT} = \&Stop;
 
 	#reload state
 	if (-e $project->{bridge}{statefile}){
@@ -98,6 +91,31 @@ sub start {
 	#--------------------------------------
 	my $cv = AE::cv;
 	$cv->recv;
+}
+
+sub Stop {
+	print "\nExiting...\n";
+
+	# "cleanly" stop our "childs"
+	$project->{bridge}->save_state_file;
+	$project->{plumbing}->Stop;
+	$project->{meters}->Stop;
+	$project->Jack::Stop_Jack_OSC; # We don't stop JACK server
+	$project->{metronome}->Stop;
+
+	#undef all events
+	undef $project->{bridge}{TCP}{events} if defined $project->{bridge}{TCP}{events};
+	undef $project->{bridge}{OSC}{events} if defined $project->{bridge}{OSC}{events};
+	# $hash{OSC}{object} = delete $project->{bridge}{OSC}{object};
+
+	# release sockets ?
+	# $hash{TCP}{socket} = delete $project->{bridge}{TCP}{socket};
+	# $hash{OSC}{socket} = delete $project->{bridge}{OSC}{socket};
+	# foreach my $mixer (keys $project->{mixers}) {
+	# 	$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{engine}{socket}; 
+	# }
+
+	exit(0);
 }
 
 sub create_midiosc_paths {
@@ -594,20 +612,7 @@ sub cmd_clic {
 	}
 }
 sub cmd_exit {
-		print "\nSIGINT, Exiting...\n";
-
-		$project->{bridge}->save_state_file;
-		$project->{plumbing}->Stop;
-		$project->{meters}->stop_jackpeak_meters;
-		$project->Jack::Stop_Jack_OSC;
-
-		# TODO finish to close everything on exit : 
-		# klick
-		# mixers
-		# fifo fh : close $project->{meters}{pipefh} , undef $project->{meters}{pipefh}
-
-
-		exit(0);
+	&Stop;
 }
 
 ###########################################################

@@ -25,6 +25,15 @@ sub Start {
 	}
 }
 
+sub Stop {
+	my $metronome = shift;
+	return unless $metronome->{enable};
+
+	if ($metronome->{engine} eq "klick") {
+		$metronome->stop_klick;
+	}
+}
+
 sub start_klick {
 	my $metronome = shift;
 
@@ -58,7 +67,19 @@ sub start_klick {
 }
 
 sub stop_klick {
-	# body...
+	my $metronome = shift;
+	#can be done with OSC
+	# Bridge::OSC_send("localhost",$metronome->{osc_port},"/klick/quit");
+	# by PID
+	if (defined $metronome->{PID}) {
+		print "Stopping metronome with PID $metronome->{PID}\n";
+		kill 'KILL',$metronome->{PID};
+	}
+	# or brute
+	else {
+		print "Force killall metronome\n";
+		my $blob = `killall klick`;
+	}
 }
 
 1;
