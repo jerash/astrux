@@ -44,7 +44,7 @@ sub start_klick {
 		die "Metronome error: could not start klick\n" unless $pid_klick;
 	}
 	elsif ($#lines == 0) {
-		if ( $lines[0] =~ /(\d+?) klick -p (\d+?)$/ ) {
+		if ( $lines[0] =~ /(\d+?) klick -o (\d+?) -t -T$/ ) {
 			$pid_klick = $1;
 			$port_klick = $2;
 			die "klick is not running on the expected oscport : $lines[0]\n" unless $port_klick eq $metronome->{osc_port};
