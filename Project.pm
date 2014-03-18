@@ -147,7 +147,7 @@ sub Start {
 	#----------------------------------------------------------------
 
 	#TODO make sure all jack ports are active before starting meters
-	$project->{meters}->start;
+	$project->{meters}->start if $project->{meters}{enable};
 
 	#----------------------------------------------------------------
 	# Start bridge > wait loop

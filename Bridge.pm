@@ -73,10 +73,10 @@ sub start {
 	$bridge->create_midi_ports if $bridge->{MIDI}{enable};
 
 	#	command line interface
-	&init_cli_server if $bridge->{CLI}{enable};	
+	$bridge->init_cli_server if $bridge->{CLI}{enable};
 
 	#	meters
-	&init_meters if $project->{meters}{options}{enable};
+	$bridge->init_meters if $project->{meters}{enable};
 
 	#	gui actions (from tcp commands)
 
@@ -600,7 +600,7 @@ sub cmd_exit {
 		$project->{meters}->stop_jackpeak_meters;
 		$project->Jack::Stop_Jack_OSC;
 
-		# TODO finish to close everything on exit
+		# TODO finish to close everything on exit : klick, mixers
 
 		exit(0);
 }
@@ -887,9 +887,9 @@ sub process_cli {
 ###########################################################
 
 sub init_meters {
-	my $fifo = $project->{meters}{options}{port};
-	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{options}{port};
-	my $speed = $project->{meters}{options}{speed} || "100";
+	my $fifo = $project->{meters}{port};
+	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{port};
+	my $speed = $project->{meters}{speed} || "100";
 	print "Reading meters every $speed ms\n";
 	$speed = $speed/1000;
 	#create the anyevent timer @100ms by default on the meters fifo
@@ -897,7 +897,7 @@ sub init_meters {
 }
 
 sub process_meters {
-	my $fifofile = $project->{meters}{options}{port};
+	my $fifofile = $project->{meters}{port};
 	use Fcntl;
 	$| = 1;
 	my $fifo_fh;
@@ -905,7 +905,7 @@ sub process_meters {
 	sysopen($fifo_fh, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
 	while (<$fifo_fh>) {
 		my (@meters,@peaks);
-		if ($project->{meters}{options}{peaks}) {
+		if ($project->{meters}{peaks}) {
 			my @duo = split (/\|/);
 			@meters = split ' ', $duo[0];
 			@peaks = split ' ', $duo[1];

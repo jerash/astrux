@@ -20,10 +20,9 @@ use warnings;
 #-------------------------------------------
 # {project_root}
 #	{meters}
-#		{options}
-#			backend
-#			port
-#			PID
+#		backend
+#		port
+#		PID
 #		@{values}
 #			jack_port_name	"..."
 #			type			channel_in, aux_out ...etc
@@ -55,12 +54,9 @@ sub new {
 	die "Meters Error: can't create meters without options\n" unless $options;
 
 	#init structure
-	my $meters = {
-		"options" => $options
-	};
-	bless $meters,$class;
+	bless $options,$class;
 
-	return $meters; 
+	return $options; 
 }
 
 ###########################################################
@@ -156,14 +152,14 @@ sub get_meters_hash {
 
 sub start {
 	my $meters_hash = shift;
-	return unless $meters_hash->{options}{enable};
+	return unless $meters_hash->{enable};
 
-	if ($meters_hash->{options}{backend} =~ "jack-peak") {
+	if ($meters_hash->{backend} =~ "jack-peak") {
 		# build the array of jack ports
 		my @ports;
 		push @ports , $_->{jack_port_name} for (@{$meters_hash->{values}});
-		$meters_hash->{options}{PID} = &launch_jackpeak_fifo(\@ports,$meters_hash->{options}{port},$meters_hash->{options}{peaks},
-			$meters_hash->{options}{speed},$meters_hash->{options}{scale});
+		$meters_hash->{PID} = &launch_jackpeak_fifo(\@ports,$meters_hash->{port},$meters_hash->{peaks},
+			$meters_hash->{speed},$meters_hash->{scale});
 	}
 }
 
@@ -235,11 +231,11 @@ sub launch_jackpeak_fifo {
 
 sub stop_jackpeak_meters {
 	my $meters_hash = shift;
-	return unless $meters_hash->{options}{enable};
+	return unless $meters_hash->{enable};
 	# by PID
-	if (defined $meters_hash->{options}{PID}) {
-		print "Stopping jack-peak2 with PID $meters_hash->{options}{PID}\n";
-		kill 'KILL',$meters_hash->{options}{PID};
+	if (defined $meters_hash->{PID}) {
+		print "Stopping jack-peak2 with PID $meters_hash->{PID}\n";
+		kill 'KILL',$meters_hash->{PID};
 	}
 	# or brute
 	else {
