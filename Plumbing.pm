@@ -82,6 +82,7 @@ sub Start {
 			sleep 1;
 			$pid_jackplumbing = qx(pgrep jack-plumbing);
 			chomp $pid_jackplumbing;
+			die "Plumbing error: could not start jack-plumbing\n" unless $pid_jackplumbing;
 		}
 		elsif ($#lines == 0) {
 			if ( $lines[0] =~ /(\d+?) jack-plumbing -q (.*)/ ) {
@@ -94,7 +95,7 @@ sub Start {
 				die "jack-plumbing doesn\'t have expected parameters : $lines[0]\n";
 			}
 		}
-		print "jack-plumbing running with PID $pid_jackplumbing and file $file_jackplumbing\n";
+		print "jack-plumbing running with PID $pid_jackplumbing and file $project_plumbing->{file}\n";
 		$project_plumbing->{PID} = $pid_jackplumbing;
 	}
 	else {
