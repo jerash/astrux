@@ -196,6 +196,8 @@ sub build_songfile_chain {
 		# push @chains , "-a:$slotnumber -i:$filename -o:jack,,slot_$slotnumber" if $song->{audio_files}{$section}{channels} eq 2;
 
 		# we create an autoconnect output because jackplumbing sometimes can't see that the port has changed
+		die "Song error: missing port connections on audio player $section\n"
+			unless ((defined $song->{audio_files}{$section}{connect_1})and(defined $song->{audio_files}{$section}{connect_2}));
 		push @chains , "-a:$slotnumber -i:$filename -chcopy:1,2 -o:jack_multi,$song->{audio_files}{$section}{connect_1},$song->{audio_files}{$section}{connect_2}";
 	}
 	#add chains to song
