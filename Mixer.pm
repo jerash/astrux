@@ -54,6 +54,9 @@ sub init {
 	}
 	my %globals = %{$mixer_io_ref->{mixer_globals}};
 
+	#verify mixer doesn't have system name
+	die "Mixer error: a mixer cannot be named \"astrux\"! please change.\n" if $globals{name} eq "astrux";
+
 	#test wich engine we use
 	if ($globals{engine} eq "ecasound") {
 		#create ecsfile path

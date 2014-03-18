@@ -494,9 +494,8 @@ sub parse_cmd {
 	elsif ($element1 eq "stop") { &cmd_stop; return; }
 	elsif ($element1 eq "zero") { &cmd_zero; return; }
 	elsif ($element1 eq "locate") {
-		my $value = shift @args;
-		return unless looks_like_number($value);
-		&cmd_locate($value);
+		return unless looks_like_number($element2);
+		&cmd_locate($element2);
 		return;
 	}
 	elsif ($element1 eq "save") {
@@ -713,76 +712,24 @@ sub process_incoming_osc {
 			return;
 		}
 	}
-	else
-	# else verify if the osc message is an astrux command
+	# or is an astrux command
 	#-----------------------------------------------------
-	{
-		#split path elements
-		$oscpath =~ s(^/)();
-		my @pathelements = split '/',$oscpath;
-
-		# TODO should we add /astrux/ to prevent mixername can't be start/stop...etc and would need to check on create
-
-		#element 1 = system command
-		my $element1 = shift @pathelements;
-		if ($element1 eq "ping") {
-			&OSC_send($sender_hostname,$project->{bridge}{OSC}{outport},"/pong");
-			return;
+	elsif ($oscpath =~ /^\/astrux(.*)$/ ) {
+		my $extras = $1;
+		# if we have more arguments in path
+		if ($extras) {
+			$extras =~ s(^/)(); # remove first /
+			print "--more in path : $extras\n";
+			my @extraelements = split '/',$extras;
+			@args = @extraelements;
 		}
-		elsif ($element1 eq "start") { &cmd_start; return; }
-		elsif ($element1 eq "stop") { &cmd_stop; return; }
-		elsif ($element1 eq "zero") { &cmd_zero; return; }
-		elsif ($element1 eq "locate") {
-			return unless $argtypes =~ /^(f|i)$/;
-			my $value = shift @args;
-			&cmd_locate($value);
-			return;
-		}
-		elsif ($element1 eq "save") {
-			my $element2 = shift @pathelements;
-			return unless $element2;
-			&cmd_save($element2);
-			return;
-		}
-		elsif ($element1 eq "status") {
-			&cmd_status;
-			return;
-		}
-		elsif ($element1 eq "song") {
-			my $element2 = shift @pathelements;
-			if (defined $element2) {
-				return unless $argtypes =~ /^(f|i)$/;
-				my $val = shift @args;
-				return unless ($val == 1);
-				&cmd_song($project->{songs}{$element2});
-				return;
-			}
+		else {
 			return unless $argtypes =~ /^(s)$/;
-			my $songname = shift @args;
-			return unless exists $project->{songs}{$songname};
-			&cmd_song($project->{songs}{$songname});
-			return;
 		}
-		elsif ($element1 eq "reload") {
-			my $element2 = shift @pathelements;
-			return unless $element2;
-			&cmd_reload($element2);
-			return;
-		}
-		elsif ($element1 eq "clic") {
-			my $element2 = shift @pathelements;
-			return unless $element2;
-			&cmd_clic("start") if $element2 eq "start";
-			&cmd_clic("stop") if $element2 eq "stop";
-			return unless @args;
-			&cmd_clic("tempo",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(f|i)$/);
-			&cmd_clic("inbuilt_sound",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(i)$/);
-			&cmd_clic("custom_sounds",\@args) if ($element2 eq "tempo") and ($argtypes =~ /^(ss)$/);
-			return;
-		}
-		elsif ($element1 eq "exit") {
-			&cmd_exit;
-		}
+		my $command = join ' ' , @args; # grab the commands
+		print "received osc command = $command\n" if $debug;
+		my $reply = &parse_cmd($command);
+		#TODO maybe do something with command reply
 	}
 }
 
