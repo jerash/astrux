@@ -212,6 +212,7 @@ sub launch_jackpeak_fifo {
 		sleep 1;
 		$pid_jackpeak = qx(pgrep jack-peak2);
 		chomp $pid_jackpeak;
+		die "Meters error: could not start jack-peak2\n" unless $pid_jackpeak;
 	}
 	elsif ($#lines == 0) {
 		$command =~ s/[\\]//g; #remove backslashes from command for correct comparison

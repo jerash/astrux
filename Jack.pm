@@ -48,6 +48,7 @@ sub Start_Jack_OSC {
 			sleep 1;
 			$pid_jackosc = qx(pgrep jack-osc);
 			chomp $pid_jackosc;
+			die "Jack error: could not start jack-osc\n" unless $pid_jackosc;
 		}
 		elsif ($#lines == 0) {
 			if ( $lines[0] =~ /(\d+?) jack-osc -p (\d+?)$/ ) {
