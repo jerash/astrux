@@ -13,6 +13,7 @@ use Bridge;
 use TouchOSC;
 use Jack;
 use Metronome;
+use Linuxsampler;
 
 ###########################################################
 #
@@ -58,7 +59,10 @@ sub init {
 	$project->AddMetronome;
 
 	#------------------Add songs------------------------------
-	$project->AddSongs;	
+	$project->AddSongs;
+
+	#------------------Add sampler----------------------------
+	$project->AddSampler;
 
 	#----------------Add plumbing-----------------------------
 	# MOVED to generate files, after we know the nonmixer auxes
@@ -279,6 +283,16 @@ sub AddMetronome {
 
 	#create object
 	$project->{metronome} = Metronome->new($project->{metronome});
+}
+
+sub AddSampler {
+	my $project = shift;
+	return unless $project->{linuxsampler}{enable};
+
+	print "Project: Creating sampler\n";
+
+	#create object
+	$project->{linuxsampler} = Linuxsampler->new($project->{linuxsampler});
 }
 
 ###########################################################
