@@ -459,7 +459,10 @@ sub SaveToFile {
 		$hash{OSC}{events} = delete $project->{bridge}{OSC}{events};
 	}
 	if (defined $project->{meters}{events}) {
-		$hash{meters}{events} = delete $project->{meters}{events};	
+		$hash{meters}{events} = delete $project->{meters}{events};
+	}
+	if (defined $project->{meters}{pipefh}) {
+		$hash{meters}{pipefh} = delete $project->{meters}{pipefh};
 	}
 	foreach my $mixer (keys $project->{mixers}) {
 		$hash{mixers}{$mixer} = delete $project->{mixers}{$mixer}{engine}{socket}; 
@@ -484,7 +487,10 @@ sub SaveToFile {
 		$project->{bridge}{OSC}{events} = delete $hash{OSC}{events};
 	}
 	if (defined $hash{meters}{events}) {
-		$project->{meters}{events} = delete $hash{meters}{events};	
+		$project->{meters}{events} = delete $hash{meters}{events};
+	}
+	if (defined $hash{meters}{pipefh}) {
+		$project->{meters}{pipefh} = delete $hash{meters}{pipefh};
 	}
 	foreach my $mixer (keys $hash{mixers}) {
 		$project->{mixers}{$mixer}{engine}{socket} = delete $hash{mixers}{$mixer}; 

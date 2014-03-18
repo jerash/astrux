@@ -15,6 +15,7 @@ use IO::Socket::INET;
 
 use AnyEvent;
 use AnyEvent::Socket;
+use AnyEvent::Handle;
 use AnyEvent::ReadLine::Gnu;
 
 my $debug = 0;
@@ -600,7 +601,11 @@ sub cmd_exit {
 		$project->{meters}->stop_jackpeak_meters;
 		$project->Jack::Stop_Jack_OSC;
 
-		# TODO finish to close everything on exit : klick, mixers
+		# TODO finish to close everything on exit : 
+		# klick
+		# mixers
+		# fifo fh : close $project->{meters}{pipefh} , undef $project->{meters}{pipefh}
+
 
 		exit(0);
 }
@@ -887,41 +892,40 @@ sub process_cli {
 ###########################################################
 
 sub init_meters {
-	my $fifo = $project->{meters}{port};
 	die "Bridge error: missing port/fifo definition in meters!\n" unless $project->{meters}{port};
-	my $speed = $project->{meters}{speed} || "100";
-	print "Reading meters every $speed ms\n";
-	$speed = $speed/1000;
-	#create the anyevent timer @100ms by default on the meters fifo
-	$project->{meters}{events} = AE::timer( 0, $speed, \&process_meters );
-}
-
-sub process_meters {
 	my $fifofile = $project->{meters}{port};
+	print "Starting Meters listener @".$project->{meters}{speed}."ms\n";
+
 	use Fcntl;
 	$| = 1;
-	my $fifo_fh;
 	# open in non-blocking mode if nothing is to be read in the fifo
-	sysopen($fifo_fh, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
-	while (<$fifo_fh>) {
-		my (@meters,@peaks);
-		if ($project->{meters}{peaks}) {
-			my @duo = split (/\|/);
-			@meters = split ' ', $duo[0];
-			@peaks = split ' ', $duo[1];
-		}
-		else {
-			@meters = split ' ';
-		}
-		#upate project meters with current value 
-		for my $i (0..$#meters) {
-			$project->{meters}{values}[$i]->{current_value} = $meters[$i];
-			$project->{meters}{values}[$i]->{current_peak} = $peaks[$i] if @peaks;
-		}
-		#force exit
-		last;
-	}
-	close $fifo_fh;
+	sysopen($project->{meters}{pipefh}, $fifofile, O_RDWR) or warn "The FIFO file \"$fifofile\" is missing\n";
+
+	#create the anyevent handle on the meters fifo
+	$project->{meters}{events} = AnyEvent::Handle->new( fh => $project->{meters}{pipefh} );
+
+	#define the read action
+	$project->{meters}{events}->on_read( sub {
+		$project->{meters}{events}->push_read( line => sub {
+			my ($h, $line, $eol) = @_;
+			# print "Got a line: $line\n";
+
+			my (@meters,@peaks);
+			if ($project->{meters}{peaks}) {
+				my @duo = split /\|/ , $line;
+				@meters = split ' ', $duo[0];
+				@peaks = split ' ', $duo[1];
+			}
+			else {
+				@meters = split ' ' , $line;
+			}
+			#upate project meters with current value 
+			for my $i (0..$#meters) {
+				$project->{meters}{values}[$i]->{current_value} = $meters[$i];
+				$project->{meters}{values}[$i]->{current_peak} = $peaks[$i] if @peaks;
+			}
+		});
+	} );
 }
 
 1;
