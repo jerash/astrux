@@ -211,14 +211,15 @@ sub launch_jackpeak_fifo {
 		#starting jack-peak
 		$command .=  " > " . $fifo . " 2>/dev/null &";
 		system("$command");
-		sleep 1;
+		sleep 2;
 		#as the command line most probably contains meta characters (space escaped with \), perl starts the command in a new shell
 		# so $pid_jackpeak = qx(pgrep jack-peak2); won't work as /bin/sh is the main process, so we do :
 		my $ps = qx(ps ax | grep jack-peak2);
-		if ($ps =~ /^(\d+?) (.*) jack-peak2/ ) 
-			{ $pid_jackpeak = $1; }
-		chomp $pid_jackpeak;
-		die "Meters error: could not start jack-peak2 with command $command\n" unless $pid_jackpeak;
+		if ($ps =~ /^(\d+?) (.*) jack-peak2/ ) {
+			$pid_jackpeak = $1;
+			chomp $pid_jackpeak;
+		}
+	 	die "Meters error: could not start jack-peak2 with command $command\n" unless $pid_jackpeak;
 	}
 	elsif ($#lines == 0) {
 		$command =~ s/[\\]//g; #remove backslashes from command for correct comparison
