@@ -498,6 +498,10 @@ sub parse_cmd {
 		&cmd_locate($element2);
 		return;
 	}
+	elsif ($element1 eq "goto") {
+		&cmd_goto($element2);
+		return;
+	}
 	elsif ($element1 eq "save") {
 		return unless $element2;
 		&cmd_save($element2);
@@ -558,15 +562,34 @@ sub cmd_song {
 	# load midifile
 	# TODO oups...jpmidi cannot load a new song & need a2jmidid to connect to some midi out
 	
+	# udpate current info
+	$project->{bridge}{current}{song} = $song->{name};
+
 	#autostart ?
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start","f","0") if $song->{autostart};
 }
+# start transport
 sub cmd_start { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable}; }
+# stop transport
 sub cmd_stop { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable}; }
+# move transport to zero (beginning)
 sub cmd_zero { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable}; }
+# move transport to a time in seconds
 sub cmd_locate {
 	my $value = shift;
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
+}
+# move transport to a song marker
+sub cmd_goto {
+	my $target = shift;
+	my $song = $project->{bridge}{current}{song} if defined $project->{bridge}{current}{song};
+	return unless defined $project->{songs}{$song}{markers};
+	$target = decode_my_ascii($target);
+	my position;
+	for my $marker (@{$project->{songs}{$song}{markers}}) {
+		$position = $marker[0] if (($marker[3] eq "marker") and ($target eq $marker[3]))
+	}
+	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f",$position) if $position;
 }
 sub cmd_save {
 	my $what = shift;
@@ -576,6 +599,7 @@ sub cmd_save {
 }
 sub cmd_status {
 	# TODO print/reply status
+	print "Current song : $project->{bridge}{current}{song}\n";
 }
 sub cmd_reload {
 	my $what = shift;
