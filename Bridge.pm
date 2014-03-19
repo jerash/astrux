@@ -381,17 +381,18 @@ sub save_midi_file {
 
 sub save_state_file {
 	my $bridge = shift;
-	return unless defined $bridge->{statefile};
-	print "Saving state file\n";
+	return "No statefile defined, cannot save." unless defined $bridge->{statefile};
+	print "Saving state file\n" if $debug;
 	use Storable;
 	$Storable::Deparse = 1; #warn if CODE encountered, but dont die
 	store $bridge->{current_values}, $bridge->{statefile};
+	return "saving state file done";
 }
 sub reload_state_file {
 	my $bridge = shift;
 	my $infile = shift;
-	return unless defined $infile;	
-	return unless -e $infile;
+	return "cannot reload statefile without a filename." unless defined $infile;	
+	return "could not find specified file $infile" unless -e $infile;
 	print "Loading previous state from file $infile\n";
 	use Storable;
 	#load state file
@@ -400,6 +401,7 @@ sub reload_state_file {
 	foreach my $oscpath (keys %{$bridge->{current_values}}){
 		&OSC_send($bridge->{OSC}{ip},$bridge->{OSC}{inport},"$oscpath","f","$bridge->{current_values}{$oscpath}");
 	}
+	return "reloading state file done";
 }
 sub reload_current_state {
 	my $bridge = shift;
@@ -408,6 +410,7 @@ sub reload_current_state {
 	foreach my $oscval (keys %{$bridge->{current_values}}){
 		&OSC_send($bridge->{OSC}{ip},$bridge->{OSC}{inport},"$oscval","f","$bridge->{current_values}{$oscval}");
 	}
+	return "reloading current state done";
 }
 
 ###########################################################
@@ -490,46 +493,42 @@ sub parse_cmd {
 	my @args = @pathelements;
 
 	# check elements
-	if ($element1 eq "start") { &cmd_start; return; }
-	elsif ($element1 eq "stop") { &cmd_stop; return; }
-	elsif ($element1 eq "zero") { &cmd_zero; return; }
+	return unless $element1;
+	if ($element1 eq "start") { return &cmd_start; }
+	elsif ($element1 eq "stop") { return &cmd_stop; }
+	elsif ($element1 eq "zero") { return &cmd_zero; }
 	elsif ($element1 eq "locate") {
-		return unless looks_like_number($element2);
-		&cmd_locate($element2);
-		return;
+		return "error: argument should be numeric" unless looks_like_number($element2);
+		return &cmd_locate($element2);
 	}
 	elsif ($element1 eq "goto") {
-		&cmd_goto($element2);
-		return;
+		return "missing arguments : markername" unless $element2;
+		return &cmd_goto($element2);
 	}
 	elsif ($element1 eq "save") {
-		return unless $element2;
-		&cmd_save($element2);
-		return;
+		return "missing arguments : all, dumper or project" unless $element2;
+		return &cmd_save($element2);
 	}
 	elsif ($element1 eq "status") {
-		&cmd_status;
-		return;
+		return &cmd_status;
 	}
 	elsif ($element1 eq "song") {
-		return unless exists $project->{songs}{$element2};
-		&cmd_song($project->{songs}{$element2});
-		return;
+		return "song $element2 not found in project" unless exists $project->{songs}{$element2};
+		return &cmd_song($project->{songs}{$element2});
 	}
 	elsif ($element1 eq "reload") {
-		return unless $element2;
-		&cmd_reload($element2);
-		return;
+		return "missing arguments : state or statefile" unless $element2;
+		return &cmd_reload($element2);
 	}
 	elsif ($element1 eq "clic") {
-		return unless $element2;
-		&cmd_clic("start") if $element2 eq "start";
-		&cmd_clic("stop") if $element2 eq "stop";
-		return unless @args;
+		return "Please specify either start, stop or tempo" unless $element2;
+		return &cmd_clic("start") if $element2 eq "start";
+		return &cmd_clic("stop") if $element2 eq "stop";
+		return "missing arguments\n" unless @args;
 		&cmd_clic("tempo",\@args) if ($element2 eq "tempo") and looks_like_number($args[0]);
 		&cmd_clic("inbuilt_sound",\@args) if ($element2 eq "tempo") and looks_like_number($args[0]);
 		&cmd_clic("custom_sounds",\@args) if ($element2 eq "tempo") and ($#args == 1); #need two files
-		return;
+		return "ok";
 	}
 	elsif ($element1 eq "exit") {
 		&cmd_exit;
@@ -539,7 +538,7 @@ sub cmd_song {
 	my $song = shift;
 
 	# TODO maybe fisrt save previous song state before starting new song
-	print "Starting song $song->{friendly_name}\n";
+	print "Starting song $song->{friendly_name}\n" if $debug;
 	
 	# stop and Goto 0
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop");
@@ -567,71 +566,70 @@ sub cmd_song {
 
 	#autostart ?
 	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start","f","0") if $song->{autostart};
+
+	return "Switched to song $song->{friendly_name}\n";
 }
 # start transport
-sub cmd_start { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable}; }
+sub cmd_start { return &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/start") if $project->{"jack-osc"}{enable}; }
 # stop transport
-sub cmd_stop { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable}; }
+sub cmd_stop { return &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/stop") if $project->{"jack-osc"}{enable}; }
 # move transport to zero (beginning)
-sub cmd_zero { &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable}; }
+sub cmd_zero { return &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","0") if $project->{"jack-osc"}{enable}; }
 # move transport to a time in seconds
 sub cmd_locate {
 	my $value = shift;
-	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
+	return &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f","$value") if $project->{"jack-osc"}{enable};
 }
 # move transport to a song marker
 sub cmd_goto {
 	my $target = shift;
 	my $song = $project->{bridge}{current}{song} if defined $project->{bridge}{current}{song};
-	return unless defined $project->{songs}{$song}{markers};
+	return "marker $target could not be found in current song\n" unless defined $project->{songs}{$song}{markers};
 	$target = decode_my_ascii($target);
-	my position;
+	my $position;
 	for my $marker (@{$project->{songs}{$song}{markers}}) {
-		$position = $marker[0] if (($marker[3] eq "marker") and ($target eq $marker[3]))
+		$position = $marker->[0] if (($marker->[3] eq "marker") and ($target eq $marker->[3]))
 	}
-	&OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f",$position) if $position;
+	return &OSC_send("localhost",$project->{"jack-osc"}{osc_port},"/locate","f",$position) if $position;
 }
 sub cmd_save {
 	my $what = shift;
 	$project->SaveDumperFile(".live") if ($what =~ /^(dumper|all)$/);
 	$project->SaveToFile if ($what =~ /^(project|all)$/);
 	$project->{bridge}->save_state_file if ($what =~ /^(state|all)$/);
+	return "saving $what done\n";
 }
 sub cmd_status {
 	# TODO print/reply status
-	print "Current song : $project->{bridge}{current}{song}\n";
+	print "Current song : $project->{bridge}{current}{song}\n" if $debug;
+	return "Current song : $project->{bridge}{current}{song}\n";
 }
 sub cmd_reload {
 	my $what = shift;
-	$project->{bridge}->reload_current_state if $what eq "state";
-	$project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $what eq "statefile";
+	return $project->{bridge}->reload_current_state if $what eq "state";
+	return $project->{bridge}->reload_state_file($project->{bridge}{statefile}) if $what eq "statefile";
 }
 sub cmd_clic {
 	my $command = shift;
 	my $args = shift; # arrayref
 
 	if ($command eq "start") { 
-		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/start");
-		return;
+		return &OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/start");
 	}
 	elsif ($command eq "stop") {
-		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/stop");
-		return;
+		return &OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/stop");
 	}
 	elsif ($command eq "tempo") {
 		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/metro/set_type","s","simple");
-		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/simple/set_tempo","f",$args->[0]);
-		return;
+		return &OSC_send("localhost",$project->{metronome}{osc_port},"/klick/simple/set_tempo","f",$args->[0]);
 	}
 	elsif ($command eq "inbuilt_sound") {
-		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","i",$args->[0]);
-		return;
+		return &OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","i",$args->[0]);
 	}
 	elsif ($command eq "custom_sounds") {
 		return unless -e $args->[0];
 		return unless -e $args->[1];
-		&OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","ss",@{$args});
-		return;
+		return &OSC_send("localhost",$project->{metronome}{osc_port},"/klick/config/set_sound","ss",@{$args});
 	}
 }
 sub cmd_exit {
@@ -783,7 +781,9 @@ sub OSC_send {
 
 	#send
 	my $udp = IO::Socket::INET->new( PeerAddr => "$destination", PeerPort => "$port", Proto => 'udp', Type => SOCK_DGRAM) || die $!;
-	$udp->send($oscpacket);	
+	$udp->send($oscpacket);
+
+	return "ok";
 }
 
 ###########################################################
@@ -798,16 +798,52 @@ sub init_tcp_server {
 	my $tcpport = $bridge->{TCP}{port};
 	# creating a listening socket
 	my $tcpsocket = new IO::Socket::INET (
-	    LocalHost => '0.0.0.0',
-	    LocalPort => $tcpport,
-	    Proto => 'tcp',
-	    Listen => 5,
-	    Reuse => 1
+		LocalHost => '0.0.0.0',
+		LocalPort => $tcpport,
+		Proto => 'tcp',
+		Listen => 5,
+		Reuse => 1
 	);
 	warn "cannot create socket $!\n" unless $tcpsocket;
+
 	print "Starting TCP listener on port $tcpport\n";
 	$bridge->{TCP}{socket} = $tcpsocket;
- 	$bridge->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
+	$bridge->{TCP}{events} = AE::io( $tcpsocket, 0, \&process_tcp_command );
+}
+
+sub init_single_tcp_server {
+	my $bridge = shift;
+
+	my $tcpport = $bridge->{TCP}{port};
+
+	print "Starting TCP listener on port $tcpport\n";
+
+	# create the anyevent handle on the meters fifo
+	my $host = '127.0.0.1';
+	my $port = $tcpport;
+	tcp_server($host, $port, sub {
+		my($fh) = @_;
+		$bridge->{TCP}{events} = AnyEvent::Handle->new( 
+			fh => $fh,
+			poll => 'r',
+			on_read => sub {
+				# my ($self) = @_;
+				# print "Received: " . $self->rbuf . "\n";
+				# start read the request
+				$bridge->{TCP}{events}->push_read (line => sub {
+					my ($hdl, $line, $eol) = @_;
+					print "TCP client send : $line\n" if $debug;
+					chomp($line);
+					my $reply = &parse_cmd($line);
+					$bridge->{TCP}{events}->push_write("$reply\n") if $reply;
+				});
+			},
+			on_eof => sub {
+				my ($hdl) = @_;
+				$hdl->destroy();
+			},
+		);
+	});
 }
 
 sub process_tcp_command {
