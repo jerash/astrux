@@ -21,6 +21,10 @@ sub get_timed_metaevents {
    "from_file" => $file,
   } );
 
+  #get midi format version
+  my $format = $song->format;
+  print "Song is midi format $format\n" if $debug;
+
   #get song tracks references
   my @tracks = $song->tracks;
   return unless @tracks;
@@ -64,11 +68,12 @@ sub get_timed_metaevents {
   my $time_signature;
   my $set_tempo;
   my $position = 0;
-  while (($position eq 0) and ((!defined $time_signature) or (!defined $set_tempo))) {
-    my $event = shift @absolute_tick_events;
+  $nb = -1;
+  while (($nb++ <= $#absolute_tick_events) and ((!defined $time_signature) or (!defined $set_tempo))) {
+    my $event = $absolute_tick_events[$nb];
     $time_signature = $event if $event->[0] eq "time_signature";
     $set_tempo = $event if $event->[0] eq "set_tempo";
-    die "We should not found a marker event so soon\n" if $event->[0] eq "marker";
+    # die "We should not found a marker event so soon\n" if $event->[0] eq "marker";
     $position = $event->[1];
   }
   die "could not find time_signature and set_tempo at position 0\n" unless ((defined $time_signature) and (defined $set_tempo));
@@ -83,15 +88,10 @@ sub get_timed_metaevents {
   my $MicrosecondsPerQuarterNote = $set_tempo->[2];
   my $BPM = sprintf "%.1f", ( 60000000 / $MicrosecondsPerQuarterNote ) * ( $time_denominator / 4 );
   my $tick_duration = &get_tick_duration($TPQN,$MicrosecondsPerQuarterNote);
-
   print "Song ticks is $TPQN\nStart tempo is $BPM\nStart Time signature is $time_numerator/$time_denominator\n" if $debug;
 
-  #add first values to array output
-  my @absolute_events;
-  my @init1 = (0,"0:0:0","set_tempo",$BPM);
-  push @absolute_events , \@init1;
-  my @init2 = (0,"0:0:0","time_signature","$time_numerator/$time_denominator");
-  push @absolute_events , \@init2;
+  #reorder array of events. because with type1 we have marker track and timesignature track.
+  my @sorted_absolute_tick_events = sort { $a->[1] <=> $b->[1] } @absolute_tick_events;
 
   #now we have only needed elements, we can calculate position in seconds and bars/beats
   my $current_seconds_position = 0;
@@ -102,7 +102,8 @@ sub get_timed_metaevents {
   my $last_timesignature_tick_change = 0;
   my ($last_ts_bars,$last_ts_beats,$last_ts_ticks) = (0,0,0);
 
-  foreach my $event (@absolute_tick_events) {
+  my @absolute_events;
+  foreach my $event (@sorted_absolute_tick_events) {
     my @info;
     
     #get current position in seconds
