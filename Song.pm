@@ -114,6 +114,7 @@ sub save_klick_tempomap_file {
 	return unless $output_path;
 
 	my @file_lines = ();
+	my @times;
 	my ($last_change,$nb_bars) = (0,0);
 	my ($current_tempo,$current_timesignature);
 
@@ -121,13 +122,13 @@ sub save_klick_tempomap_file {
 	foreach my $line (@{$song->{markers}}) {
 		# print "---$line";
 		my @parts = @{$line};
-		my @times = split(":",$parts[1]);
+		@times = split(":",$parts[1]);
 		if ($parts[2] eq "set_tempo") {
 			warn "SONG WARNING: tempo changes outside beginning of measure is incompatible with klick, may be inaccurate\n"
 				if (($times[1] ne 0)or($times[2] ne 0));
 			$current_tempo = $parts[3] if $times[0] eq 0;
 			$nb_bars = $times[0] - $last_change;
-			push @file_lines , "$nb_bars $current_tempo" if $times[0] ne 0;
+			push @file_lines , "$nb_bars $current_timesignature $current_tempo" if $times[0] ne 0;
 			$current_tempo = $parts[3] if $times[0] ne 0;
 			$last_change = $times[0];
 		}
@@ -141,8 +142,13 @@ sub save_klick_tempomap_file {
 			$last_change = $times[0];
 		}
 	}
+	# add last line if we have changing tempo or timesig
+	if (defined $current_tempo and defined $current_timesignature and $#file_lines > 0) {
+		$nb_bars = $times[0] - $last_change;
+		push @file_lines , "$nb_bars $current_timesignature $current_tempo" if $times[0] ne 0;
+	}
 
-	# if we have found necessary info in meta events
+	# if we have found timesig and tempo info in meta events, and it never changes
 	if (defined $current_tempo and defined $current_timesignature and $#file_lines eq -1) {
 		# we're missing song length in bars, try to get it from any last event
 		my $last_nb = $#{$song->{markers}};
