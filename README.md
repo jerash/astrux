@@ -1,7 +1,7 @@
 #ASTRUX
 
 A setup creation tool for live-oriented musicians
-(under active development by Raphaël Mouneyres)
+(2021-01-03 : stalled development, while still having some interest in this tool, I may move it to python one day, no plan nor any schedule so far)
 
 ##Features
 - expandable audio mixer with channel strips, effects, submixes ... 
